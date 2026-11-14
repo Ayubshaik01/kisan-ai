@@ -1,10 +1,31 @@
-const CACHE_NAME = "fieldnote-shell-v1";
+const CACHE_NAME = "kisanai-offline-v2";
+
+const OFFLINE_ROUTES = [
+  "/",
+  "/diagnose",
+  "/library",
+  "/history",
+  "/saved",
+  "/assistant",
+  "/weather",
+  "/calculator",
+  "/yield-estimator",
+  "/market",
+  "/profile",
+  "/profile/offline",
+  "/notifications",
+  "/help",
+  "/manifest.webmanifest",
+  "/favicon.ico",
+  "/logo.svg",
+  "/favicon.svg"
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      .then((cache) => cache.addAll(["/", "/manifest.webmanifest", "/favicon.ico"]))
+      .then((cache) => cache.addAll(OFFLINE_ROUTES).catch((e) => console.warn("Cache prefill warning:", e)))
       .then(() => self.skipWaiting()),
   );
 });

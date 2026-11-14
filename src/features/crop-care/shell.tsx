@@ -1,6 +1,29 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { Bell, BookOpen, Bookmark, CircleHelp, CloudSun, History, Home, Leaf, MessageCircle, Moon, ScanLine, ShieldCheck, Sun, UserRound, WifiOff, Calculator, TrendingUp, DollarSign } from "lucide-react";
-import { useEffect, type ReactNode } from "react";
+import {
+  Bell,
+  BookOpen,
+  Bookmark,
+  CircleHelp,
+  CloudSun,
+  History,
+  Home,
+  Leaf,
+  Menu,
+  MessageCircle,
+  Moon,
+  ScanLine,
+  ShieldCheck,
+  Sun,
+  UserRound,
+  WifiOff,
+  Calculator,
+  TrendingUp,
+  DollarSign,
+  X,
+  ChevronRight,
+  Sparkles,
+} from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { useCropCare } from "./context";
 import { langs, type Lang } from "./i18n";
@@ -59,11 +82,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { t, ready, settings, online, reminders } = useCropCare();
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const bare = pathname.startsWith("/welcome") || /^\/diagnose\/[^/]+\/[^/]+/.test(pathname) || pathname.endsWith("/report");
 
   useEffect(() => {
     if (ready && !settings.onboarded && !pathname.startsWith("/welcome")) void navigate({ to: "/welcome" });
   }, [ready, settings.onboarded, pathname, navigate]);
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
 
   const nav = [
     { to: "/", label: t("navHome"), icon: Home, exact: true },
@@ -93,6 +122,16 @@ export function AppShell({ children }: { children: ReactNode }) {
       <a href="#main" className="visually-hidden focus:not-sr-only">Skip to content</a>
       <header className="sticky top-0 z-30 border-b border-line bg-canvas/85 backdrop-blur-lg">
         <div className="mx-auto flex h-16 max-w-[1440px] items-center gap-2 px-4 sm:px-6">
+          {/* Mobile hamburger menu toggle */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            aria-label="Open navigation menu"
+            className="grid size-10 place-items-center rounded-xl border border-line bg-card text-muted-foreground hover:text-foreground lg:hidden transition-all active:scale-95"
+          >
+            <Menu className="size-5" />
+          </button>
+
           <Logo />
           <div className="ml-auto flex items-center gap-1.5">
             <Link to="/profile/offline" className="hidden h-10 items-center gap-2 rounded-xl border border-line bg-card px-3 text-xs font-semibold text-muted-foreground sm:flex">
@@ -125,6 +164,78 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="mx-auto w-full max-w-5xl">{children}</div>
         </main>
       </div>
+
+      {/* Mobile Drawer / Sidebar */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+
+          {/* Drawer content */}
+          <div className="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-canvas border-r border-line p-5 shadow-2xl flex flex-col justify-between overflow-y-auto">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between border-b border-line pb-4">
+                <Logo />
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="grid size-9 place-items-center rounded-xl bg-surface text-muted-foreground hover:text-foreground"
+                >
+                  <X className="size-5" />
+                </button>
+              </div>
+
+              {/* Core Navigation */}
+              <div className="space-y-1">
+                <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                  Navigation
+                </p>
+                {nav.map(({ to, label, icon: Icon, exact }) => (
+                  <Link
+                    key={to}
+                    to={to}
+                    activeOptions={{ exact }}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={side}
+                  >
+                    <Icon className="size-[18px]" />
+                    {label}
+                  </Link>
+                ))}
+              </div>
+
+              {/* Agronomic Intelligence Tools */}
+              <div className="space-y-1">
+                <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                  Field Tools & Intelligence
+                </p>
+                {more.map(({ to, label, icon: Icon }) => (
+                  <Link
+                    key={to}
+                    to={to}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={side}
+                  >
+                    <Icon className="size-[18px]" />
+                    {label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* Offline footer badge */}
+            <div className="pt-4 border-t border-line mt-6">
+              <div className="flex items-center gap-2 rounded-xl bg-card p-3 text-xs text-muted-foreground">
+                <ShieldCheck className="size-4 shrink-0 text-primary" />
+                <span>100% Offline Capable &bull; On-Device Inference</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-canvas/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg lg:hidden">
         <div className="mx-auto grid max-w-xl grid-cols-5 items-end px-2 pb-1.5 pt-1">
