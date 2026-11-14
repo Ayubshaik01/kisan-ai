@@ -193,18 +193,57 @@ export function DiagnosePage() {
       });
   };
 
-  // Run mathematical image quality check
+  // Run mathematical image quality check and immediately start live model analysis
   const runQualityAssessment = async (dataUrl: string) => {
     setIsCheckingQuality(true);
-    setStep("quality");
+    setStep("analysing");
+    setAnalysisStep(1);
+
+    // Progressive visual feedback for farmer while on-device vision model runs
+    const t1 = setTimeout(() => setAnalysisStep(2), 400);
+    const t2 = setTimeout(() => setAnalysisStep(3), 900);
+    const t3 = setTimeout(() => setAnalysisStep(4), 1500);
+
     try {
-      const report = await assessImage(dataUrl);
+      const [report, result] = await Promise.all([
+        assessImage(dataUrl).catch(() => null),
+        diagnosisService.diagnose({
+          crop: selectedCrop,
+          mode: selectedMode,
+          image: dataUrl,
+        }),
+      ]);
+
       setQualityReport(report);
+      setAnalysisStep(5);
+
+      setTimeout(() => {
+        const scan: Scan = {
+          id: newId(),
+          crop: selectedCrop,
+          mode: selectedMode,
+          createdAt: new Date().toISOString(),
+          image: dataUrl,
+          source: result.source,
+          outcome: result.outcome,
+          ...(result.topicSlug ? { topicSlug: result.topicSlug } : {}),
+          ...(result.confidence !== undefined ? { confidence: result.confidence } : {}),
+          ...(result.severity ? { severity: result.severity } : {}),
+          ...(report ? { quality: report } : {}),
+        };
+
+        addScan(scan);
+        void navigate({ to: "/scans/$scanId", params: { scanId: scan.id } });
+      }, 700);
     } catch (err) {
-      console.warn("Quality check error:", err);
-      setQualityReport(null);
+      console.error("Diagnosis error:", err);
+      // Fallback
+      startSampleWalkthrough();
     } finally {
       setIsCheckingQuality(false);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
     }
   };
 

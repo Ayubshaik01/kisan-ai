@@ -27,6 +27,8 @@ import {
   ShieldAlert,
   Sparkles,
   Trash2,
+  Volume2,
+  VolumeX,
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -54,6 +56,7 @@ import {
   severityLabel,
 } from "../services/diagnosis";
 import { safetyPrecautions } from "../services/advisory";
+import { voiceAgent } from "../services/voice";
 import type { Scan, SeverityResult } from "../services/types";
 import {
   BackButton,
@@ -139,11 +142,41 @@ export function ScanResultPage() {
   };
 
   const [analysisLang, setAnalysisLang] = useState<Lang>(lang);
+  const [isPlayingVoice, setIsPlayingVoice] = useState(false);
+
   const llamaReport = generateLlamaAnalysis(
     { ...scan, topicSlug: selectedSlug, outcome: "identified" },
     analysisLang,
     topic
   );
+
+  // Subscribe to voice agent updates
+  useEffect(() => {
+    const unsub = voiceAgent.subscribe((st) => {
+      setIsPlayingVoice(st.isPlaying && !st.isPaused);
+    });
+    return () => {
+      unsub();
+      voiceAgent.stop();
+    };
+  }, []);
+
+  const handleToggleVoiceAgent = () => {
+    if (isPlayingVoice) {
+      voiceAgent.stop();
+      toast.info("Voice read-out stopped");
+      return;
+    }
+
+    // Build comprehensive spoken report text
+    const diseaseName = topic ? l(analysisLang, topic.name) : selectedSlug;
+    const spokenText = `${diseaseName}. ${llamaReport.visualPathology}. ${llamaReport.fieldRisk}. Recommended actions: ${llamaReport.actionPlan.join(". ")}`;
+
+    voiceAgent.speak(spokenText, analysisLang, () => {
+      setIsPlayingVoice(false);
+    });
+    toast.success(`Voice Agent reading diagnosis in ${analysisLang.toUpperCase()}`);
+  };
 
   // Automatically upgrade legacy sample or unknown scans to active verified model status
   useEffect(() => {
@@ -433,33 +466,63 @@ Note: ${note || "No specific farmer notes recorded."}
               </div>
             </div>
 
-            {/* Multilingual Switcher on the Analysis Result */}
-            <div className="flex flex-wrap items-center gap-1 rounded-xl border border-line bg-surface p-1">
-              {(["en", "te", "hi", "ta", "kn", "mr"] as const).map((lCode) => (
-                <button
-                  key={lCode}
-                  type="button"
-                  onClick={() => setAnalysisLang(lCode)}
-                  className={cn(
-                    "rounded-lg px-2 py-1 text-xs font-semibold transition-all",
-                    analysisLang === lCode
-                      ? "bg-primary text-primary-foreground shadow-sm font-bold"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {lCode === "en"
-                    ? "English"
-                    : lCode === "te"
-                    ? "తెలుగు"
-                    : lCode === "hi"
-                    ? "हिन्दी"
-                    : lCode === "ta"
-                    ? "தமிழ்"
-                    : lCode === "kn"
-                    ? "ಕನ್ನಡ"
-                    : "मराठी"}
-                </button>
-              ))}
+            {/* Voice Agent Audio Trigger & Multilingual Switcher on the Analysis Result */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleToggleVoiceAgent}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition-all shadow-xs",
+                  isPlayingVoice
+                    ? "bg-rose-600 text-white animate-pulse"
+                    : "bg-primary text-primary-foreground hover:bg-primary/90"
+                )}
+                title="Play Audio Advisory"
+              >
+                {isPlayingVoice ? (
+                  <>
+                    <VolumeX className="size-4" /> Stop Voice
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="size-4" /> Listen (Voice Agent)
+                  </>
+                )}
+              </button>
+
+              <div className="flex flex-wrap items-center gap-1 rounded-xl border border-line bg-surface p-1">
+                {(["en", "te", "hi", "ta", "kn", "mr"] as const).map((lCode) => (
+                  <button
+                    key={lCode}
+                    type="button"
+                    onClick={() => {
+                      setAnalysisLang(lCode);
+                      if (isPlayingVoice) {
+                        voiceAgent.stop();
+                        setIsPlayingVoice(false);
+                      }
+                    }}
+                    className={cn(
+                      "rounded-lg px-2 py-1 text-xs font-semibold transition-all",
+                      analysisLang === lCode
+                        ? "bg-primary text-primary-foreground shadow-sm font-bold"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {lCode === "en"
+                      ? "English"
+                      : lCode === "te"
+                      ? "తెలుగు"
+                      : lCode === "hi"
+                      ? "हिन्दी"
+                      : lCode === "ta"
+                      ? "தமிழ்"
+                      : lCode === "kn"
+                      ? "ಕನ್ನಡ"
+                      : "मराठी"}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 

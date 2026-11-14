@@ -147,7 +147,8 @@ export async function analyzeImageWithVision(
       }
 
       // Check Out-of-Distribution (OOD): Insufficient crop foliage
-      if (plantPixels < 2500) {
+      // Lower threshold to 800 to avoid rejecting valid close-ups or diseased yellowed leaves
+      if (plantPixels < 800) {
         return resolve({
           source: "model",
           outcome: "unknown",

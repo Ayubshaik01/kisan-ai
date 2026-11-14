@@ -15,6 +15,8 @@ import {
   Sparkles,
   Trash2,
   User,
+  Volume2,
+  VolumeX,
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -22,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { useCropCare } from "../context";
 import type { Lang } from "../i18n";
 import { getTopic, l } from "../knowledge";
+import { voiceAgent } from "../services/voice";
 import {
   btn,
   btnGhost,
@@ -81,11 +84,36 @@ export function AssistantPage() {
   );
   const activeScan = scans.find((s) => s.id === activeScanId);
   const [input, setInput] = useState("");
+  const [activePlayingId, setActivePlayingId] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, typing]);
+
+  useEffect(() => {
+    const unsub = voiceAgent.subscribe((st) => {
+      if (!st.isPlaying) {
+        setActivePlayingId(null);
+      }
+    });
+    return () => {
+      unsub();
+      voiceAgent.stop();
+    };
+  }, []);
+
+  const handleToggleVoice = (msgId: string, text: string) => {
+    if (activePlayingId === msgId) {
+      voiceAgent.stop();
+      setActivePlayingId(null);
+    } else {
+      setActivePlayingId(msgId);
+      voiceAgent.speak(text, lang, () => {
+        setActivePlayingId(null);
+      });
+    }
+  };
 
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -301,6 +329,33 @@ export function AssistantPage() {
                   <p className="whitespace-pre-line text-[13.5px] leading-relaxed">
                     {m.text}
                   </p>
+
+                  {/* Offline Voice Agent read aloud button for assistant answers */}
+                  {!isFarmer && (
+                    <div className="flex items-center justify-end pt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleVoice(m.id, m.text)}
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold transition-all",
+                          activePlayingId === m.id
+                            ? "bg-rose-500/20 text-rose-600 animate-pulse font-bold"
+                            : "text-muted-foreground hover:bg-surface hover:text-foreground"
+                        )}
+                        title="Voice Agent: Listen in regional audio"
+                      >
+                        {activePlayingId === m.id ? (
+                          <>
+                            <VolumeX className="size-3.5" /> Stop Voice
+                          </>
+                        ) : (
+                          <>
+                            <Volume2 className="size-3.5" /> Listen Voice
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
 
                   {/* Referenced Topics Cards */}
                   {!isFarmer && m.refs && m.refs.length > 0 && (
