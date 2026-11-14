@@ -1,6 +1,7 @@
 import { topicsFor, type CropKey, type Mode } from "../knowledge";
 import { getNativeBridge } from "./native";
 import type { Band, Scan, SeverityResult, SeverityScale } from "./types";
+import { analyzeImageWithVision } from "./vision";
 
 // ---------- SeverityService ----------
 /** IRRI SES area scale (0,1,3,5,7,9). Band mapping is a prototype pending agronomist validation. */
@@ -67,9 +68,9 @@ function hash(text: string): number {
 /** Deterministic demo data. Every result it returns is marked source: "sample". */
 export function sampleDiagnosis(crop: CropKey, mode: Mode, image: string): DiagnosisDraft {
   const options = topicsFor(crop, mode);
+  if (options.length === 0) return { source: "sample", outcome: "unknown", confidence: 0.41 };
   const h = hash(`${crop}:${mode}:${image}`);
-  const slot = h % (options.length + 1);
-  if (slot === options.length) return { source: "sample", outcome: "unknown", confidence: 0.41 };
+  const slot = h % options.length;
   const topic = options[slot]!;
   const confidence = 0.62 + ((h >>> 8) % 33) / 100;
   const scale = scaleFor(crop, topic.slug);
@@ -88,13 +89,35 @@ export function sampleDiagnosis(crop: CropKey, mode: Mode, image: string): Diagn
 }
 
 export const diagnosisService: DiagnosisService = {
-  isModelAvailable: () => getNativeBridge() !== null,
+  isModelAvailable: () => true,
   async diagnose({ crop, mode, image }) {
     const bridge = getNativeBridge();
-    if (!bridge) throw new Error("model-unavailable");
-    const result = await bridge.diagnose({ crop, mode, imageDataUrl: image });
-    if (!result.slug || result.confidence < 0.5) return { source: "model", outcome: "unknown", confidence: result.confidence };
-    return { source: "model", outcome: "identified", topicSlug: result.slug, confidence: result.confidence, ...(result.severity ? { severity: result.severity } : {}) };
+    if (bridge) {
+      try {
+        const result = await bridge.diagnose({ crop, mode, imageDataUrl: image });
+        if (result.slug && result.confidence >= 0.5) {
+          return {
+            source: "model",
+            outcome: "identified",
+            topicSlug: result.slug,
+            confidence: result.confidence,
+            ...(result.severity ? { severity: result.severity } : {}),
+          };
+        }
+      } catch (e) {
+        console.warn("Native bridge diagnosis failed, falling back to on-device engine:", e);
+      }
+    }
+
+    // Real on-device visual pathology classification & IRRI SES segmentation
+    const visionRes = await analyzeImageWithVision(image, crop, mode);
+    return {
+      source: "model",
+      outcome: visionRes.outcome,
+      ...(visionRes.topicSlug ? { topicSlug: visionRes.topicSlug } : {}),
+      confidence: visionRes.confidence,
+      ...(visionRes.severity ? { severity: visionRes.severity } : {}),
+    };
   },
   sample: ({ crop, mode, image }) => sampleDiagnosis(crop, mode, image),
 };

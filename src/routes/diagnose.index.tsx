@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { pageMeta } from "@/features/crop-care/meta";
-import { PlaceholderPage } from "@/features/crop-care/pages/Placeholder";
+import { DiagnosePage } from "@/features/crop-care/pages/Diagnose";
 
 export const Route = createFileRoute("/diagnose/")({
   head: () => ({ meta: pageMeta("Diagnose", "Diagnose in the offline crop assistant.") }),
-  component: () => <PlaceholderPage title="Diagnose" />,
+  component: DiagnosePage,
 });

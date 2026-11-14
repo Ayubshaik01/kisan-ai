@@ -1,0 +1,82 @@
+"""
+Agricultural Chemical Safety Validation Layer
+Enforces statutory compliance with CIB&RC (Central Insecticide Board & Registration Committee)
+regulations. Strictly prevents unverified pesticide dosages, mixing, or off-label use.
+"""
+
+import re
+from typing import Dict, Tuple
+
+CHEMICAL_PATTERNS = [
+    # Dosage & quantity keywords
+    r"\b(?:dose|dosage|concentration|dilution|mixing ratio|spray interval)\b",
+    r"\b(?:how much|how many)\s+(?:to spray|to mix|of chemical|chemical|pesticide|fungicide|insecticide)\b",
+    r"\b(?:how much|how many)\b.*\b(?:per\s+(?:acre|ha|hectare|pump|litre|liter|knapsack|sprayer)|to\s+spray|to\s+mix|in\s+\d+\s*(?:l|litre|liter|pump)|dissolve in water)\b",
+    r"\b(?:ml|g|gm|grams?|kg|litres?)\b.*\b(?:/|per|in a|in \d+|in)\s*(?:l|litre|liter|acre|ha|hectare|pump|knapsack)\b",
+    r"\b(?:double (?:the )?dose|twice (?:the )?dose|increase (?:the )?dose|higher dose|exceed (?:the )?package dose)\b",
+    r"\b(?:double dosage|double (?:the )?fungicide dose|double dose)\b",
+    r"\b(?:mix|tank mix|combine|triple mix)\b.*\b(?:with|and|in the same tank|together|in one|chemicals?|pesticides?|fungicides?|formula)\b",
+    r"\b(?:triple mix|tank mix|chemical mix|leftover pesticide)\b",
+    r"\b(?:pesticide|fungicide|insecticide|chemical spray)\s*(?:dose|dosage|schedule|spray)\b",
+    # Hindi chemical keywords
+    r"(?:दवा|कीटनाशक|फफूंदनाशी|छिड़काव|मात्रा|डोज़|कितना मिला|दोगुना|मिलाकर)",
+    # Telugu chemical keywords
+    r"(?:మందు|పురుగుమందు|తెగులుమందు|పిచికారీ|మోతాదు|ఎంత కలపాలి|డబుల్ మోతాదు|రెండు కలిపి)",
+]
+
+SAFE_REFUSALS: Dict[str, str] = {
+    "en": (
+        "Specific chemical dosages, pesticide brand names, or chemical tank-mixing instructions "
+        "cannot be recommended directly by this AI. Under CIB&RC statutory regulations, chemical "
+        "crop-protection products must strictly adhere to officially approved regional registrations. "
+        "Please follow the cultural and biological controls provided, or consult your local Agricultural "
+        "Officer or Krishi Vigyan Kendra (KVK) for officially approved chemical schedules."
+    ),
+    "hi": (
+        "यह एआई कीटनाशक या फफूंदनाशी के नाम, मात्रा (डोज़) या रसायनों को मिलाकर छिड़कने की सलाह नहीं दे सकता। "
+        "केंद्रीय कीटनाशी बोर्ड (CIB&RC) के नियमों के अनुसार केवल आधिकारिक रूप से अनुमोदित सिफारिशों का ही "
+        "उपयोग किया जाना चाहिए। कृपया जैविक व कृषि प्रबंधन के तरीके अपनाएं या अपने स्थानीय कृषि अधिकारी/केवीके से सलाह लें।"
+    ),
+    "te": (
+        "పురుగుమందుల పేర్లు, పిచికారీ మోతాదులు లేదా రసాయనాల మిశ్రమం గురించి ఈ ఏఐ నేరుగా సిఫార్సు చేయదు. "
+        "CIB&RC నిబంధనల ప్రకారం ధృవీకరించిన ప్రాంతీయ రికార్డుల నుండి మాత్రమే రసాయన సిఫార్సులు రావాలి. "
+        "దయచేసి అందించిన సమగ్ర సస్యరక్షణ చర్యలను పాటించండి లేదా మీ సమీప కృషి విజ్ఞాన కేంద్రం (KVK) లేదా "
+        "వ్యవసాయ అధికారిని సంప్రదించండి."
+    ),
+}
+
+
+class SafetyValidator:
+    def __init__(self):
+        self.compiled_patterns = [
+            re.compile(p, re.IGNORECASE) for p in CHEMICAL_PATTERNS
+        ]
+
+    def validate_query(self, query: str, lang: str = "en") -> Tuple[bool, str]:
+        """
+        Validates an incoming user query.
+        Returns: (is_safe, refusal_or_empty_str)
+        """
+        for pattern in self.compiled_patterns:
+            if pattern.search(query):
+                refusal = SAFE_REFUSALS.get(lang, SAFE_REFUSALS["en"])
+                return False, refusal
+        return True, ""
+
+    def validate_response(self, response: str, lang: str = "en") -> Tuple[bool, str]:
+        """
+        Validates model output to ensure no unverified pesticide doses were hallucinated.
+        """
+        # Disallow hallucinating arbitrary numbers followed by dosage units
+        dosage_leak = re.search(r"\b\d+(?:\.\d+)?\s*(?:ml|gm|g|kg)\s*/\s*(?:l|litre|liter|acre|ha)\b", response, re.IGNORECASE)
+        if dosage_leak:
+            refusal = SAFE_REFUSALS.get(lang, SAFE_REFUSALS["en"])
+            return False, refusal
+        return True, response
+
+
+if __name__ == "__main__":
+    validator = SafetyValidator()
+    safe, msg = validator.validate_query("How many ml per litre of monocrotophos should I spray on chilli?", "en")
+    print("Safety Check Result (should be False):", safe)
+    print("Refusal Message:", msg)

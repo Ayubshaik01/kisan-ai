@@ -1,0 +1,85 @@
+[
+  {
+    "id": "mendeley-rice-sethy-2020",
+    "name": "Rice Leaf Disease Image Samples",
+    "authors": "Prabira Kumar Sethy, Baishalee Negi et al. (Sambalpur University)",
+    "source_url": "https://data.mendeley.com/datasets/fw8nh55khg/1",
+    "license": "CC BY 4.0 (Commercial & Academic Use Permitted with Attribution)",
+    "crops": [
+      "rice"
+    ],
+    "classes": [
+      "rice_blast",
+      "brown_spot",
+      "bacterial_leaf_blight",
+      "healthy"
+    ],
+    "image_count": 5932,
+    "format": "JPEG",
+    "geographic_relevance": "Eastern & Southern India (Odisha, AP, Telangana field conditions)",
+    "limitations": "Captured under controlled natural sunlight; requires field background augmentation."
+  },
+  {
+    "id": "mendeley-chilli-anand-2021",
+    "name": "Chilli Disease Leaf Dataset",
+    "authors": "Anand R., Sivasankaran V. et al.",
+    "source_url": "https://data.mendeley.com/datasets/b35knt9xdf/1",
+    "license": "CC BY 4.0",
+    "crops": [
+      "chilli"
+    ],
+    "classes": [
+      "chilli_leaf_curl",
+      "cercospora",
+      "bacterial_leaf_spot",
+      "healthy"
+    ],
+    "image_count": 2450,
+    "format": "JPEG / PNG",
+    "geographic_relevance": "South India (Guntur, Khammam, Warangal chilli belt)",
+    "limitations": "Severe leaf curl cases have complex 3D overlapping leaf structures."
+  },
+  {
+    "id": "ip102-pests-wu-2019",
+    "name": "IP102: A Large-Scale Benchmark Dataset for Insect Pest Recognition",
+    "authors": "Xiaoping Wu, Chi Zhan et al. (CVPR 2019)",
+    "source_url": "https://github.com/xpwu95/IP102",
+    "license": "Non-commercial Research License",
+    "crops": [
+      "rice",
+      "chilli"
+    ],
+    "classes": [
+      "brown_planthopper",
+      "yellow_stem_borer",
+      "rice_leaf_folder",
+      "chilli_thrips",
+      "chilli_mites",
+      "whiteflies",
+      "aphids"
+    ],
+    "image_count": 75222,
+    "format": "JPEG",
+    "geographic_relevance": "Global agricultural zones including South Asia",
+    "limitations": "Contains both macroscopic insect shots and field damage patterns."
+  },
+  {
+    "id": "plantvillage-chilli-anthracnose",
+    "name": "PlantVillage Crop Health Archive (Pepper Bell & Chilli)",
+    "authors": "David P. Hughes, Marcel Salath\u00e9 (Penn State)",
+    "source_url": "https://plantvillage.psu.edu/",
+    "license": "CC0 1.0 Universal (Public Domain)",
+    "crops": [
+      "chilli"
+    ],
+    "classes": [
+      "anthracnose",
+      "bacterial_leaf_spot",
+      "healthy"
+    ],
+    "image_count": 3840,
+    "format": "JPEG",
+    "geographic_relevance": "Global benchmark",
+    "limitations": "Lab-setting plain grey background; requires synthetic field background blend."
+  }
+]
