@@ -70,18 +70,18 @@ export function sampleDiagnosis(crop: CropKey, mode: Mode, image: string): Diagn
   const h = hash(`${crop}:${mode}:${image}`);
   const slot = h % (options.length + 1);
   if (slot === options.length) return { source: "sample", outcome: "unknown", confidence: 0.41 };
-  const topic = options[slot];
+  const topic = options[slot]!;
   const confidence = 0.62 + ((h >>> 8) % 33) / 100;
   const scale = scaleFor(crop, topic.slug);
   let severity: SeverityResult;
   if (scale === "irri-ses") {
-    const score = [1, 3, 5, 7][(h >>> 4) % 4];
-    severity = { scale, score, max: 9, band: bandForScore(scale, score), areaPercent: [1, 4, 15, 35][(h >>> 4) % 4] };
+    const score = [1, 3, 5, 7][(h >>> 4) % 4]!;
+    severity = { scale, score, max: 9, band: bandForScore(scale, score), areaPercent: [1, 4, 15, 35][(h >>> 4) % 4]! };
   } else if (scale === "leaf-curl-index") {
     const score = 1 + ((h >>> 4) % 3);
     severity = { scale, score, max: 4, band: bandForScore(scale, score) };
   } else {
-    const pct = [6, 18, 32][(h >>> 4) % 3];
+    const pct = [6, 18, 32][(h >>> 4) % 3]!;
     severity = { scale, score: pct, max: 100, band: bandForScore(scale, pct), areaPercent: pct };
   }
   return { source: "sample", outcome: "identified", topicSlug: topic.slug, confidence: Math.round(confidence * 100) / 100, severity };
@@ -94,7 +94,7 @@ export const diagnosisService: DiagnosisService = {
     if (!bridge) throw new Error("model-unavailable");
     const result = await bridge.diagnose({ crop, mode, imageDataUrl: image });
     if (!result.slug || result.confidence < 0.5) return { source: "model", outcome: "unknown", confidence: result.confidence };
-    return { source: "model", outcome: "identified", topicSlug: result.slug, confidence: result.confidence, severity: result.severity };
+    return { source: "model", outcome: "identified", topicSlug: result.slug, confidence: result.confidence, ...(result.severity ? { severity: result.severity } : {}) };
   },
   sample: ({ crop, mode, image }) => sampleDiagnosis(crop, mode, image),
 };

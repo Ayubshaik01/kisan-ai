@@ -1,5 +1,5 @@
 export function pageMeta(title: string, description: string) {
-  const fullTitle = `${title} · Offline AI Crop Assistant`;
+  const fullTitle = `${title} · Fieldnote`;
   return [
     { title: fullTitle },
     { name: "description", content: description },

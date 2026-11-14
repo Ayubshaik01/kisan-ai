@@ -6,7 +6,7 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
   let sum = 0;
   let green = 0;
   for (let i = 0; i < width * height; i++) {
-    const r = data[i * 4], g = data[i * 4 + 1], b = data[i * 4 + 2];
+    const r = data[i * 4]!, g = data[i * 4 + 1]!, b = data[i * 4 + 2]!;
     const y = 0.299 * r + 0.587 * g + 0.114 * b;
     gray[i] = y;
     sum += y;
@@ -15,7 +15,7 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
   const n = width * height;
   const brightness = sum / n;
   let variance = 0;
-  for (let i = 0; i < n; i++) variance += (gray[i] - brightness) ** 2;
+  for (let i = 0; i < n; i++) variance += (gray[i]! - brightness) ** 2;
   const contrast = Math.sqrt(variance / n);
 
   // Variance of the Laplacian: low values mean a blurry image.
@@ -23,7 +23,7 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
   for (let y = 1; y < height - 1; y++) {
     for (let x = 1; x < width - 1; x++) {
       const i = y * width + x;
-      const lap = gray[i - width] + gray[i + width] + gray[i - 1] + gray[i + 1] - 4 * gray[i];
+      const lap = gray[i - width]! + gray[i + width]! + gray[i - 1]! + gray[i + 1]! - 4 * gray[i]!;
       lapSum += lap;
       lapSq += lap * lap;
       count++;
