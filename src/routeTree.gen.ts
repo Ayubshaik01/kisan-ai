@@ -10,155 +10,33 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AboutRouteImport } from './routes/about'
-import { Route as AskRouteImport } from './routes/ask'
-import { Route as CheckRouteImport } from './routes/check'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as GuideIndexRouteImport } from './routes/guide.index'
-import { Route as NotesIndexRouteImport } from './routes/notes.index'
-import { Route as NotesNoteIdRouteImport } from './routes/notes.$noteId'
-import { Route as GuideCropKeyIndexRouteImport } from './routes/guide.$cropKey.index'
-import { Route as GuideCropKeyConditionSlugRouteImport } from './routes/guide.$cropKey.$conditionSlug'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AboutRoute = AboutRouteImport.update({
-  id: '/about',
-  path: '/about',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AskRoute = AskRouteImport.update({
-  id: '/ask',
-  path: '/ask',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CheckRoute = CheckRouteImport.update({
-  id: '/check',
-  path: '/check',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GuideIndexRoute = GuideIndexRouteImport.update({
-  id: '/guide/',
-  path: '/guide/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NotesIndexRoute = NotesIndexRouteImport.update({
-  id: '/notes/',
-  path: '/notes/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NotesNoteIdRoute = NotesNoteIdRouteImport.update({
-  id: '/notes/$noteId',
-  path: '/notes/$noteId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GuideCropKeyIndexRoute = GuideCropKeyIndexRouteImport.update({
-  id: '/guide/$cropKey/',
-  path: '/guide/$cropKey/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GuideCropKeyConditionSlugRoute =
-  GuideCropKeyConditionSlugRouteImport.update({
-    id: '/guide/$cropKey/$conditionSlug',
-    path: '/guide/$cropKey/$conditionSlug',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
-  '/ask': typeof AskRoute
-  '/check': typeof CheckRoute
-  '/settings': typeof SettingsRoute
-  '/notes/$noteId': typeof NotesNoteIdRoute
-  '/guide/': typeof GuideIndexRoute
-  '/notes/': typeof NotesIndexRoute
-  '/guide/$cropKey/$conditionSlug': typeof GuideCropKeyConditionSlugRoute
-  '/guide/$cropKey/': typeof GuideCropKeyIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
-  '/ask': typeof AskRoute
-  '/check': typeof CheckRoute
-  '/settings': typeof SettingsRoute
-  '/notes/$noteId': typeof NotesNoteIdRoute
-  '/guide': typeof GuideIndexRoute
-  '/notes': typeof NotesIndexRoute
-  '/guide/$cropKey/$conditionSlug': typeof GuideCropKeyConditionSlugRoute
-  '/guide/$cropKey': typeof GuideCropKeyIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
-  '/ask': typeof AskRoute
-  '/check': typeof CheckRoute
-  '/settings': typeof SettingsRoute
-  '/notes/$noteId': typeof NotesNoteIdRoute
-  '/guide/': typeof GuideIndexRoute
-  '/notes/': typeof NotesIndexRoute
-  '/guide/$cropKey/$conditionSlug': typeof GuideCropKeyConditionSlugRoute
-  '/guide/$cropKey/': typeof GuideCropKeyIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/about'
-    | '/ask'
-    | '/check'
-    | '/settings'
-    | '/notes/$noteId'
-    | '/guide/'
-    | '/notes/'
-    | '/guide/$cropKey/$conditionSlug'
-    | '/guide/$cropKey/'
+  fullPaths: '/'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/about'
-    | '/ask'
-    | '/check'
-    | '/settings'
-    | '/notes/$noteId'
-    | '/guide'
-    | '/notes'
-    | '/guide/$cropKey/$conditionSlug'
-    | '/guide/$cropKey'
-  id:
-    | '__root__'
-    | '/'
-    | '/about'
-    | '/ask'
-    | '/check'
-    | '/settings'
-    | '/notes/$noteId'
-    | '/guide/'
-    | '/notes/'
-    | '/guide/$cropKey/$conditionSlug'
-    | '/guide/$cropKey/'
+  to: '/'
+  id: '__root__' | '/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AboutRoute: typeof AboutRoute
-  AskRoute: typeof AskRoute
-  CheckRoute: typeof CheckRoute
-  SettingsRoute: typeof SettingsRoute
-  NotesNoteIdRoute: typeof NotesNoteIdRoute
-  GuideIndexRoute: typeof GuideIndexRoute
-  NotesIndexRoute: typeof NotesIndexRoute
-  GuideCropKeyConditionSlugRoute: typeof GuideCropKeyConditionSlugRoute
-  GuideCropKeyIndexRoute: typeof GuideCropKeyIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -170,83 +48,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/ask': {
-      id: '/ask'
-      path: '/ask'
-      fullPath: '/ask'
-      preLoaderRoute: typeof AskRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/check': {
-      id: '/check'
-      path: '/check'
-      fullPath: '/check'
-      preLoaderRoute: typeof CheckRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/guide/': {
-      id: '/guide/'
-      path: '/guide'
-      fullPath: '/guide/'
-      preLoaderRoute: typeof GuideIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/notes/': {
-      id: '/notes/'
-      path: '/notes'
-      fullPath: '/notes/'
-      preLoaderRoute: typeof NotesIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/notes/$noteId': {
-      id: '/notes/$noteId'
-      path: '/notes/$noteId'
-      fullPath: '/notes/$noteId'
-      preLoaderRoute: typeof NotesNoteIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/guide/$cropKey/': {
-      id: '/guide/$cropKey/'
-      path: '/guide/$cropKey'
-      fullPath: '/guide/$cropKey/'
-      preLoaderRoute: typeof GuideCropKeyIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/guide/$cropKey/$conditionSlug': {
-      id: '/guide/$cropKey/$conditionSlug'
-      path: '/guide/$cropKey/$conditionSlug'
-      fullPath: '/guide/$cropKey/$conditionSlug'
-      preLoaderRoute: typeof GuideCropKeyConditionSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AboutRoute: AboutRoute,
-  AskRoute: AskRoute,
-  CheckRoute: CheckRoute,
-  SettingsRoute: SettingsRoute,
-  NotesNoteIdRoute: NotesNoteIdRoute,
-  GuideIndexRoute: GuideIndexRoute,
-  NotesIndexRoute: NotesIndexRoute,
-  GuideCropKeyConditionSlugRoute: GuideCropKeyConditionSlugRoute,
-  GuideCropKeyIndexRoute: GuideCropKeyIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
