@@ -25,6 +25,9 @@ export async function registerCropCareAppShell(): Promise<void> {
     return;
   }
 
-  const { registerSW } = await import("virtual:pwa-register");
-  registerSW({ immediate: true });
+  try {
+    await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+  } catch {
+    // Offline shell is a nice-to-have; the app must keep working without it.
+  }
 }
