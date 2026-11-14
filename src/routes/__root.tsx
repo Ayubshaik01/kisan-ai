@@ -11,7 +11,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
+import { reportRuntimeError } from "../lib/error-reporting";
 import { CropCareProvider } from "@/features/crop-care/context";
 import { AppShell } from "@/features/crop-care/shell";
 
@@ -35,7 +35,7 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    reportRuntimeError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
 
   return (
@@ -76,10 +76,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "theme-color", content: "#0f1a14" },
-      { title: "Fieldnote — Crop care, close at hand" },
-      { name: "description", content: "A private, offline-ready crop care companion." },
-      { property: "og:title", content: "Fieldnote — Crop care, close at hand" },
-      { property: "og:description", content: "Crop notes and practical field guidance, kept on your device." },
+      { title: "KisanAI — Smart On-Device Crop Disease & Health Intelligence" },
+      { name: "description", content: "KisanAI provides instant on-device computer vision diagnosis and agronomic guidance for rice and chilli crops." },
+      { property: "og:title", content: "KisanAI — Smart On-Device Crop Disease & Health Intelligence" },
+      { property: "og:description", content: "Instant on-device crop disease diagnosis powered by MobileNetV3-Small & Meta Llama 3.2 1B Instruct." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -91,6 +91,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" },
+      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },

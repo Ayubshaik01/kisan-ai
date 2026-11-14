@@ -9,8 +9,17 @@ export function Logo({ compact }: { compact?: boolean }) {
   const { t } = useCropCare();
   return (
     <Link to="/" className="flex min-w-0 items-center gap-2.5" aria-label={t("appName")}>
-      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-leaf-deep text-primary-foreground shadow-[0_6px_20px_-8px] shadow-primary"><Leaf className="size-5" strokeWidth={2.2} /></span>
-      {!compact && <span className="truncate text-[15px] font-bold leading-tight tracking-tight">{t("appShort")}<span className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">Offline AI</span></span>}
+      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 text-white shadow-[0_6px_20px_-6px] shadow-emerald-500/40">
+        <Leaf className="size-5" strokeWidth={2.4} />
+      </span>
+      {!compact && (
+        <span className="truncate text-base font-extrabold leading-tight tracking-tight text-foreground">
+          Kisan<span className="text-primary">AI</span>
+          <span className="block text-[9px] font-bold uppercase tracking-[0.18em] text-primary">
+            Offline Vision &amp; LLM
+          </span>
+        </span>
+      )}
     </Link>
   );
 }

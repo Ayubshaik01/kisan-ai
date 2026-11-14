@@ -10,8 +10,8 @@ export const langs: { code: Lang; native: string; english: string; short: string
 ];
 
 const en = {
-  appName: "Offline AI Crop Assistant",
-  appShort: "Crop Assistant",
+  appName: "KisanAI — Offline Crop Disease Assistant",
+  appShort: "KisanAI",
   navHome: "Home", navDiagnose: "Diagnose", navKnowledge: "Knowledge", navHistory: "History", navProfile: "Profile",
   navSaved: "Saved", navAssistant: "Crop Assistant", navNotifications: "Notifications", navHelp: "Help & FAQ", navAbout: "About",
   back: "Back", continue: "Continue", skip: "Skip", cancel: "Cancel", confirm: "Confirm", delete: "Delete", save: "Save", saved: "Saved",
@@ -96,8 +96,8 @@ const en = {
 export type Key = keyof typeof en;
 
 const te: Partial<Record<Key, string>> = {
-  appName: "ఆఫ్‌లైన్ AI పంట సహాయకుడు",
-  appShort: "పంట సహాయకుడు",
+  appName: "కిసాన్ AI — పంటల రక్షణ & విశ్లేషణ",
+  appShort: "కిసాన్ AI",
   navHome: "హోమ్", navDiagnose: "పరీక్ష", navKnowledge: "జ్ఞానం", navHistory: "చరిత్ర", navProfile: "ప్రొఫైల్",
   navSaved: "సేవ్ చేసినవి", navAssistant: "పంట సహాయకుడు", navNotifications: "నోటిఫికేషన్లు", navHelp: "సహాయం", navAbout: "గురించి",
   back: "వెనుకకు", continue: "కొనసాగించు", skip: "దాటవేయి", cancel: "రద్దు", confirm: "నిర్ధారించు", delete: "తొలగించు", save: "సేవ్", saved: "సేవ్ చేయబడింది",
@@ -176,8 +176,8 @@ const te: Partial<Record<Key, string>> = {
 };
 
 const hi: Partial<Record<Key, string>> = {
-  appName: "ऑफलाइन एआई फसल सहायक",
-  appShort: "फसल सहायक",
+  appName: "किसान AI — फसल सुरक्षा व निदान",
+  appShort: "किसान AI",
   navHome: "होम", navDiagnose: "जाँच", navKnowledge: "ज्ञान", navHistory: "इतिहास", navProfile: "प्रोफ़ाइल",
   navSaved: "सहेजे गए", navAssistant: "फसल सहायक", navNotifications: "सूचनाएँ", navHelp: "सहायता", navAbout: "परिचय",
   back: "पीछे", continue: "आगे बढ़ें", skip: "छोड़ें", cancel: "रद्द करें", confirm: "पुष्टि करें", delete: "हटाएँ", save: "सहेजें", saved: "सहेजा गया",
@@ -256,8 +256,8 @@ const hi: Partial<Record<Key, string>> = {
 };
 
 const ta: Partial<Record<Key, string>> = {
-  appName: "ஆஃப்லைன் AI பயிர் உதவியாளர்",
-  appShort: "பயிர் உதவியாளர்",
+  appName: "கிசான் AI — பயிர் பாதுகாப்பு & ஆய்வு",
+  appShort: "கிசான் AI",
   navHome: "முகப்பு", navDiagnose: "பரிசோதனை", navKnowledge: "அறிவு", navHistory: "வரலாறு", navProfile: "சுயவிவரம்",
   navSaved: "சேமிக்கப்பட்டவை", navAssistant: "பயிர் உதவியாளர்", navNotifications: "அறிவிப்புகள்", navHelp: "உதவி", navAbout: "பற்றி",
   back: "பின்னால்", continue: "தொடரவும்", skip: "தவிர்", cancel: "ரத்து", confirm: "உறுதி செய்", delete: "நீக்கு", save: "சேமி", saved: "சேமிக்கப்பட்டது",
@@ -336,8 +336,8 @@ const ta: Partial<Record<Key, string>> = {
 };
 
 const kn: Partial<Record<Key, string>> = {
-  appName: "ಆಫ್‌ಲೈನ್ AI ಬೆಳೆ ಸಹಾಯಕ",
-  appShort: "ಬೆಳೆ ಸಹಾಯಕ",
+  appName: "ಕಿಸಾನ್ AI — ಬೆಳೆ ಸಂರಕ್ಷಣೆ & ವಿಶ್ಲೇಷಣೆ",
+  appShort: "ಕಿಸಾನ್ AI",
   navHome: "ಮುಖಪುಟ", navDiagnose: "ಪರೀಕ್ಷೆ", navKnowledge: "ಜ್ಞಾನ", navHistory: "ಇತಿಹಾಸ", navProfile: "ಪ್ರೊಫೈಲ್",
   navSaved: "ಉಳಿಸಿದವು", navAssistant: "ಬೆಳೆ ಸಹಾಯಕ", navNotifications: "ಸೂಚನೆಗಳು", navHelp: "ಸಹಾಯ", navAbout: "ಕುರಿತು",
   back: "ಹಿಂದಕ್ಕೆ", continue: "ಮುಂದುವರಿಸಿ", skip: "ಬಿಟ್ಟುಬಿಡಿ", cancel: "ರದ್ದುಮಾಡಿ", confirm: "ಖಚಿತಪಡಿಸಿ", delete: "ಅಳಿಸಿ", save: "ಉಳಿಸಿ", saved: "ಉಳಿಸಲಾಗಿದೆ",
@@ -416,8 +416,8 @@ const kn: Partial<Record<Key, string>> = {
 };
 
 const mr: Partial<Record<Key, string>> = {
-  appName: "ऑफलाईन AI पीक सल्लागार",
-  appShort: "पीक सल्लागार",
+  appName: "किसान AI — पीक संरक्षण व सल्ला",
+  appShort: "किसान AI",
   navHome: "मुख्यपृष्ठ", navDiagnose: "तपासणी", navKnowledge: "ज्ञान", navHistory: "इतिहास", navProfile: "प्रोफाइल",
   navSaved: "जतन केलेले", navAssistant: "पीक सहाय्यक", navNotifications: "सूचना", navHelp: "मदत", navAbout: "बद्दल",
   back: "मागे", continue: "पुढे जा", skip: "सोडा", cancel: "रद्द करा", confirm: "नक्की करा", delete: "हटवा", save: "जतन करा", saved: "जतन केले",

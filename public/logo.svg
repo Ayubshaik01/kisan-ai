@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 240" width="100%" height="100%">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="50%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#047857" />
+    </linearGradient>
+    <linearGradient id="leafGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="50%" stop-color="#a7f3d0" />
+      <stop offset="100%" stop-color="#ffffff" />
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#e2e8f0" />
+    </linearGradient>
+  </defs>
+
+  <!-- Emblem Group -->
+  <g transform="translate(40, 20)">
+    <!-- Emblem Box -->
+    <rect width="200" height="200" rx="50" fill="#09140f" stroke="#10b981" stroke-width="3" stroke-opacity="0.3" />
+    
+    <!-- Shield Outline -->
+    <path d="M 100,20 C 145,20 178,36 178,36 C 178,116 148,168 100,190 C 52,168 22,116 22,36 C 22,36 55,20 100,20 Z"
+          fill="url(#shieldGrad)" opacity="0.22" />
+
+    <path d="M 100,26 C 140,26 170,40 170,40 C 170,112 142,160 100,180 C 58,160 30,112 30,40 C 30,40 60,26 100,26 Z"
+          fill="none" stroke="url(#shieldGrad)" stroke-width="4" stroke-linejoin="round" />
+
+    <!-- Sun Sprout -->
+    <circle cx="100" cy="52" r="10" fill="url(#glowGrad)" />
+    <circle cx="100" cy="52" r="6" fill="#fef3c7" />
+
+    <!-- AI Leaf -->
+    <path d="M 100,66 C 65,84 50,128 70,162 C 85,188 100,182 100,182 C 100,182 115,188 130,162 C 150,128 135,84 100,66 Z"
+          fill="url(#shieldGrad)" />
+
+    <!-- Leaf Venation -->
+    <path d="M 100,72 Q 100,130 100,176" stroke="url(#leafGrad)" stroke-width="4" stroke-linecap="round" />
+    <path d="M 100,105 Q 80,98 70,112" stroke="url(#leafGrad)" stroke-width="2.5" stroke-linecap="round" opacity="0.9" />
+    <path d="M 100,122 Q 120,115 130,129" stroke="url(#leafGrad)" stroke-width="2.5" stroke-linecap="round" opacity="0.9" />
+    <path d="M 100,140 Q 82,135 76,149" stroke="url(#leafGrad)" stroke-width="2.5" stroke-linecap="round" opacity="0.9" />
+
+    <!-- AI Neural Nodes -->
+    <circle cx="70" cy="112" r="3.5" fill="#6ee7b7" />
+    <circle cx="130" cy="129" r="3.5" fill="#6ee7b7" />
+    <circle cx="76" cy="149" r="3.5" fill="#6ee7b7" />
+
+    <!-- Vision Brackets -->
+    <path d="M 50,38 L 38,38 L 38,50" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" />
+    <path d="M 150,38 L 162,38 L 162,50" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" />
+    <path d="M 38,155 L 38,167 L 50,167" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" />
+    <path d="M 162,155 L 162,167 L 150,167" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" />
+  </g>
+
+  <!-- Typography Group -->
+  <g transform="translate(270, 70)">
+    <!-- Brand Title -->
+    <text x="0" y="60" font-family="'Manrope', 'Segoe UI', sans-serif" font-weight="800" font-size="72" fill="url(#textGrad)" letter-spacing="-1.5">
+      Kisan<tspan fill="#10b981">AI</tspan>
+    </text>
+
+    <!-- Badge -->
+    <rect x="290" y="15" width="130" height="34" rx="10" fill="#10b981" fill-opacity="0.15" stroke="#10b981" stroke-width="1.5" stroke-opacity="0.4" />
+    <text x="355" y="38" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-weight="700" font-size="14" fill="#34d399" letter-spacing="1">
+      OFFLINE
+    </text>
+
+    <!-- Subtitle / Tagline -->
+    <text x="2" y="102" font-family="'Manrope', 'Segoe UI', sans-serif" font-weight="600" font-size="20" fill="#94a3b8" letter-spacing="0.5">
+      SMART CROP DISEASE &amp; AGRONOMIC INTELLIGENCE
+    </text>
+    <text x="2" y="128" font-family="'IBM Plex Mono', monospace" font-weight="500" font-size="14" fill="#10b981">
+      MobileNetV3-Small · Meta Llama 3.2 1B · AES-256 Encrypted
+    </text>
+  </g>
+</svg>
