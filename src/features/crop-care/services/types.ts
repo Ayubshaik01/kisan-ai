@@ -56,4 +56,18 @@ export type LocalEvent = { id: string; kind: "scan-saved" | "advisory-saved" | "
 export type ChatMessage = { id: string; role: "farmer" | "assistant"; text: string; refs?: { crop: CropKey; slug: string }[]; safety?: boolean };
 
 export type ModelState = "installed" | "unavailable" | "error";
-export type ModelStatusItem = { id: "vision-rice" | "vision-chilli" | "llm" | "database" | "runtime"; label: string; detail: string; state: ModelState; version?: string; sizeMb?: number };
+export type ModelStatusItem = {
+  id:
+    | "vision-rice"
+    | "vision-chilli"
+    | "vision-pest-specialist"
+    | "opencv-severity"
+    | "llm"
+    | "database"
+    | "runtime";
+  label: string;
+  detail: string;
+  state: ModelState;
+  version?: string;
+  sizeMb?: number;
+};

@@ -24,7 +24,7 @@ export const defaultSettings: Settings = {
   onboarded: false,
   name: "",
   lang: "en",
-  theme: "dark",
+  theme: "light",
   state: "Andhra Pradesh",
   district: "Guntur",
   season: "kharif",
@@ -63,8 +63,21 @@ export const savedService = {
 };
 
 export const settingsService = {
-  load: (): Settings => ({ ...defaultSettings, ...read<Partial<Settings>>("settings", {}) }),
-  save: (settings: Settings) => write("settings", settings),
+  load: (): Settings => {
+    const isCompleted = typeof window !== "undefined" && window.localStorage.getItem("kisanai_welcome_completed") === "true";
+    const stored = read<Partial<Settings>>("settings", {});
+    return {
+      ...defaultSettings,
+      ...stored,
+      onboarded: isCompleted || Boolean(stored.onboarded),
+    };
+  },
+  save: (settings: Settings) => {
+    if (settings.onboarded && typeof window !== "undefined") {
+      window.localStorage.setItem("kisanai_welcome_completed", "true");
+    }
+    return write("settings", settings);
+  },
 };
 
 export const reminderService = {

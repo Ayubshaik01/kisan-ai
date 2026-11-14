@@ -11,11 +11,15 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AssistantRouteImport } from './routes/assistant'
+import { Route as CalculatorRouteImport } from './routes/calculator'
 import { Route as HelpRouteImport } from './routes/help'
 import { Route as HistoryRouteImport } from './routes/history'
+import { Route as MarketRouteImport } from './routes/market'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as SavedRouteImport } from './routes/saved'
+import { Route as WeatherRouteImport } from './routes/weather'
 import { Route as WelcomeRouteImport } from './routes/welcome'
+import { Route as YieldEstimatorRouteImport } from './routes/yield-estimator'
 import { Route as DiagnoseIndexRouteImport } from './routes/diagnose.index'
 import { Route as LibraryIndexRouteImport } from './routes/library.index'
 import { Route as ProfileIndexRouteImport } from './routes/profile.index'
@@ -33,6 +37,11 @@ const AssistantRoute = AssistantRouteImport.update({
   path: '/assistant',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CalculatorRoute = CalculatorRouteImport.update({
+  id: '/calculator',
+  path: '/calculator',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HelpRoute = HelpRouteImport.update({
   id: '/help',
   path: '/help',
@@ -41,6 +50,11 @@ const HelpRoute = HelpRouteImport.update({
 const HistoryRoute = HistoryRouteImport.update({
   id: '/history',
   path: '/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketRoute = MarketRouteImport.update({
+  id: '/market',
+  path: '/market',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotificationsRoute = NotificationsRouteImport.update({
@@ -53,9 +67,19 @@ const SavedRoute = SavedRouteImport.update({
   path: '/saved',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WeatherRoute = WeatherRouteImport.update({
+  id: '/weather',
+  path: '/weather',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
   path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const YieldEstimatorRoute = YieldEstimatorRouteImport.update({
+  id: '/yield-estimator',
+  path: '/yield-estimator',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DiagnoseIndexRoute = DiagnoseIndexRouteImport.update({
@@ -92,11 +116,15 @@ const LibraryCropSlugRoute = LibraryCropSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/assistant': typeof AssistantRoute
+  '/calculator': typeof CalculatorRoute
   '/help': typeof HelpRoute
   '/history': typeof HistoryRoute
+  '/market': typeof MarketRoute
   '/notifications': typeof NotificationsRoute
   '/saved': typeof SavedRoute
+  '/weather': typeof WeatherRoute
   '/welcome': typeof WelcomeRoute
+  '/yield-estimator': typeof YieldEstimatorRoute
   '/profile/offline': typeof ProfileOfflineRoute
   '/scans/$scanId': typeof ScansScanIdRoute
   '/diagnose/': typeof DiagnoseIndexRoute
@@ -107,11 +135,15 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/assistant': typeof AssistantRoute
+  '/calculator': typeof CalculatorRoute
   '/help': typeof HelpRoute
   '/history': typeof HistoryRoute
+  '/market': typeof MarketRoute
   '/notifications': typeof NotificationsRoute
   '/saved': typeof SavedRoute
+  '/weather': typeof WeatherRoute
   '/welcome': typeof WelcomeRoute
+  '/yield-estimator': typeof YieldEstimatorRoute
   '/profile/offline': typeof ProfileOfflineRoute
   '/scans/$scanId': typeof ScansScanIdRoute
   '/diagnose': typeof DiagnoseIndexRoute
@@ -123,11 +155,15 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/assistant': typeof AssistantRoute
+  '/calculator': typeof CalculatorRoute
   '/help': typeof HelpRoute
   '/history': typeof HistoryRoute
+  '/market': typeof MarketRoute
   '/notifications': typeof NotificationsRoute
   '/saved': typeof SavedRoute
+  '/weather': typeof WeatherRoute
   '/welcome': typeof WelcomeRoute
+  '/yield-estimator': typeof YieldEstimatorRoute
   '/profile/offline': typeof ProfileOfflineRoute
   '/scans/$scanId': typeof ScansScanIdRoute
   '/diagnose/': typeof DiagnoseIndexRoute
@@ -140,11 +176,15 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/assistant'
+    | '/calculator'
     | '/help'
     | '/history'
+    | '/market'
     | '/notifications'
     | '/saved'
+    | '/weather'
     | '/welcome'
+    | '/yield-estimator'
     | '/profile/offline'
     | '/scans/$scanId'
     | '/diagnose/'
@@ -155,11 +195,15 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/assistant'
+    | '/calculator'
     | '/help'
     | '/history'
+    | '/market'
     | '/notifications'
     | '/saved'
+    | '/weather'
     | '/welcome'
+    | '/yield-estimator'
     | '/profile/offline'
     | '/scans/$scanId'
     | '/diagnose'
@@ -170,11 +214,15 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/assistant'
+    | '/calculator'
     | '/help'
     | '/history'
+    | '/market'
     | '/notifications'
     | '/saved'
+    | '/weather'
     | '/welcome'
+    | '/yield-estimator'
     | '/profile/offline'
     | '/scans/$scanId'
     | '/diagnose/'
@@ -186,11 +234,15 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AssistantRoute: typeof AssistantRoute
+  CalculatorRoute: typeof CalculatorRoute
   HelpRoute: typeof HelpRoute
   HistoryRoute: typeof HistoryRoute
+  MarketRoute: typeof MarketRoute
   NotificationsRoute: typeof NotificationsRoute
   SavedRoute: typeof SavedRoute
+  WeatherRoute: typeof WeatherRoute
   WelcomeRoute: typeof WelcomeRoute
+  YieldEstimatorRoute: typeof YieldEstimatorRoute
   ProfileOfflineRoute: typeof ProfileOfflineRoute
   ScansScanIdRoute: typeof ScansScanIdRoute
   DiagnoseIndexRoute: typeof DiagnoseIndexRoute
@@ -215,6 +267,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AssistantRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/calculator': {
+      id: '/calculator'
+      path: '/calculator'
+      fullPath: '/calculator'
+      preLoaderRoute: typeof CalculatorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/help': {
       id: '/help'
       path: '/help'
@@ -227,6 +286,13 @@ declare module '@tanstack/react-router' {
       path: '/history'
       fullPath: '/history'
       preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/market': {
+      id: '/market'
+      path: '/market'
+      fullPath: '/market'
+      preLoaderRoute: typeof MarketRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notifications': {
@@ -243,11 +309,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SavedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/weather': {
+      id: '/weather'
+      path: '/weather'
+      fullPath: '/weather'
+      preLoaderRoute: typeof WeatherRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/welcome': {
       id: '/welcome'
       path: '/welcome'
       fullPath: '/welcome'
       preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/yield-estimator': {
+      id: '/yield-estimator'
+      path: '/yield-estimator'
+      fullPath: '/yield-estimator'
+      preLoaderRoute: typeof YieldEstimatorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/diagnose/': {
@@ -298,11 +378,15 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AssistantRoute: AssistantRoute,
+  CalculatorRoute: CalculatorRoute,
   HelpRoute: HelpRoute,
   HistoryRoute: HistoryRoute,
+  MarketRoute: MarketRoute,
   NotificationsRoute: NotificationsRoute,
   SavedRoute: SavedRoute,
+  WeatherRoute: WeatherRoute,
   WelcomeRoute: WelcomeRoute,
+  YieldEstimatorRoute: YieldEstimatorRoute,
   ProfileOfflineRoute: ProfileOfflineRoute,
   ScansScanIdRoute: ScansScanIdRoute,
   DiagnoseIndexRoute: DiagnoseIndexRoute,

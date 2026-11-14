@@ -1,6 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Check, CloudRain, Database, History, Snowflake, Sparkles, WifiOff, Cpu } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import hero from "@/assets/welcome-hero.jpg";
 import { cn } from "@/lib/utils";
 import { useCropCare } from "../context";
@@ -14,11 +14,25 @@ import { btnGhost, btnPrimary, enter, Notice } from "../ui";
 const STEPS = 7;
 
 export function OnboardingPage() {
-  const { t, settings, updateSettings, lang } = useCropCare();
+  const { t, settings, updateSettings, lang, ready } = useCropCare();
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
+
+  // If already onboarded, immediately redirect to home and never show again
+  useEffect(() => {
+    if (ready && settings.onboarded) {
+      void navigate({ to: "/" });
+    }
+  }, [ready, settings.onboarded, navigate]);
+
   const next = () => setStep((s) => Math.min(STEPS - 1, s + 1));
-  const finish = () => { updateSettings({ onboarded: true }); void navigate({ to: "/" }); };
+  const finish = () => {
+    updateSettings({ onboarded: true });
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("kisanai_welcome_completed", "true");
+    }
+    void navigate({ to: "/" });
+  };
   const region = regions.find((r) => r.state === settings.state) ?? regions[0]!;
 
   if (step === 0) {
@@ -32,7 +46,10 @@ export function OnboardingPage() {
           <span className="on-image inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/15 px-3 py-1 text-xs font-semibold backdrop-blur"><WifiOff className="size-3.5" /> Works without internet</span>
           <h1 className="on-image mt-4 text-4xl font-bold leading-[1.08] tracking-tight text-balance sm:text-5xl">{t("obWelcomeTitle")}</h1>
           <p className="on-image-muted mt-4 text-[17px] leading-relaxed">{t("obWelcomeSub")}</p>
-          <button onClick={next} className={cn(btnPrimary, "mt-8 w-full sm:w-auto")}>{t("getStarted")} <ArrowRight className="size-5" /></button>
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <button onClick={next} className={cn(btnPrimary, "w-full sm:w-auto")}>{t("getStarted")} <ArrowRight className="size-5" /></button>
+            <button onClick={finish} className="inline-flex h-12 items-center justify-center rounded-2xl border border-white/20 bg-black/40 px-6 text-sm font-semibold text-white backdrop-blur hover:bg-black/60 transition-colors">Skip to Home</button>
+          </div>
         </div>
       </div>
     );

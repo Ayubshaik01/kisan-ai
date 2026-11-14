@@ -18,6 +18,10 @@ import {
   ScanLine,
   Sparkles,
   WifiOff,
+  CloudSun,
+  Calculator,
+  TrendingUp,
+  Store,
 } from "lucide-react";
 import { useCropCare } from "../context";
 import { crops, getTopic, l, type CropKey } from "../knowledge";
@@ -199,6 +203,91 @@ export function HomePage() {
               </span>
               <span className="mt-0.5 block text-xs text-muted-foreground">
                 Offline AI questions
+              </span>
+            </div>
+          </Link>
+        </div>
+      </Section>
+
+      {/* Advanced Agricultural Tools */}
+      <Section title="Agronomic Intelligence & Field Tools">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Link
+            to="/weather"
+            className={cn(
+              card,
+              "group flex flex-col justify-between p-4 transition-all hover:border-sky-500/50 hover:bg-sky-50/20 active:scale-[0.98] dark:hover:bg-sky-950/20",
+            )}
+          >
+            <span className="grid size-11 place-items-center rounded-xl bg-sky-500/15 text-sky-600 dark:text-sky-400">
+              <CloudSun className="size-5" />
+            </span>
+            <div className="mt-4">
+              <span className="block text-sm font-bold text-foreground">
+                Weather & Spray
+              </span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                Safe foliar spray windows
+              </span>
+            </div>
+          </Link>
+
+          <Link
+            to="/calculator"
+            className={cn(
+              card,
+              "group flex flex-col justify-between p-4 transition-all hover:border-emerald-500/50 hover:bg-emerald-50/20 active:scale-[0.98] dark:hover:bg-emerald-950/20",
+            )}
+          >
+            <span className="grid size-11 place-items-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+              <Calculator className="size-5" />
+            </span>
+            <div className="mt-4">
+              <span className="block text-sm font-bold text-foreground">
+                Dosage Calculator
+              </span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                NPK & micro-nutrient plans
+              </span>
+            </div>
+          </Link>
+
+          <Link
+            to="/yield-estimator"
+            className={cn(
+              card,
+              "group flex flex-col justify-between p-4 transition-all hover:border-amber-500/50 hover:bg-amber-50/20 active:scale-[0.98] dark:hover:bg-amber-950/20",
+            )}
+          >
+            <span className="grid size-11 place-items-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
+              <TrendingUp className="size-5" />
+            </span>
+            <div className="mt-4">
+              <span className="block text-sm font-bold text-foreground">
+                Yield Estimator
+              </span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                Disease loss & revenue risk
+              </span>
+            </div>
+          </Link>
+
+          <Link
+            to="/market"
+            className={cn(
+              card,
+              "group flex flex-col justify-between p-4 transition-all hover:border-purple-500/50 hover:bg-purple-50/20 active:scale-[0.98] dark:hover:bg-purple-950/20",
+            )}
+          >
+            <span className="grid size-11 place-items-center rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400">
+              <Store className="size-5" />
+            </span>
+            <div className="mt-4">
+              <span className="block text-sm font-bold text-foreground">
+                Mandi Rates
+              </span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                AP & TG wholesale prices
               </span>
             </div>
           </Link>

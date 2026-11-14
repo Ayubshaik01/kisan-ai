@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { Bell, BookOpen, Bookmark, CircleHelp, History, Home, Leaf, MessageCircle, ScanLine, ShieldCheck, UserRound, WifiOff } from "lucide-react";
+import { Bell, BookOpen, Bookmark, CircleHelp, CloudSun, History, Home, Leaf, MessageCircle, Moon, ScanLine, ShieldCheck, Sun, UserRound, WifiOff, Calculator, TrendingUp, DollarSign } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { useCropCare } from "./context";
@@ -27,12 +27,31 @@ export function Logo({ compact }: { compact?: boolean }) {
 export function LangSwitch() {
   const { settings, updateSettings } = useCropCare();
   return (
-    <label className="relative flex h-10 items-center rounded-xl border border-line bg-card px-3 text-sm font-semibold">
+    <label className="relative flex h-10 items-center rounded-xl border border-line bg-card px-3 text-sm font-semibold cursor-pointer">
       {langs.find((x) => x.code === settings.lang)?.short}
       <select value={settings.lang} onChange={(e) => updateSettings({ lang: e.target.value as Lang })} aria-label="Language" className="absolute inset-0 cursor-pointer opacity-0">
         {langs.map((x) => <option key={x.code} value={x.code}>{x.native}</option>)}
       </select>
     </label>
+  );
+}
+
+export function ThemeToggle() {
+  const { settings, updateSettings } = useCropCare();
+  const isDark = settings.theme === "dark";
+  const toggle = () => {
+    updateSettings({ theme: isDark ? "light" : "dark" });
+  };
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label="Toggle theme"
+      title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+      className="relative grid size-10 place-items-center rounded-xl border border-line bg-card text-muted-foreground hover:text-foreground transition-all active:scale-95"
+    >
+      {isDark ? <Sun className="size-[18px] text-amber" /> : <Moon className="size-[18px] text-primary" />}
+    </button>
   );
 }
 
@@ -54,6 +73,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/profile", label: t("navProfile"), icon: UserRound, exact: false },
   ] as const;
   const more = [
+    { to: "/weather", label: "Weather & Spray", icon: CloudSun },
+    { to: "/calculator", label: "Fertilizer Dosage", icon: Calculator },
+    { to: "/yield-estimator", label: "Yield Estimator", icon: TrendingUp },
+    { to: "/market", label: "Mandi Prices", icon: DollarSign },
     { to: "/assistant", label: t("navAssistant"), icon: MessageCircle },
     { to: "/saved", label: t("navSaved"), icon: Bookmark },
     { to: "/notifications", label: t("navNotifications"), icon: Bell },
@@ -77,6 +100,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               {online ? t("offlineReady") : t("offlineNow").split(".")[0]}
             </Link>
             <LangSwitch />
+            <ThemeToggle />
             <Link to="/notifications" aria-label={t("navNotifications")} className="relative grid size-10 place-items-center rounded-xl border border-line bg-card text-muted-foreground hover:text-foreground">
               <Bell className="size-[18px]" />
               {due > 0 && <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">{due}</span>}
