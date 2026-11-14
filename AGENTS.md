@@ -32,3 +32,5 @@ use the editor.
 ## Project architecture
 
 - Keep crop-care screens and device-local behavior under `src/features/crop-care`, leaving route files as entry points so offline-first product flows stay cohesive.
+- Each app section is its own route; shared device state (notes, preferences, chat) lives in one provider mounted in `__root.tsx` around the app shell, so pages stay linked without losing state on navigation.
+- Style pages with mobile-first Tailwind utilities on semantic tokens; `styles.css` holds tokens and a few helpers only, so phone layouts stay the default.
