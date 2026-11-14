@@ -1,0 +1,17 @@
+{
+  "name": "Fieldnote — Crop care, close at hand",
+  "short_name": "Fieldnote",
+  "description": "A private, offline-ready crop care companion.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f1a12",
+  "theme_color": "#0f1a12",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}
