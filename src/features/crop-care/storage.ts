@@ -74,3 +74,8 @@ export function compressPhoto(file: File): Promise<string> {
     reader.readAsDataURL(file);
   });
 }
+export function deleteScan(id: string): LocalScan[] {
+  const scans = readScans().filter((scan) => scan.id !== id);
+  window.localStorage.setItem(SCANS_KEY, JSON.stringify(scans));
+  return scans;
+}
