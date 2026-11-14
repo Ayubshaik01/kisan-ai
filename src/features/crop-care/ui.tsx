@@ -229,7 +229,7 @@ export function ListCard({ items, ordered }: { items: string[]; ordered?: boolea
   );
 }
 
-export function NavRow({ to, icon: Icon, label, detail }: { to: LinkProps["to"]; icon: LucideIcon; label: string; detail?: string }) {
+export function NavRow({ to, icon: Icon, label, detail }: { to: NonNullable<LinkProps["to"]>; icon: LucideIcon; label: string; detail?: string }) {
   return (
     <Link to={to} className="flex min-h-14 items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/50">
       <span className="grid size-9 place-items-center rounded-lg bg-surface text-primary"><Icon className="size-[18px]" /></span>

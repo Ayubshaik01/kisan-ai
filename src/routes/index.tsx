@@ -1,16 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { HomePage } from "@/features/crop-care/pages/HomePage";
+import { pageMeta } from "@/features/crop-care/meta";
+import { PlaceholderPage } from "@/features/crop-care/pages/Placeholder";
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "Fieldnote — Crop care, close at hand" },
-      { name: "description", content: "A private, offline-ready crop care companion with photo notes, chilli and rice guides, and careful next steps." },
-      { property: "og:title", content: "Fieldnote — Crop care, close at hand" },
-      { property: "og:description", content: "Crop notes and practical field guidance, kept on your device." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-    ],
-  }),
-  component: HomePage,
+  head: () => ({ meta: pageMeta("Home", "Home in the offline crop assistant.") }),
+  component: () => <PlaceholderPage title="Home" />,
 });

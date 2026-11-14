@@ -10,33 +10,193 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AssistantRouteImport } from './routes/assistant'
+import { Route as HelpRouteImport } from './routes/help'
+import { Route as HistoryRouteImport } from './routes/history'
+import { Route as NotificationsRouteImport } from './routes/notifications'
+import { Route as SavedRouteImport } from './routes/saved'
+import { Route as WelcomeRouteImport } from './routes/welcome'
+import { Route as DiagnoseIndexRouteImport } from './routes/diagnose.index'
+import { Route as LibraryIndexRouteImport } from './routes/library.index'
+import { Route as ProfileIndexRouteImport } from './routes/profile.index'
+import { Route as ProfileOfflineRouteImport } from './routes/profile.offline'
+import { Route as ScansScanIdRouteImport } from './routes/scans.$scanId'
+import { Route as LibraryCropSlugRouteImport } from './routes/library.$crop.$slug'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AssistantRoute = AssistantRouteImport.update({
+  id: '/assistant',
+  path: '/assistant',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HelpRoute = HelpRouteImport.update({
+  id: '/help',
+  path: '/help',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SavedRoute = SavedRouteImport.update({
+  id: '/saved',
+  path: '/saved',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WelcomeRoute = WelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DiagnoseIndexRoute = DiagnoseIndexRouteImport.update({
+  id: '/diagnose/',
+  path: '/diagnose/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LibraryIndexRoute = LibraryIndexRouteImport.update({
+  id: '/library/',
+  path: '/library/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileIndexRoute = ProfileIndexRouteImport.update({
+  id: '/profile/',
+  path: '/profile/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileOfflineRoute = ProfileOfflineRouteImport.update({
+  id: '/profile/offline',
+  path: '/profile/offline',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScansScanIdRoute = ScansScanIdRouteImport.update({
+  id: '/scans/$scanId',
+  path: '/scans/$scanId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LibraryCropSlugRoute = LibraryCropSlugRouteImport.update({
+  id: '/library/$crop/$slug',
+  path: '/library/$crop/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/assistant': typeof AssistantRoute
+  '/help': typeof HelpRoute
+  '/history': typeof HistoryRoute
+  '/notifications': typeof NotificationsRoute
+  '/saved': typeof SavedRoute
+  '/welcome': typeof WelcomeRoute
+  '/profile/offline': typeof ProfileOfflineRoute
+  '/scans/$scanId': typeof ScansScanIdRoute
+  '/diagnose/': typeof DiagnoseIndexRoute
+  '/library/': typeof LibraryIndexRoute
+  '/profile/': typeof ProfileIndexRoute
+  '/library/$crop/$slug': typeof LibraryCropSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/assistant': typeof AssistantRoute
+  '/help': typeof HelpRoute
+  '/history': typeof HistoryRoute
+  '/notifications': typeof NotificationsRoute
+  '/saved': typeof SavedRoute
+  '/welcome': typeof WelcomeRoute
+  '/profile/offline': typeof ProfileOfflineRoute
+  '/scans/$scanId': typeof ScansScanIdRoute
+  '/diagnose': typeof DiagnoseIndexRoute
+  '/library': typeof LibraryIndexRoute
+  '/profile': typeof ProfileIndexRoute
+  '/library/$crop/$slug': typeof LibraryCropSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/assistant': typeof AssistantRoute
+  '/help': typeof HelpRoute
+  '/history': typeof HistoryRoute
+  '/notifications': typeof NotificationsRoute
+  '/saved': typeof SavedRoute
+  '/welcome': typeof WelcomeRoute
+  '/profile/offline': typeof ProfileOfflineRoute
+  '/scans/$scanId': typeof ScansScanIdRoute
+  '/diagnose/': typeof DiagnoseIndexRoute
+  '/library/': typeof LibraryIndexRoute
+  '/profile/': typeof ProfileIndexRoute
+  '/library/$crop/$slug': typeof LibraryCropSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/assistant'
+    | '/help'
+    | '/history'
+    | '/notifications'
+    | '/saved'
+    | '/welcome'
+    | '/profile/offline'
+    | '/scans/$scanId'
+    | '/diagnose/'
+    | '/library/'
+    | '/profile/'
+    | '/library/$crop/$slug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/assistant'
+    | '/help'
+    | '/history'
+    | '/notifications'
+    | '/saved'
+    | '/welcome'
+    | '/profile/offline'
+    | '/scans/$scanId'
+    | '/diagnose'
+    | '/library'
+    | '/profile'
+    | '/library/$crop/$slug'
+  id:
+    | '__root__'
+    | '/'
+    | '/assistant'
+    | '/help'
+    | '/history'
+    | '/notifications'
+    | '/saved'
+    | '/welcome'
+    | '/profile/offline'
+    | '/scans/$scanId'
+    | '/diagnose/'
+    | '/library/'
+    | '/profile/'
+    | '/library/$crop/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AssistantRoute: typeof AssistantRoute
+  HelpRoute: typeof HelpRoute
+  HistoryRoute: typeof HistoryRoute
+  NotificationsRoute: typeof NotificationsRoute
+  SavedRoute: typeof SavedRoute
+  WelcomeRoute: typeof WelcomeRoute
+  ProfileOfflineRoute: typeof ProfileOfflineRoute
+  ScansScanIdRoute: typeof ScansScanIdRoute
+  DiagnoseIndexRoute: typeof DiagnoseIndexRoute
+  LibraryIndexRoute: typeof LibraryIndexRoute
+  ProfileIndexRoute: typeof ProfileIndexRoute
+  LibraryCropSlugRoute: typeof LibraryCropSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +208,107 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/assistant': {
+      id: '/assistant'
+      path: '/assistant'
+      fullPath: '/assistant'
+      preLoaderRoute: typeof AssistantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help': {
+      id: '/help'
+      path: '/help'
+      fullPath: '/help'
+      preLoaderRoute: typeof HelpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/saved': {
+      id: '/saved'
+      path: '/saved'
+      fullPath: '/saved'
+      preLoaderRoute: typeof SavedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/welcome': {
+      id: '/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/diagnose/': {
+      id: '/diagnose/'
+      path: '/diagnose'
+      fullPath: '/diagnose/'
+      preLoaderRoute: typeof DiagnoseIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/library/': {
+      id: '/library/'
+      path: '/library'
+      fullPath: '/library/'
+      preLoaderRoute: typeof LibraryIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile/': {
+      id: '/profile/'
+      path: '/profile'
+      fullPath: '/profile/'
+      preLoaderRoute: typeof ProfileIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile/offline': {
+      id: '/profile/offline'
+      path: '/profile/offline'
+      fullPath: '/profile/offline'
+      preLoaderRoute: typeof ProfileOfflineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scans/$scanId': {
+      id: '/scans/$scanId'
+      path: '/scans/$scanId'
+      fullPath: '/scans/$scanId'
+      preLoaderRoute: typeof ScansScanIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/library/$crop/$slug': {
+      id: '/library/$crop/$slug'
+      path: '/library/$crop/$slug'
+      fullPath: '/library/$crop/$slug'
+      preLoaderRoute: typeof LibraryCropSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AssistantRoute: AssistantRoute,
+  HelpRoute: HelpRoute,
+  HistoryRoute: HistoryRoute,
+  NotificationsRoute: NotificationsRoute,
+  SavedRoute: SavedRoute,
+  WelcomeRoute: WelcomeRoute,
+  ProfileOfflineRoute: ProfileOfflineRoute,
+  ScansScanIdRoute: ScansScanIdRoute,
+  DiagnoseIndexRoute: DiagnoseIndexRoute,
+  LibraryIndexRoute: LibraryIndexRoute,
+  ProfileIndexRoute: ProfileIndexRoute,
+  LibraryCropSlugRoute: LibraryCropSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

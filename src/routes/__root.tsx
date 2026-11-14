@@ -24,7 +24,7 @@ function NotFoundComponent() {
         <p className="mt-3 text-[15px] text-muted-foreground">This page isn’t in the field guide. It may have moved or never existed.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <Link to="/" className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90">Go home</Link>
-          <Link to="/guide" className="inline-flex h-11 items-center justify-center rounded-xl border border-input px-5 text-sm font-medium text-foreground transition-colors hover:bg-accent">Open crop guide</Link>
+          <Link to="/library" className="inline-flex h-11 items-center justify-center rounded-xl border border-input px-5 text-sm font-medium text-foreground transition-colors hover:bg-accent">Open crop knowledge</Link>
         </div>
       </div>
     </div>
