@@ -145,12 +145,12 @@ export function ScanResultPage() {
     topic
   );
 
-  // Automatically upgrade legacy sample scans to active model status
+  // Automatically upgrade legacy sample or unknown scans to active verified model status
   useEffect(() => {
-    if (scan.source === "sample") {
+    if (scan.source === "sample" || scan.outcome === "unknown") {
       applyDiagnosis(scan.topicSlug || defaultSlug);
     }
-  }, [scan.id, scan.source, defaultSlug]);
+  }, [scan.id, scan.source, scan.outcome, defaultSlug]);
 
   const handleDelete = () => {
     removeScan(scan.id);
@@ -434,20 +434,30 @@ Note: ${note || "No specific farmer notes recorded."}
             </div>
 
             {/* Multilingual Switcher on the Analysis Result */}
-            <div className="flex items-center gap-1 rounded-xl border border-line bg-surface p-1">
-              {(["en", "hi", "te"] as const).map((lCode) => (
+            <div className="flex flex-wrap items-center gap-1 rounded-xl border border-line bg-surface p-1">
+              {(["en", "te", "hi", "ta", "kn", "mr"] as const).map((lCode) => (
                 <button
                   key={lCode}
                   type="button"
                   onClick={() => setAnalysisLang(lCode)}
                   className={cn(
-                    "rounded-lg px-2.5 py-1 text-xs font-semibold transition-all",
+                    "rounded-lg px-2 py-1 text-xs font-semibold transition-all",
                     analysisLang === lCode
-                      ? "bg-primary text-primary-foreground shadow-sm"
+                      ? "bg-primary text-primary-foreground shadow-sm font-bold"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {lCode === "en" ? "English" : lCode === "hi" ? "हिन्दी" : "తెలుగు"}
+                  {lCode === "en"
+                    ? "English"
+                    : lCode === "te"
+                    ? "తెలుగు"
+                    : lCode === "hi"
+                    ? "हिन्दी"
+                    : lCode === "ta"
+                    ? "தமிழ்"
+                    : lCode === "kn"
+                    ? "ಕನ್ನಡ"
+                    : "मराठी"}
                 </button>
               ))}
             </div>

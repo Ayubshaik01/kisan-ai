@@ -52,6 +52,24 @@ const samplePromptsByLang: Record<Lang, string[]> = {
     "వరిలో గోధుమ మచ్చ మరియు అగ్గి తెగులు తేడా ఏమిటి?",
     "వరి కాండం తొలిచే పురుగు నివారణ చర్యలు ఏమిటి?",
   ],
+  ta: [
+    "நெல் குலை நோயின் ஆரம்ப அறிகுறிகள் என்ன?",
+    "மிளகாய் இலை சுருட்டை வைரஸ் எவ்வாறு பரவுகிறது?",
+    "நெல் தண்டு துளைப்பான் பூச்சியை எவ்வாறு கட்டுப்படுத்துவது?",
+    "பழுப்பு புள்ளி நோய்க்கான மேலாண்மை முறைகள் யாவை?",
+  ],
+  kn: [
+    "ಭತ್ತದ ಬೆಂಕಿ ರೋಗದ ಪ್ರಾಥಮಿಕ ಲಕ್ಷಣಗಳು ಯಾವುವು?",
+    "ಮೆಣಸಿನಕಾಯಿ ಎಲೆ ಮುದುರುವ ರೋಗ ಹೇಗೆ ಹರಡುತ್ತದೆ?",
+    "ಭತ್ತದ ಕಾಂಡ ಕೊರೆಯುವ ಕೀಟವನ್ನು ನಿಯಂತ್ರಿಸುವುದು ಹೇಗೆ?",
+    "ಕಂದು ಮಚ್ಚೆ ರೋಗದ ಲಕ್ಷಣಗಳು ಯಾವುವು?",
+  ],
+  mr: [
+    "भातावरील करपा रोगाची सुरुवातीची लक्षणे काय आहेत?",
+    "मिरचीवरील चुरडा-मुरडा (बोकड्या) रोग कसा पसरतो?",
+    "भातावरील खोडकीड कशी ओळखावी?",
+    "तपकिरी ठिपके रोगाची लक्षणे कोणती?",
+  ],
 };
 
 export function AssistantPage() {
@@ -114,20 +132,20 @@ export function AssistantPage() {
 
         <div className="flex items-center gap-2">
           {/* Multilingual Switcher */}
-          <div className="flex items-center gap-0.5 rounded-xl border border-line bg-surface p-1">
-            {(["en", "hi", "te"] as const).map((lCode) => (
+          <div className="flex flex-wrap items-center gap-0.5 rounded-xl border border-line bg-surface p-1">
+            {(["en", "te", "hi", "ta", "kn", "mr"] as const).map((lCode) => (
               <button
                 key={lCode}
                 type="button"
                 onClick={() => updateSettings({ lang: lCode })}
                 className={cn(
-                  "rounded-lg px-2.5 py-1 text-xs font-semibold transition-all",
+                  "rounded-lg px-2 py-1 text-xs font-semibold transition-all",
                   lang === lCode
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                {lCode === "en" ? "EN" : lCode === "hi" ? "हिन्दी" : "తెలుగు"}
+                {lCode === "en" ? "EN" : lCode === "te" ? "తె" : lCode === "hi" ? "हि" : lCode === "ta" ? "த" : lCode === "kn" ? "ಕ" : "म"}
               </button>
             ))}
           </div>

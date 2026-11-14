@@ -7,9 +7,13 @@ import {
   CloudRain,
   Cpu,
   Database,
+  Download,
+  FileCheck2,
   Globe,
   HardDrive,
+  Key,
   Leaf,
+  Lock,
   MapPin,
   Moon,
   Palette,
@@ -17,17 +21,24 @@ import {
   Smartphone,
   Snowflake,
   Sun,
+  Sunrise,
   Trash2,
+  Upload,
   User,
+  Wind,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useCropCare } from "../context";
 import { langs, type Lang } from "../i18n";
 import { crops, l, type CropKey } from "../knowledge";
 import { regions } from "../regions";
-import { storageUsage } from "../services/store";
+import {
+  exportEncryptedBackupFile,
+  importEncryptedBackupFile,
+  storageUsage,
+} from "../services/store";
 import type { Season, ThemePref } from "../services/types";
 import {
   btn,
@@ -44,10 +55,15 @@ export function ProfilePage() {
   const { t, lang, settings, updateSettings, clearData } = useCropCare();
 
   const [name, setName] = useState(settings.name || "");
+  const [customPassphrase, setCustomPassphrase] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const region = regions.find((r) => r.state === settings.state) ?? regions[0]!;
   const sizes = storageUsage();
   const totalStorageKb = Math.round(
-    Object.values(sizes).reduce((a, b) => a + b, 0) / 1024,
+    Object.values(sizes).reduce((a, b) => a + b, 0) / 1024
   );
 
   const handleSaveName = (e: React.FormEvent) => {
@@ -68,12 +84,59 @@ export function ProfilePage() {
     toast.success("Crop preferences updated");
   };
 
+  const handleExportBackup = async () => {
+    setIsExporting(true);
+    try {
+      await exportEncryptedBackupFile(customPassphrase.trim() || undefined);
+      toast.success("Encrypted backup downloaded (.cropcare)");
+    } catch (err) {
+      console.error("Export error:", err);
+      toast.error("Failed to generate encrypted backup");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      const text = await file.text();
+      const res = await importEncryptedBackupFile(
+        text,
+        customPassphrase.trim() || undefined
+      );
+      toast.success(`Backup restored! ${res.scansRestored} scans recovered.`);
+      setTimeout(() => {
+        window.location.reload();
+      }, 800);
+    } catch (err: unknown) {
+      console.error("Import error:", err);
+      toast.error(
+        "Failed to decrypt backup. Check file integrity or passphrase."
+      );
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const seasonOptions: { key: Season; icon: typeof Sun; subtitle: string }[] = [
+    { key: "kharif", icon: CloudRain, subtitle: "Monsoon (Jun-Oct)" },
+    { key: "rabi", icon: Snowflake, subtitle: "Winter (Nov-Mar)" },
+    { key: "zaid", icon: Sun, subtitle: "Summer (Mar-Jun)" },
+    { key: "early-kharif", icon: Sunrise, subtitle: "Early Monsoon (May-Jul)" },
+    { key: "post-monsoon", icon: Wind, subtitle: "Autumn (Sep-Nov)" },
+  ];
+
   return (
     <div className={cn("space-y-8 pb-12 max-w-2xl mx-auto", enter)}>
       <PageHeader
         eyebrow="Preferences"
-        title={t("navProfile")}
-        sub="Manage your farm location, language, active crops and device storage."
+        title={t("profileTitle")}
+        sub="Manage your farm location, language, active crops and encrypted device storage."
       />
 
       {/* Farmer Profile Card */}
@@ -87,7 +150,7 @@ export function ProfilePage() {
               {settings.name?.trim() ? settings.name : "Farmer Profile"}
             </h3>
             <p className="text-xs text-muted-foreground">
-              {settings.district}, {settings.state} · {t(settings.season)} season
+              {settings.district}, {settings.state} · {t(settings.season as any)}
             </p>
           </div>
         </div>
@@ -100,35 +163,34 @@ export function ProfilePage() {
             placeholder={t("yourName")}
             className="flex-1 rounded-xl border border-line bg-surface px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
           />
-          <button
-            type="submit"
-            className={cn(btnPrimary, "min-h-10 px-4 text-xs font-bold")}
-          >
-            {t("save")}
+          <button type="submit" className={cn(btnSecondary, "px-4 text-xs")}>
+            Save
           </button>
         </form>
       </div>
 
-      {/* Farm Location & Season */}
+      {/* Farm Location & Season Settings */}
       <div className={cn(card, "p-6 space-y-5")}>
         <h3 className="font-bold text-base text-foreground flex items-center gap-2">
-          <MapPin className="size-4 text-primary" /> Farm Location & Season
+          <MapPin className="size-4 text-primary" /> {t("farmSettings")}
         </h3>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
+        <div className="grid gap-4 sm:grid-cols-2">
+          {/* State */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted-foreground">
               {t("state")}
             </label>
             <select
               value={settings.state}
               onChange={(e) => {
-                const s = e.target.value;
-                const match = regions.find((r) => r.state === s);
+                const newState = e.target.value;
+                const newReg = regions.find((r) => r.state === newState);
                 updateSettings({
-                  state: s,
-                  district: match?.districts[0] || "",
+                  state: newState,
+                  district: newReg?.districts[0] ?? "",
                 });
+                toast.success(t("settingsUpdated"));
               }}
               className="w-full rounded-xl border border-line bg-surface p-2.5 text-sm text-foreground outline-none focus:border-primary"
             >
@@ -140,13 +202,17 @@ export function ProfilePage() {
             </select>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
+          {/* District */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted-foreground">
               {t("district")}
             </label>
             <select
               value={settings.district}
-              onChange={(e) => updateSettings({ district: e.target.value })}
+              onChange={(e) => {
+                updateSettings({ district: e.target.value });
+                toast.success(t("settingsUpdated"));
+              }}
               className="w-full rounded-xl border border-line bg-surface p-2.5 text-sm text-foreground outline-none focus:border-primary"
             >
               {region.districts.map((d) => (
@@ -158,14 +224,13 @@ export function ProfilePage() {
           </div>
         </div>
 
-        {/* Season Selection */}
-        <div>
-          <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
-            Current farming season
+        {/* Season Selector - Expanded with 5 seasons */}
+        <div className="space-y-2 pt-2">
+          <label className="text-xs font-semibold text-muted-foreground">
+            Agricultural Season ({seasonOptions.length} seasons supported)
           </label>
-          <div className="grid grid-cols-2 gap-2">
-            {(["kharif", "rabi"] as Season[]).map((s) => {
-              const Icon = s === "kharif" ? CloudRain : Snowflake;
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {seasonOptions.map(({ key: s, icon: Icon, subtitle }) => {
               const active = settings.season === s;
 
               return (
@@ -174,21 +239,21 @@ export function ProfilePage() {
                   type="button"
                   onClick={() => updateSettings({ season: s })}
                   className={cn(
-                    "flex items-center gap-2.5 rounded-xl border p-3 text-left transition-all",
+                    "flex flex-col gap-1 rounded-xl border p-3 text-left transition-all",
                     active
-                      ? "border-primary bg-primary/10 font-bold text-primary"
-                      : "border-line bg-surface hover:border-primary/40 text-muted-foreground",
+                      ? "border-primary bg-primary/10 font-bold text-primary ring-1 ring-primary"
+                      : "border-line bg-surface hover:border-primary/40 text-muted-foreground"
                   )}
                 >
-                  <Icon className="size-4 shrink-0" />
-                  <div>
+                  <div className="flex items-center gap-2">
+                    <Icon className="size-4 shrink-0 text-primary" />
                     <span className="block text-xs font-bold text-foreground">
-                      {t(s)}
-                    </span>
-                    <span className="text-[11px] text-muted-foreground">
-                      {s === "kharif" ? "Monsoon" : "Winter"}
+                      {t(s as any)}
                     </span>
                   </div>
+                  <span className="text-[10px] text-muted-foreground">
+                    {subtitle}
+                  </span>
                 </button>
               );
             })}
@@ -217,7 +282,7 @@ export function ProfilePage() {
                   "flex items-center justify-between rounded-xl border p-3.5 transition-all text-left",
                   on
                     ? "border-primary bg-primary/10 ring-1 ring-primary"
-                    : "border-line bg-surface opacity-70",
+                    : "border-line bg-surface opacity-70"
                 )}
               >
                 <div className="flex items-center gap-3">
@@ -241,7 +306,7 @@ export function ProfilePage() {
                     "grid size-6 place-items-center rounded-full border",
                     on
                       ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border",
+                      : "border-border"
                   )}
                 >
                   {on && <Check className="size-3.5" />}
@@ -252,25 +317,28 @@ export function ProfilePage() {
         </div>
       </div>
 
-      {/* Language Selection */}
+      {/* Language Selection - All 6 Languages */}
       <div className={cn(card, "p-6 space-y-4")}>
         <h3 className="font-bold text-base text-foreground flex items-center gap-2">
-          <Globe className="size-4 text-primary" /> Language / भाषा / భాష
+          <Globe className="size-4 text-primary" /> Language / भाषा / భాష / மொழி / ಭಾಷೆ / भाषा
         </h3>
 
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {langs.map((lItem) => {
             const active = settings.lang === lItem.code;
             return (
               <button
                 key={lItem.code}
                 type="button"
-                onClick={() => updateSettings({ lang: lItem.code })}
+                onClick={() => {
+                  updateSettings({ lang: lItem.code });
+                  toast.success(t("languageChanged"));
+                }}
                 className={cn(
                   "flex items-center justify-between rounded-xl border p-3 text-left transition-all",
                   active
                     ? "border-primary bg-primary/10 ring-1 ring-primary font-bold text-primary"
-                    : "border-line bg-surface hover:border-primary/40",
+                    : "border-line bg-surface hover:border-primary/40"
                 )}
               >
                 <div>
@@ -287,6 +355,80 @@ export function ProfilePage() {
               </button>
             );
           })}
+        </div>
+      </div>
+
+      {/* Encrypted Internal Storage, Export & Import */}
+      <div className={cn(card, "p-6 space-y-5 border-primary/30 bg-primary/5")}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="grid size-9 place-items-center rounded-xl bg-primary/20 text-primary">
+              <Shield className="size-5" />
+            </span>
+            <div>
+              <h3 className="font-bold text-sm text-foreground">
+                Encrypted Device Internal Storage
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                AES-GCM 256-bit encryption active · ~{totalStorageKb} KB stored
+              </p>
+            </div>
+          </div>
+          <span className="rounded-full bg-primary/20 px-2.5 py-0.5 text-[11px] font-bold text-primary">
+            AES-256
+          </span>
+        </div>
+
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          All your crop photographs, diagnoses, farmer field notes, and chat
+          history are stored directly inside this device's sandboxed storage.
+          You can create a tamper-evident encrypted backup file to safely export
+          or transfer your data across devices.
+        </p>
+
+        {/* Optional Custom Passphrase */}
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1.5">
+            <Key className="size-3 text-primary" /> Optional Backup Passphrase (leave blank to use device key)
+          </label>
+          <input
+            type="password"
+            value={customPassphrase}
+            onChange={(e) => setCustomPassphrase(e.target.value)}
+            placeholder="Enter passphrase for extra security"
+            className="w-full rounded-xl border border-line bg-surface p-2.5 text-xs text-foreground outline-none focus:border-primary"
+          />
+        </div>
+
+        {/* Backup Actions */}
+        <div className="flex flex-wrap gap-2.5 pt-1">
+          <button
+            type="button"
+            onClick={handleExportBackup}
+            disabled={isExporting}
+            className={cn(btnPrimary, "min-h-10 text-xs px-4 flex items-center gap-1.5")}
+          >
+            <Download className="size-3.5" />
+            {isExporting ? "Exporting..." : "Export Encrypted Backup (.cropcare)"}
+          </button>
+
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept=".cropcare,.json"
+            onChange={handleImportFile}
+            className="hidden"
+          />
+
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isImporting}
+            className={cn(btnSecondary, "min-h-10 text-xs px-4 flex items-center gap-1.5")}
+          >
+            <Upload className="size-3.5" />
+            {isImporting ? "Importing..." : "Import Encrypted Backup"}
+          </button>
         </div>
       </div>
 
@@ -316,7 +458,7 @@ export function ProfilePage() {
                   "flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 text-xs font-semibold transition-all",
                   active
                     ? "border-primary bg-primary/10 text-primary font-bold"
-                    : "border-line bg-surface text-muted-foreground hover:border-primary/40",
+                    : "border-line bg-surface text-muted-foreground hover:border-primary/40"
                 )}
               >
                 <Icon className="size-4" />
@@ -327,68 +469,16 @@ export function ProfilePage() {
         </div>
       </div>
 
-      {/* Navigation Links */}
-      <div className={cn(card, "divide-y divide-line overflow-hidden")}>
-        <Link
-          to="/profile/offline"
-          className="flex items-center justify-between p-4 hover:bg-surface/50 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <span className="grid size-9 place-items-center rounded-lg bg-primary/10 text-primary">
-              <Cpu className="size-4" />
-            </span>
-            <div>
-              <p className="font-bold text-sm text-foreground">
-                Offline AI & Model Telemetry
-              </p>
-              <p className="text-xs text-muted-foreground">
-                View status of on-device models and database
-              </p>
-            </div>
-          </div>
-          <ChevronRight className="size-4 text-subtle" />
-        </Link>
-
-        <Link
-          to="/help"
-          className="flex items-center justify-between p-4 hover:bg-surface/50 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <span className="grid size-9 place-items-center rounded-lg bg-surface text-muted-foreground">
-              <CircleHelp className="size-4" />
-            </span>
-            <div>
-              <p className="font-bold text-sm text-foreground">Help & FAQ</p>
-              <p className="text-xs text-muted-foreground">
-                Agricultural safety, image tips and how to use
-              </p>
-            </div>
-          </div>
-          <ChevronRight className="size-4 text-subtle" />
-        </Link>
-      </div>
-
-      {/* Storage & Privacy Controls */}
+      {/* Data Management & Deletion */}
       <div className={cn(card, "p-6 space-y-4")}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <HardDrive className="size-4 text-muted-foreground" />
-            <h3 className="font-bold text-sm text-foreground">
-              Local Storage Usage
-            </h3>
-          </div>
-          <span className="font-mono text-xs text-muted-foreground">
-            ~{totalStorageKb} KB used
-          </span>
+        <div className="flex items-center gap-2">
+          <HardDrive className="size-4 text-muted-foreground" />
+          <h3 className="font-bold text-sm text-foreground">
+            Clear Local Data
+          </h3>
         </div>
 
-        <p className="text-xs text-muted-foreground">
-          All scan photos, farmer notes, chat messages and reminders are kept
-          locally in your browser sandbox. No farmer photos are transmitted to
-          external cloud servers.
-        </p>
-
-        <div className="pt-2 flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2">
           <Confirm
             trigger={
               <button

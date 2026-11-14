@@ -6,7 +6,7 @@ import type { Lang } from "./i18n";
 
 export type CropKey = "rice" | "chilli";
 export type Mode = "disease" | "pest";
-type L10n = { en: string; hi?: string; te?: string };
+type L10n = { en: string; hi?: string; te?: string; ta?: string; kn?: string; mr?: string };
 
 export type Topic = {
   slug: string;

@@ -37,7 +37,7 @@ export type Scan = {
 export type SavedKind = "topic" | "treatment" | "prevention" | "report";
 export type SavedItem = { id: string; kind: SavedKind; crop: CropKey; slug?: string; scanId?: string; savedAt: string };
 
-export type Season = "kharif" | "rabi";
+export type Season = "kharif" | "rabi" | "zaid" | "early-kharif" | "post-monsoon";
 export type ThemePref = "dark" | "light" | "system";
 export type Settings = {
   onboarded: boolean;
