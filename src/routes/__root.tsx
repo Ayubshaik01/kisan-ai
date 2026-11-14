@@ -78,12 +78,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "theme-color", content: "#0f1a14" },
       { title: "Fieldnote — Crop care, close at hand" },
       { name: "description", content: "A private, offline-ready crop care companion." },
-      { name: "author", content: "Lovable" },
       { property: "og:title", content: "Fieldnote — Crop care, close at hand" },
       { property: "og:description", content: "Crop notes and practical field guidance, kept on your device." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
