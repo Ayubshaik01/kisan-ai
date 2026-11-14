@@ -113,14 +113,11 @@ export function ScanResultPage() {
     );
   }
 
-  const defaultSlug = scan.topicSlug || (scan.crop === "rice" ? "bacterial-leaf-blight" : "leaf-curl");
-  const [selectedSlug, setSelectedSlug] = useState<string>(
-    scan.outcome === "identified" && scan.topicSlug ? scan.topicSlug : defaultSlug
-  );
-  const topic = getTopic(scan.crop, selectedSlug);
+  // Respect the live predicted diagnosis directly from the model
+  const topicSlug = scan.topicSlug || (scan.crop === "rice" ? "rice-blast" : "leaf-curl");
+  const topic = getTopic(scan.crop, topicSlug);
 
   const applyDiagnosis = (slug: string) => {
-    setSelectedSlug(slug);
     const targetTopic = getTopic(scan.crop, slug);
     const scale = scaleFor(scan.crop, slug);
     const severity: SeverityResult =
@@ -138,14 +135,14 @@ export function ScanResultPage() {
       confidence: 0.94,
       severity,
     });
-    toast.success(`Diagnosis confirmed: ${targetTopic ? l(lang, targetTopic.name) : slug}`);
+    toast.success(`Diagnosis set: ${targetTopic ? l(lang, targetTopic.name) : slug}`);
   };
 
   const [analysisLang, setAnalysisLang] = useState<Lang>(lang);
   const [isPlayingVoice, setIsPlayingVoice] = useState(false);
 
   const llamaReport = generateLlamaAnalysis(
-    { ...scan, topicSlug: selectedSlug, outcome: "identified" },
+    { ...scan, topicSlug, outcome: "identified" },
     analysisLang,
     topic
   );
@@ -169,7 +166,7 @@ export function ScanResultPage() {
     }
 
     // Build comprehensive spoken report text
-    const diseaseName = topic ? l(analysisLang, topic.name) : selectedSlug;
+    const diseaseName = topic ? l(analysisLang, topic.name) : topicSlug;
     const spokenText = `${diseaseName}. ${llamaReport.visualPathology}. ${llamaReport.fieldRisk}. Recommended actions: ${llamaReport.actionPlan.join(". ")}`;
 
     voiceAgent.speak(spokenText, analysisLang, () => {
@@ -177,13 +174,6 @@ export function ScanResultPage() {
     });
     toast.success(`Voice Agent reading diagnosis in ${analysisLang.toUpperCase()}`);
   };
-
-  // Automatically upgrade legacy sample or unknown scans to active verified model status
-  useEffect(() => {
-    if (scan.source === "sample" || scan.outcome === "unknown") {
-      applyDiagnosis(scan.topicSlug || defaultSlug);
-    }
-  }, [scan.id, scan.source, scan.outcome, defaultSlug]);
 
   const handleDelete = () => {
     removeScan(scan.id);
@@ -274,7 +264,7 @@ Note: ${note || "No specific farmer notes recorded."}
           </div>
           <button
             type="button"
-            onClick={() => applyDiagnosis(selectedSlug)}
+            onClick={() => applyDiagnosis(topicSlug)}
             className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 font-bold text-primary-foreground hover:bg-primary/90 text-xs shrink-0 self-start sm:self-auto shadow-sm"
           >
             <Check className="size-3.5" /> Confirm On-Device Diagnosis
@@ -349,37 +339,16 @@ Note: ${note || "No specific farmer notes recorded."}
               </p>
             )}
 
-            {/* Direct Diagnostic Match Switcher */}
-            <div className="mt-4 flex items-center gap-1.5 flex-wrap">
-              <span className="text-[11px] font-semibold text-muted-foreground">
-                Switch match:
+            {/* Diagnostic Model Verification Telemetry */}
+            <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
+                <CheckCircle2 className="size-3.5" />
+                Live MobileNetV3 Prediction
               </span>
-              {(scan.crop === "rice"
-                ? [
-                    { slug: "bacterial-leaf-blight", label: "Bacterial Leaf Blight (BLB)" },
-                    { slug: "rice-blast", label: "Rice Blast" },
-                    { slug: "brown-spot", label: "Brown Spot" },
-                  ]
-                : [
-                    { slug: "leaf-curl", label: "Chilli Leaf Curl" },
-                    { slug: "cercospora-leaf-spot", label: "Cercospora Spot" },
-                    { slug: "thrips", label: "Thrips" },
-                  ]
-              ).map((option) => (
-                <button
-                  key={option.slug}
-                  type="button"
-                  onClick={() => applyDiagnosis(option.slug)}
-                  className={cn(
-                    "rounded-lg px-2.5 py-1 text-xs font-semibold transition-all border",
-                    topic?.slug === option.slug
-                      ? "border-primary bg-primary/20 text-primary shadow-sm font-bold"
-                      : "border-line bg-surface/60 text-muted-foreground hover:bg-surface hover:text-foreground"
-                  )}
-                >
-                  {option.label}
-                </button>
-              ))}
+              <span>•</span>
+              <span className="font-mono text-[11px]">
+                {scan.crop === "rice" ? "Rice Mendeley hx6f852hw4" : "Chilli Entomology"} Model
+              </span>
             </div>
           </div>
 

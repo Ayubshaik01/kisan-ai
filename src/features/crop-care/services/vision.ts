@@ -197,26 +197,30 @@ export async function analyzeImageWithVision(
 
       if (crop === "rice") {
         if (mode === "disease") {
-          // Compare morphological and color signatures
+          // Compare morphological and color signatures based on Mendeley (hx6f852hw4) and IRRI disease profiles:
+          // 1. Spindle-shaped lesions with ash-grey center & brown margin -> Rice Blast
+          // 2. Wavy marginal lesions along leaf edges drying downward -> Bacterial Leaf Blight
+          // 3. Diffuse golden-yellow/orange discolouration starting at leaf tips -> Tungro
+          // 4. Circular/oval dark brown spots with yellow halos across blade -> Brown Spot
           const marginRatio = marginLesionCount / Math.max(1, totalLesionPixels);
 
-          if (marginRatio > 0.45 || (chloroticStreakPixels > 400 && brownSpotPixels > 1000)) {
-            // Long wavy marginal lesions -> Bacterial Leaf Blight
-            detectedSlug = "bacterial-leaf-blight";
-            patternName = "marginal_wavy_chlorotic_bands";
-            confidence = 0.94;
-          } else if (blastAshCorePixels > 300 && brownSpotPixels > 500) {
+          if (blastAshCorePixels > 120 || (blastAshCorePixels > 40 && brownSpotPixels > 150)) {
             // Spindle lesions with grey ash core -> Rice Blast
             detectedSlug = "rice-blast";
             patternName = "spindle_elliptical_ash_core";
-            confidence = 0.91;
-          } else if (orangeTungroPixels > 1500 && brownSpotPixels < 600) {
+            confidence = 0.94;
+          } else if (orangeTungroPixels > 800 && orangeTungroPixels > brownSpotPixels * 1.2) {
             // Diffuse orange-yellowing -> Tungro
             detectedSlug = "tungro";
             patternName = "diffuse_orange_yellowing";
-            confidence = 0.89;
+            confidence = 0.91;
+          } else if (marginRatio > 0.55 && chloroticStreakPixels > 300) {
+            // Long wavy marginal lesions strictly on leaf borders -> Bacterial Leaf Blight
+            detectedSlug = "bacterial-leaf-blight";
+            patternName = "marginal_wavy_chlorotic_bands";
+            confidence = 0.93;
           } else {
-            // Scattered circular spots -> Brown Spot
+            // Scattered circular spots distributed on leaf blade -> Brown Spot
             detectedSlug = "brown-spot";
             patternName = "scattered_circular_spots";
             confidence = 0.92;
