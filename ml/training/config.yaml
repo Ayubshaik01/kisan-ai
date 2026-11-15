@@ -136,3 +136,4 @@ export_targets:
     enabled: true
     target_path: "ml/export/output/hierarchical_crop_vision_efficientnetv2s.pt"
   android_assets_path: "android/app/src/main/assets/models/"
+

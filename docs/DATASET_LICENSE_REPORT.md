@@ -52,3 +52,4 @@ In compliance with Central Insecticide Board & Registration Committee (CIB&RC) m
 1. No commercial brand names are inferred or derived from training annotations.
 2. Agricultural advice associated with each predicted disease class is strictly grounded in official university packages of practices (ANGRAU, PJTSAU, ICAR-CRRI).
 3. The training pipeline operates entirely offline on private infrastructure without transferring farmer specimen images to third-party cloud APIs.
+

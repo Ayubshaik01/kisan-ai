@@ -61,3 +61,4 @@ Laboratory background samples are systematically balanced with diverse real-worl
    - 15% Validation ($N_{val} \approx 5,480$)
    - 15% Held-Out Field Test ($N_{test} \approx 5,480$)
    - Group stratification: Image clusters originating from the same field walk or plant specimen are strictly kept in the same split to avoid data leakage.
+

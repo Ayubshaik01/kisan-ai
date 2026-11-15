@@ -279,3 +279,4 @@ if __name__ == "__main__":
     manifest = generate_formal_dataset_manifest()
     print(f"Generated Dataset Manifest with {manifest['total_catalogued_images']:,} catalogued images.")
     print("Benchmark Datasets:", len(manifest['datasets_audited']))
+

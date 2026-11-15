@@ -521,6 +521,152 @@ export const topics: Topic[] = [
     monitoring: ["Check tender shoots weekly"],
     getHelp: "If colonies spread fast, ask for approved local advice.",
   },
+  {
+    slug: "hispa", crop: "rice", kind: "pest",
+    name: {
+      en: "Rice Hispa",
+      hi: "धान का हिस्पा (कांटा कीट)",
+      te: "వరి ఇస్పా (ముళ్ల పురుగు)",
+      ta: "இலை வண்டு (ஹிஸ்பா)",
+      kn: "ಭತ್ತದ ಹಿಸ್ಪಾ ಮುಳ್ಳು ಕೀಟ",
+      mr: "भातावरील हिस्पा (काटेरी भुंगा)"
+    },
+    scientific: "Dicladispa armigera",
+    summary: {
+      en: "Small spiny black beetles whose grubs mine inside leaves and adults scrape green tissue, leaving characteristic parallel white streaks.",
+      hi: "छोटे कांटेदार काले भृंग जिनके ग्रब पत्तियों के अंदर सुरंग बनाते हैं और वयस्क हरी परत खुरचते हैं, जिससे समानांतर सफेद धारियाँ बन जाती हैं।",
+      te: "నల్లటి ముళ్ల రెక్కల పురుగులు; వీటి పిల్ల పురుగులు ఆకు పొరల మధ్య సొరంగాలు చేసి, పెద్ద పురుగులు ఆకు పచ్చదనాన్ని గోకి సమాంతర తెల్ల చారలను ఏర్పరుస్తాయి."
+    },
+    parts: ["Leaf blade", "Upper canopy leaves"],
+    symptoms: [
+      "White parallel streaks along the veins caused by adult scraping",
+      "Blister-like clear translucent mines in leaves where grubs feed internally",
+      "Damaged leaves dry up, giving the field a withered, burnt appearance in severe attacks"
+    ],
+    causes: [
+      "Spiny black adults laying eggs inside tender leaf tissue",
+      "Warm and humid weather with intermittent sunshine after rain",
+      "Staggered planting and excessive nitrogenous fertilizer application"
+    ],
+    identify: [
+      "Look for shiny blue-black beetles covered with sharp spines (approx. 5 mm long)",
+      "Check leaves for long parallel white epidermal scratches",
+      "Hold damaged leaves against sunlight to spot grubs inside the leaf mines"
+    ],
+    lookalikes: "Leaf folder rolls the leaf with silk threads; Hispa leaves parallel scrape lines without leaf-folding.",
+    severityNote: "Rated on IRRI SES scale by percentage of scraped leaf area.",
+    immediate: [
+      ...generalImmediate,
+      "Clip the top 2-3 inches of leaf tips where adults lay eggs before transplanting.",
+      "Sweep infested fields with insect nets early in the morning to destroy clustered adults."
+    ],
+    cultural: [
+      "Avoid staggered plantings in adjacent fields to break the multiplication cycle.",
+      "Remove wild grasses (Echinochloa, Leersia) on field bunds which harbor hispa between seasons."
+    ],
+    prevention: [
+      { title: "Bund Sanitation", body: "Keep field borders clean of grassy hosts before planting." },
+      { title: "Leaf Tip Clipping", body: "Clip seedling tips to destroy initial egg batches before transplanting." }
+    ],
+    monitoring: ["Scout weekly during tillering for adult beetles and white scraped streaks."],
+    getHelp: "If >1 adult beetle or >2 damaged leaves per hill are found during tillering, seek KVK advisory immediately."
+  },
+  {
+    slug: "downy-mildew", crop: "rice", kind: "disease",
+    name: {
+      en: "Downy Mildew (Crazy Top)",
+      hi: "मृदुरोमिल आसिता (क्रेज़ी टॉप)",
+      te: "డౌనీ మిల్డో (వెర్రి మొలక తెగులు)",
+      ta: "சாம்பல் பூஞ்சை நோய்",
+      kn: "ಬೂದಿ ರೋಗ",
+      mr: "केवडा रोग"
+    },
+    scientific: "Sclerophthora macrospora",
+    summary: {
+      en: "An oomycete water-mold disease causing leaf chlorosis, severe twisting, and leafy proliferation of the panicle (crazy top).",
+      hi: "एक जल-फफूंद रोग जिससे पत्तियां पीली पड़ जाती हैं, अत्यधिक मुड़ जाती हैं और बाली के स्थान पर पत्तियों का गुच्छा (क्रेज़ी टॉप) बन जाता है।",
+      te: "ఆకులు పసుపుబారి, మెలికలు తిరిగి, కంకి స్థానంలో ఆకుల గుత్తి ఏర్పడే (క్రేజీ టాప్) శిలీంధ్ర వ్యాధి."
+    },
+    parts: ["Leaf blade", "Flag leaf", "Panicle head"],
+    symptoms: [
+      "Chlorotic yellow mottling and white specks along veins on young leaves",
+      "Stunted growth with thick, leathery, twisted or spiral leaves",
+      "Crazy Top: Panicle is transformed into a cluster of small leaf-like structures with no grain set"
+    ],
+    causes: [
+      "Infection by swimming zoospores in submerged seedlings under floodwater",
+      "Prolonged waterlogging or flooded nurseries in low-lying fields"
+    ],
+    identify: [
+      "Check for twisted flag leaves and bushy, leaf-like malformed panicles",
+      "Occurs predominantly in fields with a history of early-season flooding"
+    ],
+    lookalikes: "Rice Tungro virus (causes orange-yellowing but panicle does not turn into leafy shoots).",
+    severityNote: "Assessed by the percentage of hills showing crazy top malformation.",
+    immediate: [
+      ...generalImmediate,
+      "Drain submerged nursery beds or fields promptly after heavy rains.",
+      "Rogue out and destroy malformed crazy-top plants to prevent soil oospore buildup."
+    ],
+    cultural: [
+      "Raise nursery seedbeds on elevated ground above flood levels.",
+      "Ensure laser land leveling to eliminate standing water pockets."
+    ],
+    prevention: [
+      { title: "Raised Nursery", body: "Avoid low-lying nurseries prone to monsoon flooding." },
+      { title: "Clean Drainage", body: "Maintain proper field drainage channels to prevent stagnant water." }
+    ],
+    monitoring: ["Inspect low-lying areas of the field after torrential rain and floods."],
+    getHelp: "If malformed panicles appear in patches, consult your local agricultural officer."
+  },
+  {
+    slug: "bacterial-leaf-streak", crop: "rice", kind: "disease",
+    name: {
+      en: "Bacterial Leaf Streak (BLS)",
+      hi: "जीवाणु पत्ती धारी रोग",
+      te: "బ్యాక్టీరియా ఆకు చారల తెగులు",
+      ta: "பாக்டீரியல் இலைக் கோடு நோய்",
+      kn: "ಬ್ಯಾಕ್ಟೀರಿಯಲ್ ಎಲೆ ಪಟ್ಟಿ ರೋಗ",
+      mr: "जिवाणूजन्य पानांवरील रेषा रोग"
+    },
+    scientific: "Xanthomonas oryzae pv. oryzicola",
+    summary: {
+      en: "A bacterial foliar disease producing narrow, interveinal translucent water-soaked streaks with tiny amber exudate beads.",
+      hi: "एक जीवाणु रोग जो पत्तियों की नसों के बीच संकरी, पारभासी पानीदार धारियाँ और पीले गोंद जैसी बूँदें बनाता है।",
+      te: "ఆకు ఈనెల మధ్య సన్నని, నీటితో తడిసిన పారదర్శక చారలను మరియు చిన్న పసుపు రంగు జిగురు చుక్కలను ఏర్పరిచే బ్యాక్టీరియా వ్యాధి."
+    },
+    parts: ["Leaf blade", "Interveinal tissue"],
+    symptoms: [
+      "Narrow, dark-green to translucent water-soaked streaks strictly confined between veins",
+      "Lesions turn brownish-yellow and coalesce, forming large patches",
+      "Tiny yellow or amber-colored resinous bacterial beads on the streak surface"
+    ],
+    causes: [
+      "Bacterial invasion through stomata and mechanical leaf wounds",
+      "High temperatures (28-34°C), high humidity, and monsoon wind-rain storms"
+    ],
+    identify: [
+      "Hold the leaf up to light: BLS streaks are translucent and confined strictly between leaf veins",
+      "Different from BLB: BLB starts from the leaf margin/tip with wavy edges; BLS starts within the blade between veins"
+    ],
+    lookalikes: "Bacterial Leaf Blight (wavy margin-running lesions, not straight interveinal streaks); Rice Hispa (surface scraping).",
+    severityNote: "Rated on IRRI SES 0–9 scale by affected foliar area.",
+    immediate: [
+      ...generalImmediate,
+      "Avoid applying additional urea top-dressing during active streak expansion.",
+      "Drain excess standing water to reduce microclimate humidity."
+    ],
+    cultural: [
+      "Balance nitrogen fertilizer with adequate potassium applications.",
+      "Avoid handling or weeding crops when foliage is wet with dew or rain."
+    ],
+    prevention: [
+      { title: "Certified Seed", body: "Use certified pathogen-free seeds from trusted sources." },
+      { title: "Split Nitrogen", body: "Avoid excess nitrogen in a single dose; use leaf color charts (LCC)." }
+    ],
+    monitoring: ["Inspect middle leaves weekly following windy rainstorms."],
+    getHelp: "If interveinal streaks coalesce into widespread foliar browning, consult the nearest KVK."
+  },
 ];
 
 export function getCrop(key: string): Crop | undefined {

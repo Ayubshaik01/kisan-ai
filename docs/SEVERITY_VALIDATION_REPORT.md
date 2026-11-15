@@ -87,3 +87,4 @@ The segmentation engine computes the ratio of distorted margins and curled leaf 
 ## 5. Field Guidance & Limitations
 1. **Single Leaf vs Canopy Caveat**: The OpenCV measurement strictly quantifies the visible symptoms in the analyzed frame. The application clearly alerts the farmer: *"A full field assessment requires sampling at least 10 hills across the diagonal of the plot."*
 2. **Lighting Invariance**: Bilateral filtering combined with CIE $L^*a^*b^*$ color space normalization maintains accurate segmentation across varying sunlight intensities (150 lux overcast to 85,000 lux bright afternoon sun).
+
