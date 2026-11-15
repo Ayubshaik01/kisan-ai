@@ -257,3 +257,4 @@ def train_paddy_doctor_model(epochs: int = 5, batch_size: int = 16, lr: float = 
 
 if __name__ == "__main__":
     train_paddy_doctor_model()
+

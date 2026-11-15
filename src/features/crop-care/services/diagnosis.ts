@@ -116,6 +116,7 @@ export const diagnosisService: DiagnosisService = {
       outcome: visionRes.outcome,
       ...(visionRes.topicSlug ? { topicSlug: visionRes.topicSlug } : {}),
       confidence: visionRes.confidence,
+      ...(visionRes.candidates ? { candidates: visionRes.candidates } : {}),
       ...(visionRes.severity ? { severity: visionRes.severity } : {}),
     };
   },

@@ -228,6 +228,7 @@ export function DiagnosePage() {
           outcome: result.outcome,
           ...(result.topicSlug ? { topicSlug: result.topicSlug } : {}),
           ...(result.confidence !== undefined ? { confidence: result.confidence } : {}),
+          ...(result.candidates ? { candidates: result.candidates } : {}),
           ...(result.severity ? { severity: result.severity } : {}),
           ...(report ? { quality: report } : {}),
         };
@@ -283,6 +284,7 @@ export function DiagnosePage() {
             outcome: result.outcome,
             ...(result.topicSlug ? { topicSlug: result.topicSlug } : {}),
             ...(result.confidence !== undefined ? { confidence: result.confidence } : {}),
+            ...(result.candidates ? { candidates: result.candidates } : {}),
             ...(result.severity ? { severity: result.severity } : {}),
             ...(qualityReport ? { quality: qualityReport } : {}),
           };

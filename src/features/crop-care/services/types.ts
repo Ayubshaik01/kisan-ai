@@ -29,6 +29,7 @@ export type Scan = {
   outcome: Outcome;
   topicSlug?: string;
   confidence?: number;
+  candidates?: { slug: string; confidence: number }[];
   severity?: SeverityResult;
   quality?: QualityReport;
   note?: string;

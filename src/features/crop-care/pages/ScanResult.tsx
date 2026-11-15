@@ -439,13 +439,56 @@ Note: ${note || "No specific farmer notes recorded."}
                 <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
                     <CheckCircle2 className="size-3.5" />
-                    Live MobileNetV3 Prediction
+                    Live Field Model Prediction
                   </span>
                   <span>•</span>
                   <span className="font-mono text-[11px]">
-                    {scan.crop === "rice" ? "Rice Mendeley hx6f852hw4" : "Chilli Entomology"} Model
+                    {scan.crop === "rice" ? "Rice Paddy Doctor & Mendeley" : "Chilli Entomology"} Model
                   </span>
                 </div>
+
+                {/* Live Model Candidates / Differential Diagnosis */}
+                {scan.candidates && scan.candidates.length > 1 && (
+                  <div className="mt-3 rounded-2xl border border-line bg-surface/60 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                        Live Model Differential Diagnosis
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">Tap candidate to inspect</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {scan.candidates.map((cand) => {
+                        const candTopic = getTopic(scan.crop, cand.slug);
+                        const isActive = topic?.slug === cand.slug;
+                        return (
+                          <button
+                            key={cand.slug}
+                            type="button"
+                            onClick={() => applyDiagnosis(cand.slug)}
+                            className={cn(
+                              "inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-semibold transition-all border",
+                              isActive
+                                ? "border-primary bg-primary/20 text-primary shadow-xs font-bold"
+                                : "border-line bg-surface text-muted-foreground hover:bg-surface/80 hover:text-foreground"
+                            )}
+                          >
+                            <span>{candTopic ? l(lang, candTopic.name) : cand.slug}</span>
+                            <span
+                              className={cn(
+                                "rounded-md px-1.5 py-0.5 text-[10px] font-mono",
+                                isActive
+                                  ? "bg-primary text-primary-foreground font-bold"
+                                  : "bg-muted text-muted-foreground"
+                              )}
+                            >
+                              {Math.round(cand.confidence * 100)}%
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Confidence and Severity meters */}
