@@ -443,7 +443,7 @@ Note: ${note || "No specific farmer notes recorded."}
                   </span>
                   <span>•</span>
                   <span className="font-mono text-[11px]">
-                    {scan.crop === "rice" ? "Rice Paddy Doctor & Mendeley" : "Chilli Entomology"} Model
+                    {scan.crop === "rice" ? "Rice Paddy Doctor (10-Class Field Model)" : "Chilli COLD & Entomology (10-Class Field Model)"}
                   </span>
                 </div>
 

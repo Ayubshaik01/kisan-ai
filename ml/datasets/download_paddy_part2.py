@@ -99,3 +99,4 @@ if __name__ == "__main__":
     dest = download_file(URL_2, PARQUET_PATH_2)
     extract_parquet_images(dest, max_per_class=400)
     print("\n[SUCCESS] All Paddy Doctor classes now present!")
+

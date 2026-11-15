@@ -667,6 +667,104 @@ export const topics: Topic[] = [
     monitoring: ["Inspect middle leaves weekly following windy rainstorms."],
     getHelp: "If interveinal streaks coalesce into widespread foliar browning, consult the nearest KVK."
   },
+  {
+    slug: "rice-healthy",
+    crop: "rice",
+    kind: "disease",
+    name: {
+      en: "Healthy Rice Canopy",
+      hi: "स्वस्थ धान की पत्तियाँ",
+      te: "ఆరోగ్యకరమైన వరి పైరు",
+      ta: "ஆரோக்கியமான நெற்பயிர்",
+      kn: "ಆರೋಗ್ಯಕರ ಭತ್ತದ ಬೆಳೆ",
+      mr: "निरोगी भाताचे पीक"
+    },
+    scientific: "Oryza sativa L. (Healthy Foliage)",
+    summary: {
+      en: "No active disease lesions or insect feeding scars detected. Foliar chlorophyll levels and canopy vigor are optimal.",
+      hi: "कोई सक्रिय रोग या कीट के लक्षण नहीं पाए गए। पत्तियों में हरापन और वानस्पतिक वृद्धि सामान्य है।",
+      te: "ఎటువంటి తెగుళ్లు లేదా కీటకాల లక్షణాలు లేవు. ఆకుల పచ్చదనం మరియు పెరుగుదల ఆరోగ్యకరంగా ఉన్నాయి.",
+      ta: "எந்த நோய்க்கூறுகளோ அல்லது பூச்சி தாக்குதலோ இல்லை. பயிரின் பசுமையும் வளர்ச்சியும் சிறப்பாக உள்ளது.",
+      kn: "ಯಾವುದೇ ರೋಗ ಅಥವಾ ಕೀಟ ಬಾಧೆ ಕಂಡುಬಂದಿಲ್ಲ. ಎಲೆಗಳ ಹಸಿರು ಮತ್ತು ಬೆಳೆ ಬೆಳವಣಿಗೆ ಉತ್ತಮವಾಗಿದೆ.",
+      mr: "कोणतीही कीड किंवा रोगाची लक्षणे आढळलेली नाहीत. पानांचा हिरवेगारपणा आणि वाढ उत्तम आहे."
+    },
+    parts: ["Leaves", "Canopy", "Tillers"],
+    symptoms: [
+      "Uniform green foliar coloration across blade",
+      "Absence of necrotic lesions, chlorotic halos or brown spots",
+      "Erect leaf habit with clear venation"
+    ],
+    causes: ["Optimal agronomic conditions and balanced nutrient management."],
+    identify: [
+      "Clear green foliage without lesions, spots, or marginal scorch",
+      "Healthy tillering and active photosynthetic surface"
+    ],
+    lookalikes: "None. Baseline healthy physiological standard.",
+    severityNote: "IRRI SES Score 0 (Completely healthy).",
+    immediate: [
+      "Maintain regular field water depth (2–5 cm) during active tillering.",
+      "Continue standard scouting routine twice a week."
+    ],
+    cultural: [
+      "Follow balanced N:P:K fertilization; do not apply excessive urea.",
+      "Keep field borders clean of alternative weed hosts."
+    ],
+    prevention: [
+      { title: "Split Nitrogen", body: "Use Leaf Color Chart (LCC) to guide urea applications." },
+      { title: "Water Management", body: "Practice alternate wetting and drying (AWD) after panicle initiation." }
+    ],
+    monitoring: ["Inspect hill bases weekly for early planthopper buildup."],
+    getHelp: "Continue standard good agricultural practices (GAP)."
+  },
+  {
+    slug: "chilli-healthy",
+    crop: "chilli",
+    kind: "disease",
+    name: {
+      en: "Healthy Chilli Plant",
+      hi: "स्वस्थ मिर्च का पौधा",
+      te: "ఆరోగ్యకరమైన మిరప మొక్క",
+      ta: "ஆரோக்கியமான மிளகாய் செடி",
+      kn: "ಆರೋಗ್ಯಕರ ಮೆಣಸಿನಕಾಯಿ ಗಿಡ",
+      mr: "निरोगी मिरचीचे रोप"
+    },
+    scientific: "Capsicum annuum L. (Healthy Foliage)",
+    summary: {
+      en: "Foliage shows clear lamina expansion with no upward or downward curling, necrotic spotting, or vector feeding marks.",
+      hi: "पत्तियों में कोई मरोड़िया, धब्बे या रस चूसक कीटों के निशान नहीं हैं। पौधे का विकास सामान्य है।",
+      te: "ఆకులలో ముడుత, మచ్చలు లేదా రసం పీల్చే పురుగుల ఆనవాళ్లు లేవు. మొక్క పెరుగుదల బాగుంది.",
+      ta: "இலைகளில் சுருட்டலோ, புள்ளிகளோ அல்லது பூச்சி சேதமோ இல்லை. செடியின் வளர்ச்சி சீராக உள்ளது.",
+      kn: "ಎಲೆಗಳಲ್ಲಿ ಯಾವುದೇ ಸುರುಟು, ಚುಕ್ಕೆ ಅಥವಾ ಕೀಟ ಬಾಧೆ ಇಲ್ಲ. ಗಿಡದ ಬೆಳವಣಿಗೆ ಸಮೃದ್ಧವಾಗಿದೆ.",
+      mr: "पानांवर कोणताही चुरडा-मुरडा, डाग किंवा रस शोषणाऱ्या किडींचे नुकसान नाही. रोपाची वाढ निरोगी आहे."
+    },
+    parts: ["Leaves", "Shoots", "Terminal buds"],
+    symptoms: [
+      "Smooth, fully expanded leaf lamina without cupping",
+      "Vibrant green tissue free of chlorotic mosaic or necrotic halos",
+      "Healthy active apical shoot growth"
+    ],
+    causes: ["Good nursery management, vector exclusion, and balanced foliar nutrition."],
+    identify: [
+      "Flat, broad leaves with natural glossy surface",
+      "No webbing underneath leaves or silvering on upper surface"
+    ],
+    lookalikes: "None. Healthy physiological standard.",
+    severityNote: "Severity Score 0 (Completely healthy).",
+    immediate: [
+      "Maintain adequate root zone moisture without water stagnation.",
+      "Install yellow and blue sticky traps (10/acre) for preventive monitoring."
+    ],
+    cultural: [
+      "Apply balanced basal fertilizer; avoid excessive nitrogen that attracts sucking pests.",
+      "Maintain border crops like maize or sorghum as vector barriers."
+    ],
+    prevention: [
+      { title: "Sticky Traps", body: "Install yellow and blue sticky traps early to catch thrips and whiteflies before colonies establish." },
+      { title: "Neem Spray", body: "Preventive neem oil spray (10,000 ppm @ 1 ml/L) helps repel incoming vector pests." }
+    ],
+    monitoring: ["Scout terminal buds and underside of upper leaves twice weekly for minute sucking pests."],
+    getHelp: "Keep following Integrated Pest Management (IPM) guidelines."
+  },
 ];
 
 export function getCrop(key: string): Crop | undefined {

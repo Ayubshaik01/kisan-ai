@@ -147,7 +147,7 @@ describe("Knowledge Library Search", () => {
     // Filter by crop
     const chilliOnly = searchTopics("", { crop: "chilli" });
     expect(chilliOnly.every((t) => t.crop === "chilli")).toBe(true);
-    expect(chilliOnly.length).toBe(9);
+    expect(chilliOnly.length).toBe(10);
 
     // Filter by mode
     const pestsOnly = searchTopics("", { kind: "pest" });
