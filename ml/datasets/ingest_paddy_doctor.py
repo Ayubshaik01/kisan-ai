@@ -100,3 +100,4 @@ def setup_paddy_doctor_integration(paddy_doctor_dir: str = None):
 
 if __name__ == "__main__":
     setup_paddy_doctor_integration()
+
