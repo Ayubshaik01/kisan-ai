@@ -192,6 +192,13 @@ export function CropCareProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // 100% Offline execution: When device is offline, instantly deliver local Llama 3.2 1B response
+    const isDeviceOffline = !online || (typeof navigator !== "undefined" && !navigator.onLine);
+    if (isDeviceOffline) {
+      finish(llamaRes.text);
+      return;
+    }
+
     // Dual-mode execution: attempt live Docker / online Llama 3.2 endpoint with seamless offline fallback
     queryLiveLlamaEndpoint(
       `Crop context: ${ctx?.crop || "rice/chilli"}, condition: ${ctx?.slug || "general health"}\nFarmer Question in ${settings.lang}: ${question}`,
@@ -201,7 +208,7 @@ export function CropCareProvider({ children }: { children: ReactNode }) {
     }).catch(() => {
       finish(llamaRes.text);
     });
-  }, [settings.lang]);
+  }, [settings.lang, online]);
 
   const clearChat = useCallback(() => { setMessages([]); chatStore.save([]); }, []);
   const clearData = useCallback((scope: "history" | "saved" | "chat" | "all") => {

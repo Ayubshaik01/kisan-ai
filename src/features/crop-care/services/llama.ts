@@ -397,6 +397,10 @@ export async function queryLiveLlamaEndpoint(
   prompt: string,
   systemPrompt: string
 ): Promise<string | null> {
+  // If the browser or environment is offline, avoid triggering network errors
+  if (typeof navigator !== "undefined" && !navigator.onLine) {
+    return null;
+  }
   const endpoints = [
     "http://localhost:11434/v1/chat/completions",
     "http://localhost:8000/v1/chat/completions",
@@ -525,18 +529,79 @@ export function generateLlamaChatResponse(
     };
   }
 
-  // English fallback or generic
+  // Dynamic multilingual agronomic response generator
   let body = "";
   if (topic?.slug === "rice-blast") {
-    body = `Rice Blast presents with spindle-shaped lesions containing necrotic ash-grey centers. Excessive split-applications of urea and continuous leaf wetness dramatically aggravate spread. Immediately suspend nitrogen top-dressing, regulate water depth, and maintain clean field bunds.`;
+    if (targetLang === "te") {
+      body = `వరి అగ్గి తెగులు (బ్లాస్ట్) నూలు కండె ఆకారపు మచ్చలతో వస్తుంది; మధ్యలో బూడిద రంగు ఉంటుంది. రాత్రి మంచు మరియు అధిక యూరియా వాడకం వల్ల వ్యాప్తి పెరుగుతుంది. అదనపు నత్రజని వేయడం వెంటనే ఆపండి, పొలంలో నీటిని తగ్గించండి, గట్లపై కలుపు తొలగించండి. కంకి దశలో మెడ విరుపు రాకుండా జాగ్రత్త పడండి.`;
+    } else if (targetLang === "hi") {
+      body = `धान का ब्लास्ट (झोंका) रोग तकलीनुमा आँख जैसे धब्बों के रूप में दिखता है, जिनका केंद्र राख जैसा धूसर होता है। रात की ओस और अत्यधिक यूरिया से इसका फैलाव तेज होता है। यूरिया का छिड़काव तुरंत बंद करें, पानी का स्तर नियंत्रित करें और मेड़ों की सफाई रखें।`;
+    } else if (targetLang === "ta") {
+      body = `நெல் குலை நோய் (பிளாஸ்ட்) கதிர் வடிவிலான புள்ளிகளுடன் தோன்றும், இதன் நடுப்பகுதி சாம்பல் நிறத்தில் இருக்கும். அதிக யூரியா மற்றும் இரவு பனிப்பொழிவு இதை தீவிரப்படுத்துகிறது. உடனடியாக யூரியாவை நிறுத்தி, வரப்புப் புற்களை அழிக்கவும்.`;
+    } else if (targetLang === "kn") {
+      body = `ಭತ್ತದ ಬೆಂಕಿ ರೋಗವು ಕಣ್ಣಿನ ಆಕಾರದ ಮಚ್ಚೆಗಳೊಂದಿಗೆ ಕಾಣಿಸಿಕೊಳ್ಳುತ್ತದೆ, ಮಧ್ಯದಲ್ಲಿ ಬೂದಿ ಬಣ್ಣವಿರುತ್ತದೆ. ತಂಪಾದ ಇಬ್ಬನಿ ಮತ್ತು ಅತಿಯಾದ ಯೂರಿಯಾ ಬಳಕೆಯಿಂದ ರೋಗವು ವೇಗವಾಗಿ ಹರಡುತ್ತದೆ. ತಕ್ಷಣ ಯೂರಿಯಾ ಗೊಬ್ಬರ ನಿಲ್ಲಿಸಿ.`;
+    } else if (targetLang === "mr") {
+      body = `भातावरील करपा (ब्लास्ट) रोग चातीच्या आकाराच्या ठिपक्यांसह दिसतो, ज्यांचा मध्यभाग राखाडी असतो. रात्रीचे दव आणि अतिरिक्त युरियामुळे हा रोग वेगाने पसरतो. तातडीने युरिया देणे बंद करा आणि बांधावरील गवत काढून टाका.`;
+    } else {
+      body = `Rice Blast presents with spindle-shaped lesions containing necrotic ash-grey centers. Excessive split-applications of urea and continuous leaf wetness dramatically aggravate spread. Immediately suspend nitrogen top-dressing, regulate water depth, and maintain clean field bunds.`;
+    }
   } else if (topic?.slug === "brown-spot") {
-    body = `Brown Spot presents as small, circular or oval brown lesions with grayish centers and yellow halos, exacerbated by poor sandy soils and zinc deficiency. Conduct soil testing, supply balanced NPK with zinc sulfate, and maintain continuous shallow standing water.`;
+    if (targetLang === "te") {
+      body = `గోధుమ మచ్చ తెగులు గుండ్రని లేదా అండాకారపు గోధుమ మచ్చలను కలిగిస్తుంది. నేలలో జింక్ లోపం మరియు పోషకాహార లోపం ఉన్నప్పుడు ఇది తీవ్రమవుతుంది. సమతుల్య ఎరువులతో పాటు జింక్ సల్ఫేట్ అందించండి మరియు పొలంలో ఎల్లప్పుడూ తేమ ఉండేలా చూడండి.`;
+    } else if (targetLang === "hi") {
+      body = `भूरा धब्बा रोग पत्तियों पर छोटे गोल या अंडाकार भूरे धब्बे बनाता है। यह हल्की रेतीली मिट्टी और जिंक की कमी में अधिक फैलता है। संतुलित खाद और जिंक सल्फेट दें तथा खेत में उचित नमी बनाए रखें।`;
+    } else if (targetLang === "ta") {
+      body = `பழுப்பு புள்ளி நோய் இலைகளில் வட்டமான பழுப்பு புள்ளிகளை ஏற்படுத்துகிறது. ஊட்டச்சத்து மற்றும் துத்தநாக குறைபாடுள்ள நிலங்களில் இது தீவிரமடைகிறது. துத்தநாக சல்பேட் உரமிட்டு சமச்சீரான ஊட்டச்சத்தை உறுதி செய்யவும்.`;
+    } else if (targetLang === "kn") {
+      body = `ಕಂದು ಮಚ್ಚೆ ರೋಗವು ದುಂಡಗಿನ ಕಂದು ಮಚ್ಚೆಗಳನ್ನು ಉಂಟುಮಾಡುತ್ತದೆ. ಪೋಷಕಾಂಶಗಳ ಕೊರತೆ ಮತ್ತು ಸತುವಿನ ಕೊರತೆಯಿದ್ದಾಗ ಈ ರೋಗ ಹೆಚ್ಚಾಗುತ್ತದೆ. ಸತುವಿನ ಸಲ್ಫೇಟ್ ಒದಗಿಸಿ ಮತ್ತು ತೇವಾಂಶ ಕಾಪಾಡಿ.`;
+    } else if (targetLang === "mr") {
+      body = `तपकिरी ठिपके रोग पानांवर गोलाकार किंवा लंबगोलाकार ठिपके निर्माण करतो. जमिनीत झिंक आणि अन्नद्रव्यांची कमतरता असल्यास हा रोग वाढतो. झिंक सल्फेट देऊन जमिनीची सुपिकता सुधारा.`;
+    } else {
+      body = `Brown Spot presents as small, circular or oval brown lesions with grayish centers and yellow halos, exacerbated by poor sandy soils and zinc deficiency. Conduct soil testing, supply balanced NPK with zinc sulfate, and maintain continuous shallow standing water.`;
+    }
   } else if (topic?.slug === "leaf-curl") {
-    body = `Chilli Leaf Curl is predominantly vectored by thrips and whiteflies, leading to upward cupping and stunted bushiness. Install 20 yellow and blue sticky traps per acre to intercept vector flights, rogue out severely deformed host plants, and reinforce foliar nutrition.`;
+    if (targetLang === "te") {
+      body = `మిరప ఆకు ముడత ప్రధానంగా తెల్లదోమలు మరియు తామర పురుగుల ద్వారా వ్యాపిస్తుంది. ఆకులు పైకి దోనె ఆకారంలో ముడుచుకుంటాయి. ఎకరాకు 20 పసుపు, 20 నీలి జిగురు అట్టలను అమర్చండి, తీవ్రంగా దెబ్బతిన్న మొక్కలను పీకివేయండి, పొలం చుట్టూ జొన్న సరిహద్దు పంట వేయండి.`;
+    } else if (targetLang === "hi") {
+      body = `मिर्च का पत्ती मरोड़ रोग सफेद मक्खी और थ्रिप्स कीटों द्वारा फैलता है। पत्तियां ऊपर की ओर मुड़ जाती हैं और पौधा बौना हो जाता है। प्रति एकड़ 20 पीले व 20 नीले चिपचिपे ट्रैप लगाएं, अत्यधिक रोगी पौधों को उखाड़कर नष्ट करें और खेत के चारों ओर मक्का/ज्वार लगाएं।`;
+    } else if (targetLang === "ta") {
+      body = `மிளகாய் இலை சுருட்டை நோய் வெள்ளை ஈ மற்றும் இலைப்பேன் மூலம் பரவுகிறது. இலைகள் மேல்நோக்கி சுருண்டு விடும். ஏக்கருக்கு 20 மஞ்சள் மற்றும் 20 நீல ஒட்டும் பொறிகளை வைக்கவும், எல்லையில் சோளம் பயிரிடவும்.`;
+    } else if (targetLang === "kn") {
+      body = `ಮೆಣಸಿನ ಎಲೆ ಮುದುರು ರೋಗವು ಬಿಳಿ ನೊಣ ಮತ್ತು ಥ್ರಿಪ್ಸ್ ಕೀಟಗಳಿಂದ ಹರಡುತ್ತದೆ. ಎಲೆಗಳು ಮೇಲ್ಮುಖವಾಗಿ ಮುದುರಿಕೊಳ್ಳುತ್ತವೆ. ಎಕರೆಗೆ 20 ಹಳದಿ ಮತ್ತು 20 ನೀಲಿ ಅಂಟು ಬಲೆಗಳನ್ನು ಇರಿಸಿ ಮತ್ತು ಜಮೀನಿನ ಸುತ್ತಲೂ ಜೋಳ ಬೆಳೆಯಿರಿ.`;
+    } else if (targetLang === "mr") {
+      body = `मिरचीवरील चुरडा-मुरडा (बोकड्या) रोग पांढरी माशी आणि फुलकिडे (थ्रिप्स) द्वारे पसरतो. पाने वरच्या दिशेने गोळा होतात. एकरामध्ये २० पिवळे आणि २० निळे चिकट सापळे लावा आणि शेताभोवती मका किंवा ज्वारीचे पीक लावा.`;
+    } else {
+      body = `Chilli Leaf Curl is predominantly vectored by thrips and whiteflies, leading to upward cupping and stunted bushiness. Install 20 yellow and blue sticky traps per acre to intercept vector flights, rogue out severely deformed host plants, and reinforce foliar nutrition.`;
+    }
   } else if (topic) {
-    body = `Based on verified agronomic records for ${l(targetLang, topic.name)}: Key visual markers include ${topic.symptoms.slice(0, 2).join("; ")}. Follow cultural sanitation, regulate irrigation, and consult your local KVK or Agriculture Officer for registered interventions.`;
+    const probName = l(targetLang, topic.name);
+    if (targetLang === "te") {
+      body = `${probName} గురించిన సమాచారం: ప్రాథమిక లక్షణాలు: ${topic.symptoms.slice(0, 2).join("; ")}. సకాలంలో సమగ్ర సస్యరక్షణ చర్యలు పాటించండి, నీటి యాజమాన్యం సరిగ్గా నిర్వహించండి. సందేహాల కొరకు స్థానిక వ్యవసాయ అధికారి లేదా కేవీకేను సంప్రదించండి.`;
+    } else if (targetLang === "hi") {
+      body = `${probName} के बारे में जानकारी: मुख्य लक्षण: ${topic.symptoms.slice(0, 2).join("; ")}। जैविक व कृषि प्रबंधन के तरीके अपनाएं। अधिक जानकारी के लिए नजदीकी कृषि विज्ञान केंद्र (KVK) से संपर्क करें।`;
+    } else if (targetLang === "ta") {
+      body = `${probName} குறித்த தகவல்: முக்கிய அறிகுறிகள்: ${topic.symptoms.slice(0, 2).join("; ")}. இயற்கை மற்றும் உழவியல் மேலாண்மை முறைகளை பின்பற்றவும்.`;
+    } else if (targetLang === "kn") {
+      body = `${probName} ಕುರಿತ ಮಾಹಿತಿ: ಪ್ರಮುಖ ಲಕ್ಷಣಗಳು: ${topic.symptoms.slice(0, 2).join("; ")}. ನೈಸರ್ಗಿಕ ಮತ್ತು ಸ್ವಚ್ಛತಾ ಕ್ರಮಗಳನ್ನು ಅನುಸರಿಸಿ.`;
+    } else if (targetLang === "mr") {
+      body = `${probName} बद्दल माहिती: मुख्य लक्षणे: ${topic.symptoms.slice(0, 2).join("; ")}. मशागतीचे उपाय अमलात आणा व अधिक माहितीसाठी कृषी केंद्राशी संपर्क साधा.`;
+    } else {
+      body = `Based on verified agronomic records for ${probName}: Key visual markers include ${topic.symptoms.slice(0, 2).join("; ")}. Follow cultural sanitation, regulate irrigation, and consult your local KVK or Agriculture Officer for registered interventions.`;
+    }
   } else {
-    body = `Please describe what you observe in your rice or chilli field (e.g., 'spindle spots on paddy leaves', 'inward chilli curl', or 'dead hearts in tillers'). You can also ask directly about any scan photo on your device.`;
+    if (targetLang === "te") {
+      body = `దయచేసి మీ వరి లేదా మిరప పొలంలో మీరు గమనించిన లక్షణాలను తెలియజేయండి (ఉదాహరణకు: 'ఆకులపై కంటి ఆకారపు మచ్చలు', 'ఆకు ముడత', లేదా 'కాండం తొలిచే పురుగు'). మీ పరికరంలోని స్కాన్ ఫోటోల గురించి కూడా నేరుగా అడగవచ్చు.`;
+    } else if (targetLang === "hi") {
+      body = `कृपया बताएं कि आप अपने धान या मिर्च के खेत में क्या लक्षण देख रहे हैं (जैसे: 'पत्तियों पर तकलीनुमा धब्बे', 'मिर्च में मरोड़िया रोग', या 'तना छेदक')। आप अपने फोन में मौजूद किसी भी स्कैन के बारे में भी सीधे पूछ सकते हैं।`;
+    } else if (targetLang === "ta") {
+      body = `தயவுசெய்து உங்கள் வயலில் நீங்கள் காணும் அறிகுறிகளை விவரிக்கவும் (எ.கா: 'இலைகளில் கண் வடிவ புள்ளிகள்', 'மிளகாய் இலை சுருட்டை'). உங்கள் சாதனத்திலுள்ள எந்தவொரு ஸ்கேன் பற்றியும் நீங்கள் கேட்கலாம்.`;
+    } else if (targetLang === "kn") {
+      body = `ದಯವಿಟ್ಟು ನಿಮ್ಮ ಜಮೀನಿನಲ್ಲಿ ನೀವು ಕಂಡ ಲಕ್ಷಣಗಳನ್ನು ತಿಳಿಸಿ (ಉದಾ: 'ಎಲೆಗಳ ಮೇಲೆ ಕಣ್ಣಿನ ಆಕಾರದ ಮಚ್ಚೆಗಳು', 'ಎಲೆ ಮುದುರುವಿಕೆ'). ನಿಮ್ಮ ಮೊಬೈಲ್‌ನಲ್ಲಿರುವ ಸ್ಕ್ಯಾನ್ ಬಗ್ಗೆಯೂ ನೇರವಾಗಿ ಕೇಳಬಹುದು.`;
+    } else if (targetLang === "mr") {
+      body = `कृपया तुमच्या शेतात तुम्हाला दिसणारी लक्षणे सांगा (उदा. 'पानांवर डोळ्यासारखे ठिपके', 'मिरचीवर चुरडा-मुरडा', किंवा 'खोडकीड'). तुम्ही तुमच्या फोनमधील स्कॅनबद्दलही थेट विचारू शकता.`;
+    } else {
+      body = `Please describe what you observe in your rice or chilli field (e.g., 'spindle spots on paddy leaves', 'inward chilli curl', or 'dead hearts in tillers'). You can also ask directly about any scan photo on your device.`;
+    }
   }
 
   return {

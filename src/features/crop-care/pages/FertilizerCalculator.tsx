@@ -82,7 +82,7 @@ export function FertilizerCalculatorPage() {
           to="/"
           className="-ml-2 inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="size-4" /> Back to Home
+          <ArrowLeft className="size-4" /> {t("back")}
         </Link>
         <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
           ANGRAU / ICAR Grounded
@@ -91,7 +91,7 @@ export function FertilizerCalculatorPage() {
 
       <PageHeader
         eyebrow="Soil & Plant Nutrition"
-        title="Balanced Fertilizer & Nutrient Calculator"
+        title={t("fertilizerDosage")}
         sub="Calculate precise N-P-K splits, Zinc, and Potash requirements per acre without hazardous chemical hallucinations."
       />
 

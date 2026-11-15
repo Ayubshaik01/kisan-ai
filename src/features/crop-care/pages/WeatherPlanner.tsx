@@ -114,7 +114,7 @@ export function WeatherPlannerPage() {
           to="/"
           className="-ml-2 inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="size-4" /> Back to Home
+          <ArrowLeft className="size-4" /> {t("back")}
         </Link>
         <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
           Offline Microclimate Engine
@@ -123,7 +123,7 @@ export function WeatherPlannerPage() {
 
       <PageHeader
         eyebrow="Agricultural Meteorology"
-        title="Weather & Spray Window Planner"
+        title={t("sprayWindow")}
         sub={`Microclimate telemetry and safe spray forecasting for ${settings.district}, ${settings.state}.`}
       />
 

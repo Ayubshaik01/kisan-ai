@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Link } from "@tanstack/react-router";
+import { useCropCare } from "../context";
 import {
   TrendingUp,
   MapPin,
@@ -163,6 +164,7 @@ const INITIAL_MANDI_DATA: MandiPriceRecord[] = [
 ];
 
 export function MarketPricesPage(): React.JSX.Element {
+  const { t } = useCropCare();
   const [selectedCrop, setSelectedCrop] = React.useState<"all" | "rice" | "chilli">("all");
   const [selectedState, setSelectedState] = React.useState<string>("all");
   const [searchQuery, setSearchQuery] = React.useState<string>("");
@@ -201,7 +203,7 @@ export function MarketPricesPage(): React.JSX.Element {
               e-NAM & APMC Real-time Market Intelligence
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
-              APMC Mandi Rates & Commodity Market
+              {t("mandiPrices")}
             </h1>
             <p className="text-sm text-stone-600 dark:text-stone-400">
               Verified daily arrivals, minimum, maximum, and modal wholesale rates across primary Andhra Pradesh and Telangana agricultural market yards.

@@ -210,7 +210,7 @@ export function HomePage() {
       </Section>
 
       {/* Advanced Agricultural Tools */}
-      <Section title="Agronomic Intelligence & Field Tools">
+      <Section title={t("agronomicTools")}>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Link
             to="/weather"
@@ -224,10 +224,10 @@ export function HomePage() {
             </span>
             <div className="mt-4">
               <span className="block text-sm font-bold text-foreground">
-                Weather & Spray
+                {t("navWeather")}
               </span>
               <span className="mt-0.5 block text-xs text-muted-foreground">
-                Safe foliar spray windows
+                {t("weatherDesc")}
               </span>
             </div>
           </Link>
@@ -244,10 +244,10 @@ export function HomePage() {
             </span>
             <div className="mt-4">
               <span className="block text-sm font-bold text-foreground">
-                Dosage Calculator
+                {t("navCalculator")}
               </span>
               <span className="mt-0.5 block text-xs text-muted-foreground">
-                NPK & micro-nutrient plans
+                {t("fertilizerDesc")}
               </span>
             </div>
           </Link>
@@ -264,10 +264,10 @@ export function HomePage() {
             </span>
             <div className="mt-4">
               <span className="block text-sm font-bold text-foreground">
-                Yield Estimator
+                {t("navYield")}
               </span>
               <span className="mt-0.5 block text-xs text-muted-foreground">
-                Disease loss & revenue risk
+                {t("yieldDesc")}
               </span>
             </div>
           </Link>
@@ -284,10 +284,10 @@ export function HomePage() {
             </span>
             <div className="mt-4">
               <span className="block text-sm font-bold text-foreground">
-                Mandi Rates
+                {t("navMarket")}
               </span>
               <span className="mt-0.5 block text-xs text-muted-foreground">
-                AP & TG wholesale prices
+                {t("marketDesc")}
               </span>
             </div>
           </Link>

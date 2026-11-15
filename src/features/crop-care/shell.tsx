@@ -102,15 +102,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/profile", label: t("navProfile"), icon: UserRound, exact: false },
   ] as const;
   const more = [
-    { to: "/weather", label: "Weather & Spray", icon: CloudSun },
-    { to: "/calculator", label: "Fertilizer Dosage", icon: Calculator },
-    { to: "/yield-estimator", label: "Yield Estimator", icon: TrendingUp },
-    { to: "/market", label: "Mandi Prices", icon: DollarSign },
+    { to: "/weather", label: t("navWeather"), icon: CloudSun },
+    { to: "/calculator", label: t("navCalculator"), icon: Calculator },
+    { to: "/yield-estimator", label: t("navYield"), icon: TrendingUp },
+    { to: "/market", label: t("navMarket"), icon: DollarSign },
     { to: "/assistant", label: t("navAssistant"), icon: MessageCircle },
     { to: "/saved", label: t("navSaved"), icon: Bookmark },
     { to: "/notifications", label: t("navNotifications"), icon: Bell },
     { to: "/help", label: t("navHelp"), icon: CircleHelp },
-  ] as const;
+  ];
   const due = reminders.filter((r) => !r.done && r.dueDate <= new Date().toISOString().slice(0, 10)).length;
 
   if (bare) return <div className="min-h-dvh bg-canvas text-foreground">{children}</div>;

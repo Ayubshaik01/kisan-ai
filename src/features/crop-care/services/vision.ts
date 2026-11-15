@@ -90,6 +90,8 @@ export async function analyzeImageWithVision(
 
       let plantPixels = 0;
       let healthyGreenPixels = 0;
+      let pureFoliageCount = 0;
+      let chloroticCount = 0;
       let chloroticStreakPixels = 0;
       let brownSpotPixels = 0;
       let blastAshCorePixels = 0;
@@ -113,23 +115,29 @@ export async function analyzeImageWithVision(
 
           const [h, s, v] = rgbToHsv(r, g, b);
 
-          // 1. Plant foliage filter: green, yellow, chlorotic or dried agricultural leaf hues
-          const isFoliage = (h >= 20 && h <= 180 && s >= 0.08 && v >= 0.08) ||
-                            (g > r * 0.95 && g > b * 0.95 && (r + g + b) > 60) ||
-                            (r > b && g > b && v >= 0.15); // Broad leaf tissue detection across varied lighting
+          // 1. Genuine Plant Foliage Chromaticity
+          // - Pure Green: Hue 45°–165°, S >= 0.15, V >= 0.12, G > B * 1.08
+          const isPureGreen = (h >= 45 && h <= 165 && s >= 0.15 && v >= 0.12 && g > b * 1.08);
+          // - Chlorotic / Yellowing Leaf Tissue: Hue 32°–45°, S >= 0.20, V >= 0.18, G > B * 1.12, G >= R * 0.70
+          const isChloroticLeaf = (h >= 32 && h < 45 && s >= 0.20 && v >= 0.18 && g > b * 1.12 && g >= r * 0.70);
 
-          // 2. Lesion detections
-          const isChloroticStreak = (h >= 36 && h <= 72 && s >= 0.18 && v >= 0.30);
-          const isBrownLesion = ((h <= 40 || h >= 320) && s >= 0.18 && v >= 0.10 && v <= 0.85);
-          const isAshCore = (s <= 0.30 && v >= 0.30 && v <= 0.88);
-          const isPowdery = (v >= 0.70 && s <= 0.22);
-          const isOrangeDiscoloration = (h >= 20 && h <= 48 && s >= 0.35 && v >= 0.35);
+          if (isPureGreen) pureFoliageCount++;
+          if (isChloroticLeaf) chloroticCount++;
+
+          const isFoliage = isPureGreen || isChloroticLeaf;
+
+          // 2. Foliar Lesion Detections (evaluated on or adjacent to leaf canopy)
+          const isChloroticStreak = (h >= 35 && h <= 68 && s >= 0.20 && v >= 0.30);
+          const isBrownLesion = ((h <= 40 || h >= 320) && s >= 0.22 && v >= 0.12 && v <= 0.75 && (r > b * 1.2));
+          const isAshCore = (s <= 0.32 && v >= 0.30 && v <= 0.85 && (r > 60 && g > 60));
+          const isPowdery = (v >= 0.75 && s <= 0.20);
+          const isOrangeDiscoloration = (h >= 20 && h <= 44 && s >= 0.36 && v >= 0.35);
 
           const isLesion = isChloroticStreak || isBrownLesion || isAshCore || isPowdery || isOrangeDiscoloration;
 
-          if (isFoliage || isLesion) {
+          if (isFoliage) {
             plantPixels++;
-            if (!isLesion && h >= 65 && h <= 150 && s >= 0.16) {
+            if (!isLesion && h >= 60 && h <= 150 && s >= 0.18) {
               healthyGreenPixels++;
             }
           }
@@ -147,18 +155,22 @@ export async function analyzeImageWithVision(
         }
       }
 
-      // Check Out-of-Distribution (OOD): Very lenient threshold to accept any leaf image
-      if (plantPixels < 150) {
+      const totalFoliage = pureFoliageCount + chloroticCount;
+
+      // Strict Out-of-Distribution (OOD) Check:
+      // A genuine crop leaf photograph must exhibit recognizable plant foliage (at least 2,200 pixels ~ 3.4% of frame)
+      // and pure green foliar tissue of at least 600 pixels. Non-leaf scenes (desks, faces, walls, clothing) fail this test.
+      if (totalFoliage < 2200 || (totalFoliage / totalPixels) < 0.034 || (pureFoliageCount < 600 && chloroticCount < 800)) {
         return resolve({
           source: "model",
           outcome: "unknown",
           confidence: 0.35,
           diagnostics: {
-            plantPixels,
+            plantPixels: totalFoliage,
             lesionPixels: 0,
             affectedPercent: 0,
             isCropValid: false,
-            pattern: "out_of_distribution_non_crop",
+            pattern: "out_of_distribution_non_leaf",
           },
         });
       }

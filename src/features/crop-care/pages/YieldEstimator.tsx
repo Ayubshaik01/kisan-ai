@@ -23,7 +23,7 @@ interface YieldLossScenario {
 }
 
 export function YieldEstimatorPage(): React.JSX.Element {
-  const { scans } = useCropCare();
+  const { scans, t } = useCropCare();
 
   const [crop, setCrop] = React.useState<"rice" | "chilli">("rice");
   const [acres, setAcres] = React.useState<number>(2.5);
@@ -95,7 +95,7 @@ export function YieldEstimatorPage(): React.JSX.Element {
               Agronomic Loss & Economic Forecasting
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
-              Crop Yield & Financial Risk Estimator
+              {t("harvestForecast")}
             </h1>
             <p className="text-sm text-stone-600 dark:text-stone-400">
               Correlate visual disease severity percentages with realistic field harvest potential, market price benchmarks, and actionable economic risk mitigation.

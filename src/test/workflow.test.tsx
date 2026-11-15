@@ -178,3 +178,47 @@ describe("Local Storage & Data Isolation", () => {
   });
 });
 
+describe("Multilingual I18n & Offline Agronomic Synthesis", () => {
+  it("translates all core navigation and OOD keys across all 6 languages", async () => {
+    const { translate } = await import("@/features/crop-care/i18n");
+    const languages = ["en", "te", "hi", "ta", "kn", "mr"] as const;
+    const requiredKeys = ["oodTitle", "navWeather", "navCalculator", "navYield", "navMarket", "retakeLeaf"] as const;
+
+    for (const lang of languages) {
+      for (const key of requiredKeys) {
+        const text = translate(lang, key);
+        expect(text).toBeDefined();
+        expect(text.length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("generates localized offline Llama 3.2 1B agronomic responses without network", async () => {
+    const { generateLlamaChatResponse } = await import("@/features/crop-care/services/llama");
+    const languages = ["en", "te", "hi", "ta", "kn", "mr"] as const;
+
+    for (const lang of languages) {
+      const res = generateLlamaChatResponse("blb symptoms in paddy", lang);
+      expect(res.model).toBe("Llama-3.2-1B-Instruct");
+      expect(res.lang).toBe(lang);
+      expect(res.text.length).toBeGreaterThan(20);
+      expect(res.safetyTriggered).toBe(false);
+    }
+  });
+
+  it("strictly triggers statutory CIB&RC safety refusal when chemical dosage is queried", async () => {
+    const { generateLlamaChatResponse } = await import("@/features/crop-care/services/llama");
+    const hazardousQueries = [
+      "how much chemical dosage per acre to spray for blast?",
+      "कितना कीटनाशक छिड़काव करें प्रति एकड़?",
+      "పురుగుమందు మోతాదు ఎకరాకు ఎంత కలపాలి?",
+    ];
+
+    for (const query of hazardousQueries) {
+      const res = generateLlamaChatResponse(query, "en");
+      expect(res.safetyTriggered).toBe(true);
+      expect(res.text).toContain("CIB&RC");
+    }
+  });
+});
+

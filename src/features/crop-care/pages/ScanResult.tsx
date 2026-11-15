@@ -15,6 +15,7 @@ import {
   FileText,
   FlaskConical,
   HelpCircle,
+  ImageOff,
   Info,
   Leaf,
   MapPin,
@@ -113,9 +114,12 @@ export function ScanResultPage() {
     );
   }
 
-  // Respect the live predicted diagnosis directly from the model
-  const topicSlug = scan.topicSlug || (scan.crop === "rice" ? "rice-blast" : "leaf-curl");
-  const topic = getTopic(scan.crop, topicSlug);
+  // Live predicted diagnosis directly from the on-device model
+  const isIdentified = scan.outcome === "identified";
+  const isUnknown = scan.outcome === "unknown";
+  const isUnanalysed = scan.outcome === "unanalysed";
+  const topicSlug = isIdentified && scan.topicSlug ? scan.topicSlug : undefined;
+  const topic = topicSlug ? getTopic(scan.crop, topicSlug) : null;
 
   const applyDiagnosis = (slug: string) => {
     const targetTopic = getTopic(scan.crop, slug);
@@ -141,11 +145,18 @@ export function ScanResultPage() {
   const [analysisLang, setAnalysisLang] = useState<Lang>(lang);
   const [isPlayingVoice, setIsPlayingVoice] = useState(false);
 
-  const llamaReport = generateLlamaAnalysis(
-    { ...scan, topicSlug, outcome: "identified" },
-    analysisLang,
-    topic
-  );
+  // Synchronize report language dynamically when user changes header language
+  useEffect(() => {
+    setAnalysisLang(lang);
+  }, [lang]);
+
+  const llamaReport = topic
+    ? generateLlamaAnalysis(
+        { ...scan, topicSlug: topic.slug, outcome: "identified" },
+        analysisLang,
+        topic
+      )
+    : null;
 
   // Subscribe to voice agent updates
   useEffect(() => {
@@ -165,9 +176,11 @@ export function ScanResultPage() {
       return;
     }
 
+    if (!topic || !llamaReport) return;
+
     // Build comprehensive spoken report text
-    const diseaseName = topic ? l(analysisLang, topic.name) : topicSlug;
-    const spokenText = `${diseaseName}. ${llamaReport.visualPathology}. ${llamaReport.fieldRisk}. Recommended actions: ${llamaReport.actionPlan.join(". ")}`;
+    const diseaseName = l(analysisLang, topic.name);
+    const spokenText = `${diseaseName}. ${llamaReport.visualPathology}. ${llamaReport.fieldRisk}. ${t("immediate")}: ${llamaReport.actionPlan.join(". ")}`;
 
     voiceAgent.speak(spokenText, analysisLang, () => {
       setIsPlayingVoice(false);
@@ -250,170 +263,255 @@ Note: ${note || "No specific farmer notes recorded."}
         </div>
       </div>
 
-      {/* On-device AI Model Connection Banner */}
-      {scan.source === "sample" ? (
-        <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
-          <div className="flex items-center gap-2.5">
-            <span className="grid size-8 place-items-center rounded-xl bg-primary/20 text-primary shrink-0">
-              <Sparkles className="size-4" />
-            </span>
-            <div>
-              <p className="font-bold text-foreground">Offline AI Model Connected</p>
-              <p className="text-muted-foreground">MobileNetV3-Small & Llama 3.2 1B are active on this device.</p>
+      {/* ========================================================= */}
+      {/* NON-LEAF / OUT-OF-DISTRIBUTION WARNING */}
+      {/* ========================================================= */}
+      {isUnknown && (
+        <div className="space-y-6">
+          <div className="rounded-3xl border border-rose-500/30 bg-gradient-to-br from-card via-card to-rose-500/10 p-6 sm:p-8 space-y-6 shadow-forest">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 border-b border-line pb-5">
+              <span className="grid size-14 place-items-center rounded-2xl bg-rose-500/15 text-rose-500 shrink-0">
+                <ImageOff className="size-8" />
+              </span>
+              <div className="space-y-1">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                  {t("oodTitle")}
+                </span>
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+                  {t("oodTitle")}
+                </h1>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {t("oodSub")}
+                </p>
+              </div>
             </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => applyDiagnosis(topicSlug)}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 font-bold text-primary-foreground hover:bg-primary/90 text-xs shrink-0 self-start sm:self-auto shadow-sm"
-          >
-            <Check className="size-3.5" /> Confirm On-Device Diagnosis
-          </button>
-        </div>
-      ) : (
-        <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-xs text-primary">
-          <span className="flex items-center gap-2 font-semibold">
-            <CheckCircle2 className="size-4 text-primary" /> Verified MobileNetV3-Small & Llama 3.2 1B Diagnostic
-          </span>
-          <span className="font-mono text-[11px] text-muted-foreground">On-device</span>
-        </div>
-      )}
 
-      {/* Hero Diagnostic Card */}
-      <div className="grid gap-6 md:grid-cols-12">
-        {/* Photo view */}
-        <div className="md:col-span-5">
-          <div className="relative overflow-hidden rounded-3xl border border-line bg-card shadow-forest">
-            <img
-              src={scan.image}
-              alt="Scan specimen"
-              className="aspect-square w-full object-cover"
-            />
-            <div className="image-scrim absolute inset-0 pointer-events-none" />
-            <div className="absolute inset-x-0 bottom-0 p-4">
-              <div className="flex items-center justify-between">
-                <span className="rounded-full bg-black/60 px-3 py-1 text-xs font-semibold backdrop-blur text-white">
-                  {t(scan.crop)} · {t(scan.mode)}
-                </span>
-                <span className="text-xs text-white/80 font-mono">
-                  {fmtDate(scan.createdAt, lang)}
-                </span>
+            <div className="grid gap-6 md:grid-cols-12">
+              <div className="md:col-span-5">
+                <div className="relative overflow-hidden rounded-2xl border border-line bg-card aspect-square shadow-sm">
+                  <img
+                    src={scan.image}
+                    alt="Uploaded specimen"
+                    className="size-full object-cover filter grayscale contrast-75"
+                  />
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center p-4 text-center">
+                    <span className="rounded-xl bg-black/75 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur flex items-center gap-1.5">
+                      <ImageOff className="size-3.5" /> Non-Leaf Image
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="md:col-span-7 flex flex-col justify-between space-y-4">
+                <div className="rounded-2xl border border-line bg-surface/50 p-5 space-y-3">
+                  <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                    <Sparkles className="size-4 text-primary" />
+                    {t("photoTips")}
+                  </h3>
+                  <ul className="space-y-2 text-xs leading-relaxed text-muted-foreground list-disc pl-4">
+                    <li>{t("tipFocus")}</li>
+                    <li>{t("tipLight")}</li>
+                    <li>{t("tipBackground")}</li>
+                    <li>{t("tipAvoid")}</li>
+                  </ul>
+                </div>
+
+                <div className="flex flex-wrap gap-3 pt-2">
+                  <Link
+                    to="/diagnose"
+                    search={{ crop: scan.crop, mode: scan.mode }}
+                    className={cn(btnPrimary, "flex-1 min-h-12 text-sm font-bold shadow-lg shadow-primary/20")}
+                  >
+                    <RotateCcw className="size-4" />
+                    {t("retakeLeaf")}
+                  </Link>
+                  <Link
+                    to="/library"
+                    search={{ crop: scan.crop }}
+                    className={cn(btnSecondary, "flex-1 min-h-12 text-sm font-semibold")}
+                  >
+                    <BookOpen className="size-4 text-muted-foreground" />
+                    {t("browseLibrary")}
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
         </div>
+      )}
 
-        {/* Diagnosis overview */}
-        <div className="flex flex-col justify-between space-y-5 md:col-span-7">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-primary">
-                {topic
-                  ? topic.kind === "disease"
-                    ? t("possibleDisease")
-                    : t("possiblePest")
-                  : scan.outcome === "unanalysed"
-                    ? t("unanalysedTitle")
-                    : t("unknownTitle")}
-              </span>
-              {scan.source === "sample" && <SampleBadge />}
-            </div>
-
-            <h1 className="mt-3 text-2xl font-bold tracking-tight text-foreground sm:text-4xl">
-              {topic
-                ? l(lang, topic.name)
-                : scan.outcome === "unanalysed"
-                  ? t("unanalysedTitle")
-                  : t("unknownTitle")}
-            </h1>
-
-            {topic?.scientific && (
-              <p className="mt-1 font-mono text-sm italic text-muted-foreground">
-                {topic.scientific}
-              </p>
-            )}
-
-            {topic && (
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                {l(lang, topic.summary)}
-              </p>
-            )}
-
-            {/* Diagnostic Model Verification Telemetry */}
-            <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
-                <CheckCircle2 className="size-3.5" />
-                Live MobileNetV3 Prediction
-              </span>
-              <span>•</span>
-              <span className="font-mono text-[11px]">
-                {scan.crop === "rice" ? "Rice Mendeley hx6f852hw4" : "Chilli Entomology"} Model
-              </span>
-            </div>
-          </div>
-
-          {/* Confidence and Severity meters */}
-          {topic && (
-            <div className="grid gap-3 rounded-2xl border border-line bg-surface/40 p-4 sm:grid-cols-2">
-              {/* Confidence */}
-              {scan.confidence !== undefined && (
+      {/* ========================================================= */}
+      {/* VERIFIED LEAF DIAGNOSIS VIEW */}
+      {/* ========================================================= */}
+      {!isUnknown && (
+        <>
+          {scan.source === "sample" ? (
+            <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <span className="grid size-8 place-items-center rounded-xl bg-primary/20 text-primary shrink-0">
+                  <Sparkles className="size-4" />
+                </span>
                 <div>
-                  <p className="text-xs font-semibold text-muted-foreground mb-1">
-                    {t("confidence")}
-                  </p>
-                  <ConfidenceBar value={scan.confidence} />
+                  <p className="font-bold text-foreground">Offline AI Model Connected</p>
+                  <p className="text-muted-foreground">MobileNetV3-Small & Llama 3.2 1B are active on this device.</p>
                 </div>
+              </div>
+              {topic && (
+                <button
+                  type="button"
+                  onClick={() => applyDiagnosis(topic.slug)}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 font-bold text-primary-foreground hover:bg-primary/90 text-xs shrink-0 self-start sm:self-auto shadow-sm"
+                >
+                  <Check className="size-3.5" /> Confirm On-Device Diagnosis
+                </button>
               )}
-
-              {/* Severity */}
-              {scan.severity && (
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs font-semibold text-muted-foreground">
-                      {t("severity")}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setShowSeverityDetail(true)}
-                      className="text-[11px] font-semibold text-primary hover:underline"
-                    >
-                      Scale info →
-                    </button>
-                  </div>
-                  <SeverityMeter severity={scan.severity} />
-                </div>
-              )}
+            </div>
+          ) : (
+            <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-xs text-primary">
+              <span className="flex items-center gap-2 font-semibold">
+                <CheckCircle2 className="size-4 text-primary" /> Verified MobileNetV3-Small & Llama 3.2 1B Diagnostic
+              </span>
+              <span className="font-mono text-[11px] text-muted-foreground">On-device</span>
             </div>
           )}
 
-          {/* Quick Action Navigation */}
-          <div className="flex flex-wrap gap-2 pt-2">
-            <Link
-              to="/assistant"
-              search={{ scanId: scan.id }}
-              className={cn(btnPrimary, "flex-1 min-h-11 text-xs font-bold")}
-            >
-              <MessageCircle className="size-4" />
-              {t("askAi")}
-            </Link>
-            {topic && (
-              <Link
-                to="/library/$crop/$slug"
-                params={{ crop: scan.crop, slug: topic.slug }}
-                className={cn(btnSecondary, "flex-1 min-h-11 text-xs font-semibold")}
-              >
-                <BookOpen className="size-4 text-muted-foreground" />
-                {t("exploreLibrary")}
-              </Link>
-            )}
+          {/* Hero Diagnostic Card */}
+          <div className="grid gap-6 md:grid-cols-12">
+            {/* Photo view */}
+            <div className="md:col-span-5">
+              <div className="relative overflow-hidden rounded-3xl border border-line bg-card shadow-forest">
+                <img
+                  src={scan.image}
+                  alt="Scan specimen"
+                  className="aspect-square w-full object-cover"
+                />
+                <div className="image-scrim absolute inset-0 pointer-events-none" />
+                <div className="absolute inset-x-0 bottom-0 p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="rounded-full bg-black/60 px-3 py-1 text-xs font-semibold backdrop-blur text-white">
+                      {t(scan.crop)} · {t(scan.mode)}
+                    </span>
+                    <span className="text-xs text-white/80 font-mono">
+                      {fmtDate(scan.createdAt, lang)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Diagnosis overview */}
+            <div className="flex flex-col justify-between space-y-5 md:col-span-7">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-primary">
+                    {topic
+                      ? topic.kind === "disease"
+                        ? t("possibleDisease")
+                        : t("possiblePest")
+                      : scan.outcome === "unanalysed"
+                        ? t("unanalysedTitle")
+                        : t("unknownTitle")}
+                  </span>
+                  {scan.source === "sample" && <SampleBadge />}
+                </div>
+
+                <h1 className="mt-3 text-2xl font-bold tracking-tight text-foreground sm:text-4xl">
+                  {topic
+                    ? l(lang, topic.name)
+                    : scan.outcome === "unanalysed"
+                      ? t("unanalysedTitle")
+                      : t("unknownTitle")}
+                </h1>
+
+                {topic?.scientific && (
+                  <p className="mt-1 font-mono text-sm italic text-muted-foreground">
+                    {topic.scientific}
+                  </p>
+                )}
+
+                {topic && (
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                    {l(lang, topic.summary)}
+                  </p>
+                )}
+
+                {/* Diagnostic Model Verification Telemetry */}
+                <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
+                    <CheckCircle2 className="size-3.5" />
+                    Live MobileNetV3 Prediction
+                  </span>
+                  <span>•</span>
+                  <span className="font-mono text-[11px]">
+                    {scan.crop === "rice" ? "Rice Mendeley hx6f852hw4" : "Chilli Entomology"} Model
+                  </span>
+                </div>
+              </div>
+
+              {/* Confidence and Severity meters */}
+              {topic && (
+                <div className="grid gap-3 rounded-2xl border border-line bg-surface/40 p-4 sm:grid-cols-2">
+                  {/* Confidence */}
+                  {scan.confidence !== undefined && (
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground mb-1">
+                        {t("confidence")}
+                      </p>
+                      <ConfidenceBar value={scan.confidence} />
+                    </div>
+                  )}
+
+                  {/* Severity */}
+                  {scan.severity && (
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-xs font-semibold text-muted-foreground">
+                          {t("severity")}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setShowSeverityDetail(true)}
+                          className="text-[11px] font-semibold text-primary hover:underline"
+                        >
+                          Scale info →
+                        </button>
+                      </div>
+                      <SeverityMeter severity={scan.severity} />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Quick Action Navigation */}
+              <div className="flex flex-wrap gap-2 pt-2">
+                <Link
+                  to="/assistant"
+                  search={{ scanId: scan.id }}
+                  className={cn(btnPrimary, "flex-1 min-h-11 text-xs font-bold")}
+                >
+                  <MessageCircle className="size-4" />
+                  {t("askAi")}
+                </Link>
+                {topic && (
+                  <Link
+                    to="/library/$crop/$slug"
+                    params={{ crop: scan.crop, slug: topic.slug }}
+                    className={cn(btnSecondary, "flex-1 min-h-11 text-xs font-semibold")}
+                  >
+                    <BookOpen className="size-4 text-muted-foreground" />
+                    {t("exploreLibrary")}
+                  </Link>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
 
       {/* ========================================================= */}
       {/* SECTION: LLAMA 3.2 MULTIMODAL SYNTHESIS (ON-DEVICE) */}
       {/* ========================================================= */}
-      {topic && (
+      {topic && llamaReport && (
         <div className={cn(card, "p-6 border-primary/30 bg-gradient-to-br from-card to-primary/5 shadow-forest space-y-5")}>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-line pb-4">
             <div className="flex items-center gap-2.5">
@@ -423,14 +521,14 @@ Note: ${note || "No specific farmer notes recorded."}
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-base font-bold text-foreground">
-                    Llama 3.2 Multimodal Synthesis
+                    {t("multimodalSynthesis")}
                   </h3>
                   <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold tracking-wide text-primary uppercase">
                     1B Instruct
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  On-device vision & agricultural reasoning · Offline
+                  {t("onDeviceReasoning")}
                 </p>
               </div>
             </div>
@@ -450,11 +548,11 @@ Note: ${note || "No specific farmer notes recorded."}
               >
                 {isPlayingVoice ? (
                   <>
-                    <VolumeX className="size-4" /> Stop Voice
+                    <VolumeX className="size-4" /> {t("voiceStop")}
                   </>
                 ) : (
                   <>
-                    <Volume2 className="size-4" /> Listen (Voice Agent)
+                    <Volume2 className="size-4" /> {t("voiceListen")}
                   </>
                 )}
               </button>
@@ -501,7 +599,7 @@ Note: ${note || "No specific farmer notes recorded."}
             <div className="rounded-2xl border border-line bg-background/60 p-4 space-y-2">
               <div className="flex items-center gap-1.5 text-xs font-bold text-primary uppercase tracking-wide">
                 <Eye className="size-3.5" />
-                <span>Visual Pathology</span>
+                <span>{t("visualPathology")}</span>
               </div>
               <p className="text-xs leading-relaxed text-foreground/90">
                 {llamaReport.visualPathology}
@@ -512,7 +610,7 @@ Note: ${note || "No specific farmer notes recorded."}
             <div className="rounded-2xl border border-line bg-background/60 p-4 space-y-2">
               <div className="flex items-center gap-1.5 text-xs font-bold text-coral uppercase tracking-wide">
                 <AlertTriangle className="size-3.5" />
-                <span>Spread & Risk Forecast</span>
+                <span>{t("fieldRisk")}</span>
               </div>
               <p className="text-xs leading-relaxed text-foreground/90">
                 {llamaReport.fieldRisk}
@@ -523,7 +621,7 @@ Note: ${note || "No specific farmer notes recorded."}
             <div className="rounded-2xl border border-line bg-background/60 p-4 space-y-2">
               <div className="flex items-center gap-1.5 text-xs font-bold text-emerald uppercase tracking-wide">
                 <CheckCircle2 className="size-3.5" />
-                <span>Action Protocol</span>
+                <span>{t("actionProtocol")}</span>
               </div>
               <ul className="space-y-1.5 text-xs leading-relaxed text-foreground/90 list-disc pl-3.5">
                 {llamaReport.actionPlan.map((action, idx) => (
@@ -660,79 +758,7 @@ Note: ${note || "No specific farmer notes recorded."}
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* SECTION: UNKNOWN / UNANALYSED RESOLUTION */}
-      {/* ========================================================= */}
-      {!topic && scan.outcome === "unknown" && (
-        <div className="space-y-6">
-          {/* Llama 3.2 Candidate Matcher */}
-          <div className={cn(card, "p-6 border-primary/30 bg-primary/5 space-y-4")}>
-            <div className="flex items-center gap-2">
-              <span className="grid size-8 place-items-center rounded-xl bg-primary/20 text-primary">
-                <Sparkles className="size-4" />
-              </span>
-              <div>
-                <h3 className="font-bold text-base text-foreground">
-                  Llama 3.2 Visual Symptom Matcher
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  Select the visible symptom matching your leaf to generate the full Llama diagnosis:
-                </p>
-              </div>
-            </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
-              {(scan.crop === "rice"
-                ? [
-                    { slug: "bacterial-leaf-blight", name: "Bacterial Leaf Blight", desc: "Pale/yellow wavy lesions running down leaf edges from tip" },
-                    { slug: "rice-blast", name: "Rice Leaf Blast", desc: "Spindle/diamond-shaped lesions with ash-grey center" },
-                    { slug: "brown-spot", name: "Brown Spot", desc: "Circular to oval dark brown spots with yellow halos" },
-                  ]
-                : [
-                    { slug: "leaf-curl", name: "Chilli Leaf Curl", desc: "Upward leaf cupping, curling, and stunted growth" },
-                    { slug: "cercospora-leaf-spot", name: "Cercospora Leaf Spot", desc: "Circular frogeye spots with pale/white center" },
-                    { slug: "thrips", name: "Thrips Infestation", desc: "Upward curling with silvery leaf underside" },
-                  ]
-              ).map((cand) => (
-                <button
-                  key={cand.slug}
-                  type="button"
-                  onClick={() => applyDiagnosis(cand.slug)}
-                  className="rounded-2xl border border-line bg-card p-4 text-left hover:border-primary/50 hover:bg-surface transition-all flex flex-col justify-between"
-                >
-                  <div>
-                    <p className="font-bold text-sm text-foreground">{cand.name}</p>
-                    <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{cand.desc}</p>
-                  </div>
-                  <span className="mt-3 text-xs font-semibold text-primary inline-flex items-center gap-1">
-                    Analyze as {cand.name} →
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className={cn(card, "p-6 space-y-4")}>
-            <h3 className="font-bold text-base text-foreground">
-              {t("unknownWhy")}
-            </h3>
-            <ul className="space-y-2 pl-4 list-disc text-sm text-muted-foreground">
-              <li>{t("unknown1")}</li>
-              <li>{t("unknown2")}</li>
-              <li>{t("unknown3")}</li>
-            </ul>
-
-            <div className="pt-2 flex flex-wrap gap-3">
-              <Link to="/diagnose" className={cn(btnPrimary, "min-h-11 px-5")}>
-                <RotateCcw className="size-4" /> {t("chooseAnother")}
-              </Link>
-              <Link to="/library" className={cn(btnSecondary, "min-h-11 px-5")}>
-                <BookOpen className="size-4" /> {t("viewSupported")}
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
 
       {scan.outcome === "unanalysed" && (
         <div className={cn(card, "p-6 space-y-4")}>
