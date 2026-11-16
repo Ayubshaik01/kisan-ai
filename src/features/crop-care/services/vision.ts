@@ -396,11 +396,39 @@ export async function analyzeImageWithVision(
         meanDiffRG
       ];
 
-      // Query the trained gradient boosted model
+      // 1. Query Local PyTorch Deep Learning Server / Ollama Vision Endpoint if running
+      let deepModelResult: { slug: string; confidence: number; candidates: { slug: string; confidence: number }[] } | null = null;
+      try {
+        const localServerRes = await fetch("http://127.0.0.1:8000/api/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: dataUrl, crop }),
+          signal: AbortSignal.timeout(1800),
+        });
+        if (localServerRes.ok) {
+          const srvData = await localServerRes.json();
+          if (srvData && srvData.outcome === "identified" && srvData.topicSlug && srvData.topicSlug !== "unknown") {
+            deepModelResult = {
+              slug: srvData.topicSlug,
+              confidence: srvData.confidence,
+              candidates: srvData.candidates || [],
+            };
+          }
+        }
+      } catch {
+        // Local server offline; fall through to client model
+      }
+
+      // 2. Query the trained client gradient boosted model or embedded pathology
       const hgbModel = await loadHgbModel(crop);
       const hgbRes = hgbModel ? evaluateHgb(hgbModel, featVector) : null;
 
-      if (hgbRes && hgbRes.confidence >= 0.20) {
+      if (deepModelResult) {
+        detectedSlug = deepModelResult.slug;
+        confidence = Math.min(0.98, Math.max(0.70, deepModelResult.confidence));
+        patternName = detectedSlug.replace("-", "_");
+        candidates = deepModelResult.candidates;
+      } else if (hgbRes && hgbRes.confidence >= 0.20) {
         detectedSlug = hgbRes.slug;
         confidence = Math.min(0.96, Math.max(0.68, hgbRes.confidence));
         patternName = detectedSlug.replace("-", "_");
