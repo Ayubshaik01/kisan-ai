@@ -203,46 +203,72 @@ export async function analyzeImageWithVision(
       const colorHistogram = new Map<number, number>();
       let saturatedFlatCount = 0;
 
+      // Multi-spectral foliar pathology pixel counters matching training extraction
+      let foliarCount = 0;
+      let yellowTissueCount = 0;
+      let brownLesionCount = 0;
+      let ashCoreCount = 0;
+      let whiteStreakCount = 0;
+      let marginalYellowCount = 0;
+      let marginalBrownCount = 0;
+
       for (let y = 0; y < H; y++) {
-        const isMargin = y < 40 || y > 215 || false; // Vertical leaf boundaries
+        const isMarginY = y < 51 || y > 204; // 20% margin
         for (let x = 0; x < W; x++) {
-          const isEdgeX = x < 45 || x > 210;
-          const isLeafMargin = isMargin || isEdgeX;
+          const isMarginX = x < 51 || x > 204; // 20% margin
+          const isMargin = isMarginY || isMarginX;
 
           const idx = (y * W + x) * 4;
-          const r = data[idx]!;
-          const g = data[idx + 1]!;
-          const b = data[idx + 2]!;
+          const r8 = data[idx]!;
+          const g8 = data[idx + 1]!;
+          const b8 = data[idx + 2]!;
+
+          const r = r8 / 255.0;
+          const g = g8 / 255.0;
+          const b = b8 / 255.0;
+
+          // 14-Feature ML Feature Definitions (Identical to training pipeline)
+          const isFoliar = (g > r * 1.05) && (g > b * 1.05) && (g > 0.15);
+          const isYellow = (r > 0.38) && (g > 0.35) && (b < 0.28) && (r > b * 1.3);
+          const isBrown = (r > 0.24) && (g < r * 0.92) && (b < 0.24) && (r > b * 1.3);
+          const isAsh = (Math.abs(r - g) < 0.07) && (Math.abs(g - b) < 0.07) && (r > 0.35) && (r < 0.70);
+          const isWhite = (r > 0.65) && (g > 0.65) && (b > 0.60) && (isFoliar || isYellow);
+
+          if (isFoliar) foliarCount++;
+          if (isYellow) {
+            yellowTissueCount++;
+            if (isMargin) marginalYellowCount++;
+          }
+          if (isBrown) {
+            brownLesionCount++;
+            if (isMargin) marginalBrownCount++;
+          }
+          if (isAsh) ashCoreCount++;
+          if (isWhite) whiteStreakCount++;
 
           // Quantize color (5-bit per channel) for histogram analysis
-          const qColor = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
+          const qColor = ((r8 >> 3) << 10) | ((g8 >> 3) << 5) | (b8 >> 3);
           colorHistogram.set(qColor, (colorHistogram.get(qColor) || 0) + 1);
 
-          const [h, s, v] = rgbToHsv(r, g, b);
+          const [h, s, v] = rgbToHsv(r8, g8, b8);
 
           // Track artificial / neon cartoon colors (extreme saturation with high brightness)
           if (s > 0.88 && v > 0.85) {
             saturatedFlatCount++;
           }
 
-          // 1. Genuine Plant Foliage Chromaticity
-          // - Pure Green: Hue 45°–165°, S >= 0.15, V >= 0.12, G > B * 1.08
-          const isPureGreen = (h >= 45 && h <= 165 && s >= 0.15 && v >= 0.12 && g > b * 1.08);
-          // - Chlorotic / Yellowing Leaf Tissue: Hue 32°–45°, S >= 0.20, V >= 0.18, G > B * 1.12, G >= R * 0.70
-          const isChloroticLeaf = (h >= 32 && h < 45 && s >= 0.20 && v >= 0.18 && g > b * 1.12 && g >= r * 0.70);
-
+          // Legacy visual masks
+          const isPureGreen = (h >= 45 && h <= 165 && s >= 0.15 && v >= 0.12 && g8 > b8 * 1.08);
+          const isChloroticLeaf = (h >= 32 && h < 45 && s >= 0.20 && v >= 0.18 && g8 > b8 * 1.12 && g8 >= r8 * 0.70);
           if (isPureGreen) pureFoliageCount++;
           if (isChloroticLeaf) chloroticCount++;
 
           const isFoliage = isPureGreen || isChloroticLeaf;
-
-          // 2. Foliar Lesion Detections (evaluated on or adjacent to leaf canopy)
           const isChloroticStreak = (h >= 35 && h <= 68 && s >= 0.20 && v >= 0.30);
-          const isBrownLesion = ((h <= 40 || h >= 320) && s >= 0.22 && v >= 0.12 && v <= 0.75 && (r > b * 1.2));
-          const isAshCore = (s <= 0.32 && v >= 0.30 && v <= 0.85 && (r > 60 && g > 60));
+          const isBrownLesion = ((h <= 40 || h >= 320) && s >= 0.22 && v >= 0.12 && v <= 0.75 && (r8 > b8 * 1.2));
+          const isAshCore = (s <= 0.32 && v >= 0.30 && v <= 0.85 && (r8 > 60 && g8 > 60));
           const isPowdery = (v >= 0.75 && s <= 0.20);
           const isOrangeDiscoloration = (h >= 20 && h <= 44 && s >= 0.36 && v >= 0.35);
-
           const isLesion = isChloroticStreak || isBrownLesion || isAshCore || isPowdery || isOrangeDiscoloration;
 
           if (isFoliage) {
@@ -253,7 +279,7 @@ export async function analyzeImageWithVision(
           }
 
           if (isLesion) {
-            if (isLeafMargin) marginLesionCount++;
+            if (isMargin) marginLesionCount++;
             else centerLesionCount++;
 
             if (isChloroticStreak) chloroticStreakPixels++;
@@ -352,15 +378,15 @@ export async function analyzeImageWithVision(
       let patternName = "";
       let candidates: { slug: string; confidence: number }[] = [];
 
-      // Construct feature vector for the field gradient boosted model:
+      // Construct feature vector for the field gradient boosted model (EXACT 14-features from real-field training):
       const featVector = [
-        plantPixels / totalPixels,
-        chloroticStreakPixels / totalPixels,
-        brownSpotPixels / totalPixels,
-        blastAshCorePixels / totalPixels,
-        whitePowderyPixels / totalPixels,
-        marginLesionCount / totalPixels,
-        centerLesionCount / totalPixels,
+        foliarCount / totalPixels,
+        yellowTissueCount / totalPixels,
+        brownLesionCount / totalPixels,
+        ashCoreCount / totalPixels,
+        whiteStreakCount / totalPixels,
+        marginalYellowCount / totalPixels,
+        marginalBrownCount / totalPixels,
         meanR,
         meanG,
         meanB,
