@@ -2,8 +2,10 @@ import { Link, useSearch } from "@tanstack/react-router";
 import {
   AlertTriangle,
   Bot,
+  Check,
   CheckCircle2,
   ChevronRight,
+  Copy,
   CornerDownLeft,
   Image as ImageIcon,
   Info,
@@ -13,6 +15,7 @@ import {
   Send,
   ShieldAlert,
   Sparkles,
+  Sprout,
   Trash2,
   User,
   Volume2,
@@ -25,6 +28,7 @@ import { useCropCare } from "../context";
 import type { Lang } from "../i18n";
 import { getTopic, l } from "../knowledge";
 import { voiceAgent } from "../services/voice";
+import { MarkdownMessage } from "../ui/MarkdownMessage";
 import {
   btn,
   btnGhost,
@@ -36,42 +40,132 @@ import {
   PageHeader,
 } from "../ui";
 
-const samplePromptsByLang: Record<Lang, string[]> = {
+const samplePromptsByLang: Record<Lang, { category: string; questions: string[] }[]> = {
   en: [
-    "How to identify rice blast in the field?",
-    "What causes chilli leaves to curl up?",
-    "How to tell brown spot from blast?",
-    "Signs of yellow stem borer in paddy",
-  ],
-  hi: [
-    "धान के ब्लास्ट रोग के क्या लक्षण हैं?",
-    "मिर्च में पत्ती मरोड़ रोग की रोकथाम कैसे करें?",
-    "धान में भूरा धब्बा और ब्लास्ट में क्या अंतर है?",
-    "धान के तना छेदक कीट की पहचान कैसे करें?",
+    {
+      category: "🌾 Rice (Paddy) Care",
+      questions: [
+        "How to identify rice blast in the field?",
+        "Best fertilizer schedule for paddy tillering?",
+        "How to control yellow stem borer organically?",
+      ],
+    },
+    {
+      category: "🌶️ Chilli Crop Care",
+      questions: [
+        "What causes chilli leaves to curl upwards?",
+        "Safe natural remedy for chilli thrips and mites",
+        "How to prevent fruit rot (anthracnose)?",
+      ],
+    },
+    {
+      category: "🌿 Bio-Controls & Irrigation",
+      questions: [
+        "How to use Pseudomonas for disease prevention?",
+        "Explain Alternate Wetting and Drying (AWD)",
+        "When is the best time of day to spray?",
+      ],
+    },
   ],
   te: [
-    "వరి అగ్గి తెగులు ప్రాథమిక లక్షణాలు ఏమిటి?",
-    "మిరప ఆకు ముడత వైరస్ ఎలా వ్యాపిస్తుంది?",
-    "వరిలో గోధుమ మచ్చ మరియు అగ్గి తెగులు తేడా ఏమిటి?",
-    "వరి కాండం తొలిచే పురుగు నివారణ చర్యలు ఏమిటి?",
+    {
+      category: "🌾 వరి సస్యరక్షణ",
+      questions: [
+        "వరి అగ్గి తెగులు ప్రాథమిక లక్షణాలు ఏమిటి?",
+        "వరిలో పిలకల దశలో ఎరువుల యాజమాన్యం ఎలా చేయాలి?",
+        "కాండం తొలిచే పురుగు నివారణ చర్యలు ఏమిటి?",
+      ],
+    },
+    {
+      category: "🌶️ మిరప సస్యరక్షణ",
+      questions: [
+        "మిరప ఆకు ముడత వైరస్ ఎలా వ్యాపిస్తుంది?",
+        "తామర పురుగులు, నల్లి నివారణకు వేప నూనె ఎలా వాడాలి?",
+        "కాయ కుళ్ళు తెగులు రాకుండా ఏం చేయాలి?",
+      ],
+    },
+    {
+      category: "🌿 సేంద్రీయ & నీటి యాజమాన్యం",
+      questions: [
+        "సూడోమోనాస్ జీవ రసాయనం ఎలా పిచికారీ చేయాలి?",
+        "వరిలో ఆరుతడుల (AWD) నీటి పద్ధతి ఏమిటి?",
+        "మందులు పిచికారీ చేయడానికి సరైన సమయం ఏది?",
+      ],
+    },
+  ],
+  hi: [
+    {
+      category: "🌾 धान की फसल सुरक्षा",
+      questions: [
+        "धान के ब्लास्ट रोग के क्या लक्षण हैं?",
+        "धान में कल्ले फूटते समय यूरिया का सही प्रयोग?",
+        "तना छेदक कीट की जैविक रोकथाम कैसे करें?",
+      ],
+    },
+    {
+      category: "🌶️ मिर्च की उन्नत सुरक्षा",
+      questions: [
+        "मिर्च में पत्ती मरोड़ रोग की रोकथाम कैसे करें?",
+        "थ्रिप्स और माइट्स के लिए नीम तेल का छिड़काव",
+        "मिर्च में फल सड़न (एंथ्रेक्नोज) से बचाव",
+      ],
+    },
+    {
+      category: "🌿 जैविक व सिंचाई प्रबंधन",
+      questions: [
+        "स्यूडोमोनास बायो-कंट्रोल का सही उपयोग कैसे करें?",
+        "धान में कम पानी में खेती (AWD) तकनीक क्या है?",
+        "दवा छिड़काव का सबसे उत्तम समय कौन सा है?",
+      ],
+    },
   ],
   ta: [
-    "நெல் குலை நோயின் ஆரம்ப அறிகுறிகள் என்ன?",
-    "மிளகாய் இலை சுருட்டை வைரஸ் எவ்வாறு பரவுகிறது?",
-    "நெல் தண்டு துளைப்பான் பூச்சியை எவ்வாறு கட்டுப்படுத்துவது?",
-    "பழுப்பு புள்ளி நோய்க்கான மேலாண்மை முறைகள் யாவை?",
+    {
+      category: "🌾 நெல் பாதுகாப்பு",
+      questions: [
+        "நெல் குலை நோயின் ஆரம்ப அறிகுறிகள் என்ன?",
+        "நெல் தண்டு துளைப்பான் பூச்சியை கட்டுப்படுத்துவது எப்படி?",
+      ],
+    },
+    {
+      category: "🌶️ மிளகாய் பயிர்",
+      questions: [
+        "மிளகாய் இலை சுருட்டை வைரஸ் எவ்வாறு பரவுகிறது?",
+        "இலைப்பேன் கட்டுப்பாடு இயற்கை முறைகள் யாவை?",
+      ],
+    },
   ],
   kn: [
-    "ಭತ್ತದ ಬೆಂಕಿ ರೋಗದ ಪ್ರಾಥಮಿಕ ಲಕ್ಷಣಗಳು ಯಾವುವು?",
-    "ಮೆಣಸಿನಕಾಯಿ ಎಲೆ ಮುದುರುವ ರೋಗ ಹೇಗೆ ಹರಡುತ್ತದೆ?",
-    "ಭತ್ತದ ಕಾಂಡ ಕೊರೆಯುವ ಕೀಟವನ್ನು ನಿಯಂತ್ರಿಸುವುದು ಹೇಗೆ?",
-    "ಕಂದು ಮಚ್ಚೆ ರೋಗದ ಲಕ್ಷಣಗಳು ಯಾವುವು?",
+    {
+      category: "🌾 ಭತ್ತದ ರೋಗ ನಿರ್ವಹಣೆ",
+      questions: [
+        "ಭತ್ತದ ಬೆಂಕಿ ರೋಗದ ಪ್ರಾಥಮಿಕ ಲಕ್ಷಣಗಳು ಯಾವುವು?",
+        "ಕಾಂಡ ಕೊರೆಯುವ ಕೀಟ ನಿಯಂತ್ರಣ ಕ್ರಮಗಳು ಯಾವುವು?",
+      ],
+    },
+    {
+      category: "🌶️ ಮೆಣಸಿನ ಬೆಳೆ",
+      questions: [
+        "ಮೆಣಸಿನಕಾಯಿ ಎಲೆ ಮುದುರುವ ರೋಗ ಹೇಗೆ ಹರಡುತ್ತದೆ?",
+        "ನುಸಿ ಮತ್ತು ಹೇನು ನಿಯಂತ್ರಣಕ್ಕೆ ನೈಸರ್ಗಿಕ ವಿಧಾನಗಳು",
+      ],
+    },
   ],
   mr: [
-    "भातावरील करपा रोगाची सुरुवातीची लक्षणे काय आहेत?",
-    "मिरचीवरील चुरडा-मुरडा (बोकड्या) रोग कसा पसरतो?",
-    "भातावरील खोडकीड कशी ओळखावी?",
-    "तपकिरी ठिपके रोगाची लक्षणे कोणती?",
+    {
+      category: "🌾 भात पीक संरक्षण",
+      questions: [
+        "भातावरील करपा रोगाची सुरुवातीची लक्षणे काय आहेत?",
+        "भातावरील खोडकीड नियंत्रण कसे करावे?",
+      ],
+    },
+    {
+      category: "🌶️ मिरची पीक संरक्षण",
+      questions: [
+        "मिरचीवरील चुरडा-मुरडा (बोकड्या) रोग कसा पसरतो?",
+        "थ्रिप्स व माइट्स नियंत्रणासाठी सेंद्रिय उपाय",
+      ],
+    },
   ],
 };
 
@@ -85,7 +179,9 @@ export function AssistantPage() {
   const activeScan = scans.find((s) => s.id === activeScanId);
   const [input, setInput] = useState("");
   const [activePlayingId, setActivePlayingId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -115,13 +211,20 @@ export function AssistantPage() {
     }
   };
 
-  const handleSubmit = (e?: React.FormEvent) => {
-    e?.preventDefault();
-    const text = input.trim();
-    if (!text || typing) return;
+  const handleCopyMessage = (msgId: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(msgId);
+    setTimeout(() => {
+      setCopiedId(null);
+    }, 1800);
+  };
+
+  const handleSendPrompt = (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed || typing) return;
     setInput("");
     ask(
-      text,
+      trimmed,
       activeScan
         ? {
             crop: activeScan.crop,
@@ -131,6 +234,11 @@ export function AssistantPage() {
           }
         : {}
     );
+  };
+
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    handleSendPrompt(input);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -146,15 +254,17 @@ export function AssistantPage() {
       <div className="flex flex-col gap-2.5 border-b border-line pb-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+            <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl flex items-center gap-2">
+              <Bot className="size-6 text-primary" />
               {t("navAssistant")}
             </h1>
-            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-bold text-primary">
-              Llama 3.2 1B · Multimodal
+            <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Llama 3.2 1B Active
             </span>
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {t("assistantSub")} · Grounded in ANGRAU / PJTSAU / ICAR records
+            {t("assistantSub")} · Offline-First ICAR / ANGRAU Agronomic AI
           </p>
         </div>
 
@@ -184,6 +294,7 @@ export function AssistantPage() {
                 <button
                   type="button"
                   className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-surface hover:text-coral transition-colors"
+                  title="Clear conversation"
                 >
                   <Trash2 className="size-3.5" />
                 </button>
@@ -199,20 +310,20 @@ export function AssistantPage() {
 
       {/* Multimodal Photo Active Context Banner */}
       {activeScan && (
-        <div className="mt-2.5 flex items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-2 sm:px-3">
+        <div className="mt-2.5 flex items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-2 sm:px-3 animate-in fade-in">
           <div className="flex items-center gap-2.5 min-w-0">
             <img
               src={activeScan.image}
               alt="Active Scan"
-              className="size-9 rounded-xl object-cover border border-line shrink-0"
+              className="size-9 rounded-xl object-cover border border-line shrink-0 shadow-xs"
             />
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] font-bold text-primary uppercase tracking-wide">
-                  Photo Context Attached
+                  Active Photo Context Attached
                 </span>
                 <span className="text-[10px] text-muted-foreground capitalize">
-                  {activeScan.crop}
+                  • {activeScan.crop}
                 </span>
               </div>
               <p className="truncate text-xs font-semibold text-foreground">
@@ -236,13 +347,13 @@ export function AssistantPage() {
               params={{ scanId: activeScan.id }}
               className="text-xs font-semibold text-primary hover:underline"
             >
-              View
+              View Scan
             </Link>
             <button
               type="button"
               onClick={() => setActiveScanId(undefined)}
               className="rounded-lg p-1 text-muted-foreground hover:bg-surface hover:text-foreground"
-              title="Detach photo"
+              title="Detach photo context"
             >
               <X className="size-3.5" />
             </button>
@@ -253,43 +364,45 @@ export function AssistantPage() {
       {/* Messages Thread */}
       <div className="flex-1 overflow-y-auto py-4 space-y-4 pr-1">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center p-6 space-y-4">
-            <span className="grid size-14 place-items-center rounded-2xl bg-primary/15 text-primary">
-              <Bot className="size-7" />
+          <div className="flex flex-col items-center justify-center h-full text-center p-4 sm:p-6 space-y-5">
+            <span className="grid size-14 place-items-center rounded-2xl bg-primary/15 text-primary shadow-inner">
+              <Sprout className="size-7" />
             </span>
             <div className="max-w-md">
               <h2 className="text-lg font-bold text-foreground">
                 How can I assist your crop today?
               </h2>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Ask about rice or chilli leaf symptoms, insect pests, preventive
-                measures or scouting techniques.
+                Ask anything about Rice and Chilli leaf diseases, organic remedies,
+                fertilizer schedules, or water management.
               </p>
             </div>
 
-            {/* Quick Prompts */}
-            <div className="w-full max-w-md pt-2 space-y-2">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground text-left">
-                Suggested questions:
-              </p>
-              <div className="grid gap-2">
-                {(samplePromptsByLang[lang] ?? samplePromptsByLang.en).map((q) => (
-                  <button
-                    key={q}
-                    type="button"
-                    onClick={() => {
-                      setInput(q);
-                    }}
-                    className={cn(
-                      card,
-                      "flex items-center justify-between p-3 text-left text-xs font-medium text-foreground transition-all hover:border-primary/50 hover:bg-accent/40",
-                    )}
-                  >
-                    <span>{q}</span>
-                    <ChevronRight className="size-3.5 text-subtle" />
-                  </button>
-                ))}
-              </div>
+            {/* Quick Prompt Cards */}
+            <div className="w-full max-w-lg space-y-3 text-left">
+              {(samplePromptsByLang[lang] ?? samplePromptsByLang.en).map((group, gIdx) => (
+                <div key={gIdx} className="space-y-1.5">
+                  <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider pl-1">
+                    {group.category}
+                  </span>
+                  <div className="grid gap-1.5 sm:grid-cols-2">
+                    {group.questions.map((q) => (
+                      <button
+                        key={q}
+                        type="button"
+                        onClick={() => handleSendPrompt(q)}
+                        className={cn(
+                          card,
+                          "flex items-center justify-between p-2.5 text-left text-xs font-medium text-foreground transition-all hover:border-primary/50 hover:bg-accent/40 active:scale-98"
+                        )}
+                      >
+                        <span className="line-clamp-2">{q}</span>
+                        <ChevronRight className="size-3.5 text-muted-foreground shrink-0 ml-1.5" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         ) : (
@@ -300,91 +413,141 @@ export function AssistantPage() {
               <div
                 key={m.id}
                 className={cn(
-                  "flex gap-3 text-sm leading-relaxed",
-                  isFarmer ? "justify-end" : "justify-start",
+                  "flex gap-2.5 text-sm leading-relaxed",
+                  isFarmer ? "justify-end" : "justify-start"
                 )}
               >
                 {!isFarmer && (
-                  <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary mt-1">
+                  <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary mt-1 shadow-xs">
                     <Bot className="size-4" />
                   </span>
                 )}
 
-                <div
-                  className={cn(
-                    "max-w-[85%] rounded-2xl p-4 space-y-2.5",
-                    isFarmer
-                      ? "bg-primary text-primary-foreground rounded-tr-none font-medium"
-                      : "border border-line bg-card text-foreground rounded-tl-none shadow-sm",
-                    m.safety && "border-amber/40 bg-amber/10 text-amber",
-                  )}
-                >
-                  {m.safety && (
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-amber border-b border-amber/20 pb-2">
-                      <ShieldAlert className="size-4" /> Agricultural Safety
-                      Guard
-                    </div>
-                  )}
-
-                  <p className="whitespace-pre-line text-[13.5px] leading-relaxed">
-                    {m.text}
-                  </p>
-
-                  {/* Offline Voice Agent read aloud button for assistant answers */}
-                  {!isFarmer && (
-                    <div className="flex items-center justify-end pt-1">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleVoice(m.id, m.text)}
-                        className={cn(
-                          "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold transition-all",
-                          activePlayingId === m.id
-                            ? "bg-rose-500/20 text-rose-600 animate-pulse font-bold"
-                            : "text-muted-foreground hover:bg-surface hover:text-foreground"
-                        )}
-                        title="Voice Agent: Listen in regional audio"
-                      >
-                        {activePlayingId === m.id ? (
-                          <>
-                            <VolumeX className="size-3.5" /> Stop Voice
-                          </>
-                        ) : (
-                          <>
-                            <Volume2 className="size-3.5" /> Listen Voice
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Referenced Topics Cards */}
-                  {!isFarmer && m.refs && m.refs.length > 0 && (
-                    <div className="border-t border-line/60 pt-2.5 space-y-1.5">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-subtle">
-                        Referenced Field Topics:
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {m.refs.map((rf) => {
-                          const topic = getTopic(rf.crop, rf.slug);
-                          return (
-                            <Link
-                              key={`${rf.crop}-${rf.slug}`}
-                              to="/library/$crop/$slug"
-                              params={{ crop: rf.crop, slug: rf.slug }}
-                              className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors"
-                            >
-                              <Leaf className="size-3" />
-                              {topic ? l(lang, topic.name) : rf.slug}
-                            </Link>
-                          );
-                        })}
+                <div className={cn("max-w-[88%] space-y-2", isFarmer ? "items-end" : "items-start")}>
+                  <div
+                    className={cn(
+                      "rounded-2xl p-4 shadow-sm",
+                      isFarmer
+                        ? "bg-primary text-primary-foreground rounded-tr-none font-medium ml-auto"
+                        : "border border-line bg-card text-foreground rounded-tl-none",
+                      m.safety && "border-amber-500/40 bg-amber-500/5 text-amber-900 dark:text-amber-200"
+                    )}
+                  >
+                    {m.safety && (
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 border-b border-amber-500/20 pb-2 mb-2">
+                        <ShieldAlert className="size-4 shrink-0" />
+                        Agricultural Statutory Safety Guard (CIB&RC)
                       </div>
+                    )}
+
+                    {/* Rich Markdown Message Rendering */}
+                    {isFarmer ? (
+                      <p className="whitespace-pre-line text-[13.5px] leading-relaxed">
+                        {m.text}
+                      </p>
+                    ) : (
+                      <MarkdownMessage content={m.text} />
+                    )}
+
+                    {/* Action Bar for Assistant Messages */}
+                    {!isFarmer && (
+                      <div className="flex items-center justify-between border-t border-line/50 pt-2.5 mt-2.5 text-[11px] text-muted-foreground">
+                        <span className="text-[10px] font-semibold text-muted-foreground/80">
+                          KisanAI · Meta Llama 3.2 1B
+                        </span>
+
+                        <div className="flex items-center gap-2">
+                          {/* Copy to clipboard */}
+                          <button
+                            type="button"
+                            onClick={() => handleCopyMessage(m.id, m.text)}
+                            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:bg-surface hover:text-foreground transition-colors"
+                            title="Copy response"
+                          >
+                            {copiedId === m.id ? (
+                              <>
+                                <Check className="size-3 text-emerald-500" />
+                                <span className="text-emerald-500 font-bold">Copied</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="size-3" />
+                                <span>Copy</span>
+                              </>
+                            )}
+                          </button>
+
+                          {/* Listen audio with Vernacular Voice Agent */}
+                          <button
+                            type="button"
+                            onClick={() => handleToggleVoice(m.id, m.text)}
+                            className={cn(
+                              "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition-all",
+                              activePlayingId === m.id
+                                ? "bg-rose-500/20 text-rose-600 font-bold animate-pulse"
+                                : "hover:bg-surface hover:text-foreground"
+                            )}
+                            title="Read aloud in regional vernacular voice"
+                          >
+                            {activePlayingId === m.id ? (
+                              <>
+                                <VolumeX className="size-3" /> Stop
+                              </>
+                            ) : (
+                              <>
+                                <Volume2 className="size-3" /> Listen
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Referenced Field Topics */}
+                    {!isFarmer && m.refs && m.refs.length > 0 && (
+                      <div className="border-t border-line/40 pt-2 mt-2 space-y-1">
+                        <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Referenced Field Records:
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {m.refs.map((rf) => {
+                            const topic = getTopic(rf.crop, rf.slug);
+                            return (
+                              <Link
+                                key={`${rf.crop}-${rf.slug}`}
+                                to="/library/$crop/$slug"
+                                params={{ crop: rf.crop, slug: rf.slug }}
+                                className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors"
+                              >
+                                <Leaf className="size-3" />
+                                {topic ? l(lang, topic.name) : rf.slug}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Interactive Dynamic Suggestion Chips */}
+                  {!isFarmer && m.suggestions && m.suggestions.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-1 pl-1">
+                      {m.suggestions.map((sug) => (
+                        <button
+                          key={sug}
+                          type="button"
+                          onClick={() => handleSendPrompt(sug)}
+                          className="rounded-full border border-primary/25 bg-card/80 backdrop-blur-xs px-3 py-1 text-xs font-medium text-foreground hover:bg-primary/15 hover:border-primary/50 transition-all active:scale-95 shadow-2xs"
+                        >
+                          {sug}
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>
 
                 {isFarmer && (
-                  <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-surface text-muted-foreground mt-1">
+                  <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-surface text-muted-foreground mt-1 shadow-xs">
                     <User className="size-4" />
                   </span>
                 )}
@@ -395,32 +558,36 @@ export function AssistantPage() {
 
         {/* Typing indicator */}
         {typing && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
+          <div className="flex items-center gap-2.5 text-xs text-muted-foreground pt-1">
             <span className="grid size-8 place-items-center rounded-xl bg-primary/15 text-primary">
               <Bot className="size-4 animate-spin" />
             </span>
-            <span className="rounded-2xl border border-line bg-card px-4 py-2 text-xs">
-              {t("thinking")}
-            </span>
+            <div className="flex items-center gap-1.5 rounded-2xl border border-line bg-card px-4 py-2.5 shadow-xs">
+              <span className="size-1.5 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]" />
+              <span className="size-1.5 rounded-full bg-primary animate-bounce [animation-delay:-0.15s]" />
+              <span className="size-1.5 rounded-full bg-primary animate-bounce" />
+              <span className="ml-1 text-xs text-muted-foreground">{t("thinking")}...</span>
+            </div>
           </div>
         )}
 
         <div ref={endRef} />
       </div>
 
-      {/* Input Form */}
+      {/* Input Bar */}
       <div className="border-t border-line pt-3">
         <form
           onSubmit={handleSubmit}
-          className="relative flex items-end gap-2 rounded-2xl border border-line bg-card p-2 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary"
+          className="relative flex items-end gap-2 rounded-2xl border border-line bg-card p-2 shadow-xs focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all"
         >
           <textarea
+            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={t("typeQuestion")}
             rows={1}
-            className="flex-1 max-h-32 min-h-10 resize-none bg-transparent px-2 py-2 text-sm text-foreground outline-none placeholder:text-subtle"
+            className="flex-1 max-h-32 min-h-10 resize-none bg-transparent px-2.5 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/70"
           />
 
           <button
@@ -428,7 +595,7 @@ export function AssistantPage() {
             disabled={!input.trim() || typing}
             aria-label={t("send")}
             className={cn(
-              "grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-all hover:bg-primary/90 disabled:opacity-40 active:scale-95",
+              "grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-all hover:bg-primary/90 disabled:opacity-40 active:scale-95"
             )}
           >
             <Send className="size-4" />
@@ -436,7 +603,7 @@ export function AssistantPage() {
         </form>
 
         <p className="mt-2 text-center text-[10px] text-muted-foreground">
-          {t("llmMissing")}
+          {t("llmMissing")} · 100% offline-ready & private
         </p>
       </div>
     </div>

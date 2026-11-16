@@ -54,7 +54,15 @@ export type Settings = {
 export type Reminder = { id: string; title: string; crop: CropKey; dueDate: string; createdAt: string; done: boolean };
 export type LocalEvent = { id: string; kind: "scan-saved" | "advisory-saved" | "report-prepared"; label: string; at: string; link?: string };
 
-export type ChatMessage = { id: string; role: "farmer" | "assistant"; text: string; refs?: { crop: CropKey; slug: string }[]; safety?: boolean };
+export type ChatMessage = {
+  id: string;
+  role: "farmer" | "assistant";
+  text: string;
+  refs?: { crop: CropKey; slug: string }[];
+  safety?: boolean;
+  timestamp?: number;
+  suggestions?: string[];
+};
 
 export type ModelState = "installed" | "unavailable" | "error";
 export type ModelStatusItem = {

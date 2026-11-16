@@ -171,15 +171,31 @@ export function CropCareProvider({ children }: { children: ReactNode }) {
     const question = text.trim();
     if (!question) return;
     const add = (m: ChatMessage) => setMessages((c) => { const n = [...c, m]; chatStore.save(n); return n; });
-    add({ id: newId(), role: "farmer", text: question });
+    add({ id: newId(), role: "farmer", text: question, timestamp: Date.now() });
     setTyping(true);
-    const llamaRes = generateLlamaChatResponse(question, settings.lang, ctx ? {
-      crop: ctx.crop ?? "rice",
-      ...(ctx.slug ? { topicSlug: ctx.slug } : {}),
-      ...(ctx.confidence !== undefined ? { confidence: ctx.confidence } : {}),
-      ...(ctx.severityBand ? { severity: { scale: "area-band", score: 0, max: 100, band: ctx.severityBand as any } } : {}),
-    } : undefined);
-    const finish = (txt: string) => { setTyping(false); add({ id: newId(), role: "assistant", text: txt, refs: llamaRes.refs, safety: llamaRes.safetyTriggered }); };
+    const llamaRes = generateLlamaChatResponse(
+      question,
+      settings.lang,
+      ctx ? {
+        crop: ctx.crop ?? "rice",
+        ...(ctx.slug ? { topicSlug: ctx.slug } : {}),
+        ...(ctx.confidence !== undefined ? { confidence: ctx.confidence } : {}),
+        ...(ctx.severityBand ? { severity: { scale: "area-band", score: 0, max: 100, band: ctx.severityBand as any } } : {}),
+      } : undefined,
+      messages
+    );
+    const finish = (txt: string) => {
+      setTyping(false);
+      add({
+        id: newId(),
+        role: "assistant",
+        text: txt,
+        refs: llamaRes.refs,
+        safety: llamaRes.safetyTriggered,
+        suggestions: llamaRes.suggestions,
+        timestamp: Date.now(),
+      });
+    };
 
     if (llamaRes.safetyTriggered) {
       finish(llamaRes.text);
@@ -202,13 +218,14 @@ export function CropCareProvider({ children }: { children: ReactNode }) {
     // Dual-mode execution: attempt live Docker / online Llama 3.2 endpoint with seamless offline fallback
     queryLiveLlamaEndpoint(
       `Crop context: ${ctx?.crop || "rice/chilli"}, condition: ${ctx?.slug || "general health"}\nFarmer Question in ${settings.lang}: ${question}`,
-      "You are the Meta Llama 3.2 1B Instruct Agricultural Assistant. Provide verified ICAR/ANGRAU guidance without chemical dosages."
+      "You are the Meta Llama 3.2 1B Instruct Agricultural Assistant. Provide verified ICAR/ANGRAU guidance without chemical dosages.",
+      messages
     ).then((liveText) => {
       finish(liveText || llamaRes.text);
     }).catch(() => {
       finish(llamaRes.text);
     });
-  }, [settings.lang, online]);
+  }, [settings.lang, online, messages]);
 
   const clearChat = useCallback(() => { setMessages([]); chatStore.save([]); }, []);
   const clearData = useCallback((scope: "history" | "saved" | "chat" | "all") => {

@@ -253,6 +253,17 @@ describe("Multilingual I18n & Offline Agronomic Synthesis", () => {
     const teGreetingRes = generateLlamaChatResponse("బ్రో", "te", scanCtx);
     expect(teGreetingRes.text).toContain("అగ్గి తెగులు");
     expect(teGreetingRes.text).toContain("ఏం చేయాలి?");
+
+    // 6. Multi-turn memory without scanCtx attached: follow-up query "how to treat it"
+    const history = [
+      { id: "1", role: "farmer" as const, text: "My rice leaves have rice blast" },
+      { id: "2", role: "assistant" as const, text: "I identified Rice Blast on your crop.", refs: [{ crop: "rice" as const, slug: "rice-blast" }] },
+    ];
+    const followUpRes = generateLlamaChatResponse("how to treat it", "en", null, history);
+    expect(followUpRes.text).toContain("Rice Blast");
+    expect(followUpRes.text).toContain("Recommended Action Plan");
+    expect(followUpRes.suggestions).toBeDefined();
+    expect(followUpRes.suggestions?.length).toBeGreaterThan(0);
   });
 });
 
