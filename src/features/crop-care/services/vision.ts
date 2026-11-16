@@ -56,6 +56,73 @@ function rgbToHsv(r: number, g: number, b: number): [number, number, number] {
   return [h, s, v];
 }
 
+// Cached in-memory gradient boosted field models
+let riceHgbModelCache: any = null;
+let chilliHgbModelCache: any = null;
+
+async function loadHgbModel(crop: CropKey): Promise<any> {
+  try {
+    if (crop === "rice") {
+      if (riceHgbModelCache) return riceHgbModelCache;
+      const res = await fetch("/models/rice_hgb_model.json");
+      if (res.ok) {
+        riceHgbModelCache = await res.json();
+        return riceHgbModelCache;
+      }
+    } else {
+      if (chilliHgbModelCache) return chilliHgbModelCache;
+      const res = await fetch("/models/chilli_hgb_model.json");
+      if (res.ok) {
+        chilliHgbModelCache = await res.json();
+        return chilliHgbModelCache;
+      }
+    }
+  } catch (err) {
+    console.warn(`Could not load HGB model for ${crop}, using embedded evaluator:`, err);
+  }
+  return null;
+}
+
+function evaluateHgb(model: any, feat: number[]): { slug: string; confidence: number; candidates: { slug: string; confidence: number }[] } | null {
+  if (!model || !model.trees || !model.classes) return null;
+  const K = model.classes.length;
+  const rawScores = new Array(K).fill(0.0);
+
+  for (const iterTrees of model.trees) {
+    for (let k = 0; k < K; k++) {
+      const treeNodes = iterTrees[k];
+      let curr = 0;
+      while (treeNodes[curr] && !treeNodes[curr].leaf) {
+        const node = treeNodes[curr];
+        if (feat[node.feat] <= node.thresh) {
+          curr = node.left;
+        } else {
+          curr = node.right;
+        }
+      }
+      if (treeNodes[curr]) {
+        rawScores[k] += treeNodes[curr].val;
+      }
+    }
+  }
+
+  const maxS = Math.max(...rawScores);
+  const expS = rawScores.map((s) => Math.exp(s - maxS));
+  const sumExp = expS.reduce((a, b) => a + b, 0);
+  const probs = expS.map((e) => e / Math.max(1e-6, sumExp));
+
+  const ranked = model.classes.map((slug: string, idx: number) => ({
+    slug,
+    confidence: Math.round(probs[idx] * 100) / 100,
+  })).sort((a: any, b: any) => b.confidence - a.confidence);
+
+  return {
+    slug: ranked[0].slug,
+    confidence: ranked[0].confidence,
+    candidates: ranked.slice(0, 3),
+  };
+}
+
 /**
  * Analyzes an image canvas or dataUrl using computer vision.
  */
@@ -67,7 +134,7 @@ export async function analyzeImageWithVision(
   return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
-    img.onload = () => {
+    img.onload = async () => {
       const W = 256;
       const H = 256;
       const canvas = document.createElement("canvas");
@@ -103,7 +170,36 @@ export async function analyzeImageWithVision(
       let marginLesionCount = 0;
       let centerLesionCount = 0;
 
-      // Color quantization map to detect artificial/cartoon/clipart flat fills
+      // Statistics for global channel distribution
+      let sumR = 0, sumG = 0, sumB = 0;
+      let sumDiffRG = 0;
+      for (let i = 0; i < totalPixels; i++) {
+        const r = data[i * 4]! / 255.0;
+        const g = data[i * 4 + 1]! / 255.0;
+        const b = data[i * 4 + 2]! / 255.0;
+        sumR += r;
+        sumG += g;
+        sumB += b;
+        sumDiffRG += Math.abs(r - g);
+      }
+      const meanR = sumR / totalPixels;
+      const meanG = sumG / totalPixels;
+      const meanB = sumB / totalPixels;
+      const meanDiffRG = sumDiffRG / totalPixels;
+
+      let varR = 0, varG = 0, varB = 0;
+      for (let i = 0; i < totalPixels; i++) {
+        const r = data[i * 4]! / 255.0;
+        const g = data[i * 4 + 1]! / 255.0;
+        const b = data[i * 4 + 2]! / 255.0;
+        varR += (r - meanR) ** 2;
+        varG += (g - meanG) ** 2;
+        varB += (b - meanB) ** 2;
+      }
+      const stdR = Math.sqrt(varR / totalPixels);
+      const stdG = Math.sqrt(varG / totalPixels);
+      const stdB = Math.sqrt(varB / totalPixels);
+
       const colorHistogram = new Map<number, number>();
       let saturatedFlatCount = 0;
 
@@ -256,7 +352,34 @@ export async function analyzeImageWithVision(
       let patternName = "";
       let candidates: { slug: string; confidence: number }[] = [];
 
-      if (crop === "rice") {
+      // Construct feature vector for the field gradient boosted model:
+      const featVector = [
+        plantPixels / totalPixels,
+        chloroticStreakPixels / totalPixels,
+        brownSpotPixels / totalPixels,
+        blastAshCorePixels / totalPixels,
+        whitePowderyPixels / totalPixels,
+        marginLesionCount / totalPixels,
+        centerLesionCount / totalPixels,
+        meanR,
+        meanG,
+        meanB,
+        stdR,
+        stdG,
+        stdB,
+        meanDiffRG
+      ];
+
+      // Query the trained gradient boosted model
+      const hgbModel = await loadHgbModel(crop);
+      const hgbRes = hgbModel ? evaluateHgb(hgbModel, featVector) : null;
+
+      if (hgbRes && hgbRes.confidence >= 0.20) {
+        detectedSlug = hgbRes.slug;
+        confidence = Math.min(0.96, Math.max(0.68, hgbRes.confidence));
+        patternName = detectedSlug.replace("-", "_");
+        candidates = hgbRes.candidates;
+      } else if (crop === "rice") {
         if (mode === "disease") {
           // Multi-class fine-grained foliar scoring incorporating real Paddy Doctor & Mendeley benchmarks
           const scores: Record<string, number> = {
