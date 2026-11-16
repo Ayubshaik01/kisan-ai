@@ -103,6 +103,10 @@ export async function analyzeImageWithVision(
       let marginLesionCount = 0;
       let centerLesionCount = 0;
 
+      // Color quantization map to detect artificial/cartoon/clipart flat fills
+      const colorHistogram = new Map<number, number>();
+      let saturatedFlatCount = 0;
+
       for (let y = 0; y < H; y++) {
         const isMargin = y < 40 || y > 215 || false; // Vertical leaf boundaries
         for (let x = 0; x < W; x++) {
@@ -114,7 +118,16 @@ export async function analyzeImageWithVision(
           const g = data[idx + 1]!;
           const b = data[idx + 2]!;
 
+          // Quantize color (5-bit per channel) for histogram analysis
+          const qColor = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
+          colorHistogram.set(qColor, (colorHistogram.get(qColor) || 0) + 1);
+
           const [h, s, v] = rgbToHsv(r, g, b);
+
+          // Track artificial / neon cartoon colors (extreme saturation with high brightness)
+          if (s > 0.88 && v > 0.85) {
+            saturatedFlatCount++;
+          }
 
           // 1. Genuine Plant Foliage Chromaticity
           // - Pure Green: Hue 45°–165°, S >= 0.15, V >= 0.12, G > B * 1.08
@@ -157,6 +170,40 @@ export async function analyzeImageWithVision(
       }
 
       const totalFoliage = pureFoliageCount + chloroticCount;
+
+      // -------------------------------------------------------------
+      // CARTOON / CLIPART / ILLUSTRATION DISCRIMINATOR
+      // -------------------------------------------------------------
+      // Real leaves exhibit continuous organic texture gradients (hundreds of distinct tonal shades).
+      // Vector art, clip-art, diagrams and cartoons have few distinct quantized colors, large identical flat fills,
+      // or unnaturally high neon saturation with zero cellular noise.
+      let maxColorFrequency = 0;
+      for (const count of colorHistogram.values()) {
+        if (count > maxColorFrequency) {
+          maxColorFrequency = count;
+        }
+      }
+      const topColorDominance = maxColorFrequency / totalPixels;
+      const uniqueColorCount = colorHistogram.size;
+      const isCartoonOrClipart =
+        uniqueColorCount < 45 || // Extremely low color entropy (solid graphic fills)
+        topColorDominance > 0.38 || // One single flat block covers >38% of canvas
+        (saturatedFlatCount / totalPixels > 0.25 && uniqueColorCount < 180); // Neon flat drawing
+
+      if (isCartoonOrClipart) {
+        return resolve({
+          source: "model",
+          outcome: "unknown",
+          confidence: 0.25,
+          diagnostics: {
+            plantPixels: totalFoliage,
+            lesionPixels: 0,
+            affectedPercent: 0,
+            isCropValid: false,
+            pattern: "rejected_illustration_or_drawing",
+          },
+        });
+      }
 
       // Strict Out-of-Distribution (OOD) Check:
       // A genuine crop leaf photograph must exhibit recognizable plant foliage (at least 2,200 pixels ~ 3.4% of frame)

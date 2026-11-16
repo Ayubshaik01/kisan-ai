@@ -16,13 +16,13 @@ export interface VoicePlaybackState {
   supported: boolean;
 }
 
-const BCP47_LANG_TAGS: Record<Lang, string> = {
-  en: "en-IN",
-  hi: "hi-IN",
-  te: "te-IN",
-  ta: "ta-IN",
-  kn: "kn-IN",
-  mr: "mr-IN",
+const BCP47_LANG_TAGS: Record<Lang, string[]> = {
+  en: ["en-IN", "en-GB", "en-US", "en"],
+  hi: ["hi-IN", "hi"],
+  te: ["te-IN", "te"],
+  ta: ["ta-IN", "ta-LK", "ta"],
+  kn: ["kn-IN", "kn"],
+  mr: ["mr-IN", "mr"],
 };
 
 class VoiceAgentService {
@@ -40,6 +40,11 @@ class VoiceAgentService {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       this.synth = window.speechSynthesis;
       this.state.supported = true;
+      if (this.synth.onvoiceschanged !== undefined) {
+        this.synth.onvoiceschanged = () => {
+          this.synth?.getVoices();
+        };
+      }
     }
   }
 
@@ -92,18 +97,34 @@ class VoiceAgentService {
 
     try {
       const utterance = new SpeechSynthesisUtterance(cleanText);
-      const targetTag = BCP47_LANG_TAGS[lang] || "en-IN";
-      utterance.lang = targetTag;
-      utterance.rate = 0.95; // Slightly slower, comfortable listening speed for farmers
+      const candidateTags = BCP47_LANG_TAGS[lang] || ["en-IN", "en"];
+      const primaryTag = candidateTags[0]!;
+      utterance.lang = primaryTag;
+      utterance.rate = 0.92; // Slightly slower, comfortable listening speed for farmers
       utterance.pitch = 1.0;
 
-      // Select regional voice if available
+      // Select regional voice if available in browser
       const voices = this.synth.getVoices();
-      const regionalVoice = voices.find(
-        (v) => v.lang === targetTag || v.lang.startsWith(targetTag.split("-")[0]!)
-      );
+      let regionalVoice: SpeechSynthesisVoice | undefined;
+
+      // 1. Try exact matches from candidate tags
+      for (const tag of candidateTags) {
+        regionalVoice = voices.find((v) => v.lang.toLowerCase() === tag.toLowerCase() || v.lang.toLowerCase().replace("_", "-") === tag.toLowerCase());
+        if (regionalVoice) break;
+      }
+
+      // 2. Try prefix match (e.g., "te", "hi", "ta", "kn", "mr")
+      if (!regionalVoice) {
+        const langPrefix = lang.toLowerCase();
+        regionalVoice = voices.find((v) => {
+          const lCode = v.lang.toLowerCase().replace("_", "-");
+          return lCode === langPrefix || lCode.startsWith(`${langPrefix}-`) || v.name.toLowerCase().includes(langPrefix);
+        });
+      }
+
       if (regionalVoice) {
         utterance.voice = regionalVoice;
+        utterance.lang = regionalVoice.lang;
       }
 
       utterance.onstart = () => {

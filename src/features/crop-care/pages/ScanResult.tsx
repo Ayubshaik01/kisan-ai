@@ -264,7 +264,7 @@ Note: ${note || "No specific farmer notes recorded."}
       </div>
 
       {/* ========================================================= */}
-      {/* NON-LEAF / OUT-OF-DISTRIBUTION WARNING */}
+      {/* NON-LEAF / OUT-OF-DISTRIBUTION / CARTOON WARNING */}
       {/* ========================================================= */}
       {isUnknown && (
         <div className="space-y-6">
@@ -282,6 +282,9 @@ Note: ${note || "No specific farmer notes recorded."}
                 </h1>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   {t("oodSub")}
+                </p>
+                <p className="text-xs text-rose-600/90 dark:text-rose-400/90 font-medium pt-1">
+                  💡 {t("cartoonRejectSub")}
                 </p>
               </div>
             </div>
@@ -635,6 +638,30 @@ Note: ${note || "No specific farmer notes recorded."}
               </div>
             </div>
           </div>
+
+          {/* ========================================================= */}
+          {/* AI SIMPLE SUMMARY (Plain Language with Meaning) */}
+          {/* ========================================================= */}
+          {llamaReport.simpleSummary && (
+            <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 sm:p-5 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="grid size-7 place-items-center rounded-lg bg-primary/20 text-primary">
+                  <Sparkles className="size-4" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">
+                    {t("aiSummaryTitle")}
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground">
+                    {t("aiSummaryDesc")}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-2 rounded-xl bg-surface/80 p-3.5 border border-line text-xs sm:text-sm leading-relaxed text-foreground whitespace-pre-line font-medium">
+                {llamaReport.simpleSummary}
+              </div>
+            </div>
+          )}
 
           {/* Narrative Breakdown */}
           <div className="grid gap-4 md:grid-cols-3">

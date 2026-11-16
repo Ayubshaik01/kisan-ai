@@ -24,6 +24,7 @@ export type LlamaSynthesisResult = {
   fieldRisk: string;
   actionPlan: string[];
   fullNarrative: string;
+  simpleSummary: string;
 };
 
 export type LlamaChatResult = {
@@ -810,6 +811,68 @@ const DETAILED_PROFILES: Record<string, AgronomicDetail> = {
       ],
     },
   },
+  "leaf-curl": {
+    visual: {
+      en: (pct, band) => `Visual inspection confirms upward puckering, boat-shaped leaf cupping, and pronounced vein thickening across ${pct}% of young canopy (${band} severity). Growing tips are severely clustered with stunted internodes and flower abortion.`,
+      te: (pct, band) => `ఛాయాచిత్రంలో పైకి ముడుచుకుపోయిన దోనె ఆకారపు ఆకులు, ఈనెలు లావుగా మారడం మరియు లేత కొమ్మలు చిన్నవిగా మారడం ఆకులలో ${pct}% మేర (${band} తీవ్రత) స్పష్టంగా కనిపిస్తున్నాయి. పూత రాలిపోవడం మరియు పిందెలు ఏర్పడకపోవడం మిరప ఆకు ముడత (జెమిని వైరస్) విలక్షణ లక్షణాలు.`,
+      hi: (pct, band) => `तस्वीर में पत्तियां ऊपर की ओर नाव के आकार में मुड़ी हुई, नसें मोटी और नई पत्तियां गुच्छेदार दिखाई दे रही हैं (प्रभावित क्षेत्र ${pct}%, ${band} स्तर)। यह मिर्च पत्ती मरोड़ (लीफ कर्ल वायरस) का स्पष्ट लक्षण है।`,
+      ta: (pct, band) => `புகைப்படத்தில் இலைகள் மேல்நோக்கி படகு போல சுருண்டு, நரம்புகள் தடித்து, இளம் தளிர்கள் கொத்தாக ${pct}% இலைப்பரப்பில் (${band} நிலை) காணப்படுகின்றன. இது மிளகாய் இலை சுருட்டை நோயாகும்.`,
+      kn: (pct, band) => `ಫೋಟೋದಲ್ಲಿ ಎಲೆಗಳು ದೋಣಿಯಾಕಾರದಲ್ಲಿ ಮೇಲ್ಮುಖವಾಗಿ ಮುದುರಿಕೊಂಡಿದ್ದು, ನರಗಳು ದಪ್ಪಗಾಗಿ, ಗಿಣ್ಣುಗಳು ಕುಂಠಿತಗೊಂಡು ಸುಮಾರು ${pct}% ಎಲೆಯ ಭಾಗದಲ್ಲಿ (${band} ತೀವ್ರತೆ) ಕಾಣಿಸುತ್ತಿವೆ. ಇದು ಮೆಣಸಿನ ಎಲೆ ಮುದುರು ರೋಗವಾಗಿದೆ.`,
+      mr: (pct, band) => `छायाचित्रात पाने वरच्या बाजूला वाटीसारखी दुमडलेली, शिरा जाड झालेल्या आणि वाढ खुंटलेली दिसत असून पानाचा सुमारे ${pct}% भाग (${band} पातळी) बाधित झाला आहे. हे मिरचीवरील चुरडा-मुरडा (लीफ कर्ल) रोगाचे लक्षण आहे.`,
+    },
+    risk: {
+      en: "Etiology: Chilli Leaf Curl Virus (Begomovirus) transmitted persistently by Whiteflies (Bemisia tabaci). High temperatures (30-38°C) accelerate whitefly reproductive cycles and rapid transmission.",
+      te: "వ్యాధికారక జీవశాస్త్రం: తెల్లదోమ (బెమిసియా టబాసి) ద్వారా వ్యాపించే జెమిని వైరస్ (బిగోమోవైరస్). అధిక ఉష్ణోగ్రతలు (30-38°C) ఉన్నప్పుడు తెల్లదోమల సంతతి వేగంగా పెరిగి తెగులును నిమిషాల వ్యవధిలో వ్యాపింపజేస్తుంది.",
+      hi: "रोगजनक जीवविज्ञान: मिर्च लीफ कर्ल वायरस (बेगोमोवायरस), जो सफेद मक्खी (बेमिसिया तबासी) द्वारा फैलता है। 30-38 डिग्री सेल्सियस तापमान में सफेद मक्खी का प्रकोप तेजी से बढ़ता है।",
+      ta: "நோய்க்கிருமி உயிரியல்: வெள்ளை ஈக்கள் மூலம் பரவும் மிளகாய் இலை சுருட்டை வைரஸ் நோய். அதிக வெப்பநிலையில் வெள்ளை ஈக்களின் பெருக்கம் அதிகரிக்கிறது.",
+      kn: "ರೋಗಕಾರಕ ಜೀವಶಾಸ್ತ್ರ: ಬಿಳಿ ನೊಣದಿಂದ ಹರಡುವ ಮೆಣಸಿನ ಎಲೆ ಮುದುರು ವೈರಸ್ ರೋಗ. ಹೆಚ್ಚಿನ ಉಷ್ಣಾಂಶದಲ್ಲಿ ಬಿಳಿ ನೊಣಗಳ ಸಂಖ್ಯೆ ಹೆಚ್ಚಿ ರೋಗ ಬೇಗ ಹರಡುತ್ತದೆ.",
+      mr: "रोगकारक जीवशास्त्र: पांढऱ्या माशीद्वारे पसरणारा मिरचीवरील लीफ कर्ल विषाणू. उष्ण व कोरड्या हवामानात पांढऱ्या माशीचा प्रादुर्भाव वेगाने वाढतो.",
+    },
+    actions: {
+      en: [
+        "Install 15-20 yellow sticky traps per acre at crop canopy height to trap vector whiteflies.",
+        "Rogue and bury severely infected stunted plants displaying severe curling to reduce field virus reservoirs.",
+        "Erect dense border crops of maize, sorghum, or pearl millet (3-4 dense rows) as windbreaks against whiteflies.",
+        "Apply 5% neem seed kernel extract (NSKE) or 10,000 ppm azadirachtin as a natural deterrent.",
+        "Maintain balanced potash fertilization to strengthen foliar cuticle integrity.",
+      ],
+      te: [
+        "తెల్లదోమల నివారణకు ఎకరానికి 15-20 పసుపు రంగు జిగురు అట్టలను పైరు ఎత్తులో అమర్చండి.",
+        "తీవ్రంగా ముడత సోకి గిడసబారిన మొక్కలను పీకి పొలం బయట గుంత తీసి పాతిపెట్టండి.",
+        "తెల్లదోమల ప్రవేశాన్ని అడ్డుకోవడానికి పొలం చుట్టూ 3-4 వరుసలలో జొన్న లేదా మొక్కజొన్నను సరిహద్దు పంటగా వేయండి.",
+        "సహజ రక్షణ కోసం 5% వేప గింజల కషాయం (NSKE) లేదా వేపనూనె (10,000 ppm) పిచికారీ చేయండి.",
+        "పొటాష్ ఎరువులను సమతుల్యంగా వేసి మొక్క రోగనిరోధక శక్తిని పెంచండి.",
+      ],
+      hi: [
+        "सफेद मक्खियों की निगरानी और रोकथाम हेतु प्रति एकड़ 15-20 पीले चिपचिपे कार्ड लगाएं।",
+        "गंभीर रूप से मुड़े व बौने पौधों को उखाड़कर खेत से दूर गड्ढे में दबा दें ताकि वायरस न फैले।",
+        "खेत के चारों ओर मक्का, ज्वार या बाजरे की 3-4 घनी कतारें सुरक्षात्मक बाड़ के रूप में लगाएं।",
+        "प्राकृतिक नियंत्रण के लिए 5% नीम के बीज का काढ़ा (एनएसकेई) या 10,000 पीपीएम नीम तेल का छिड़काव करें।",
+        "संतुलित पोटाश का उपयोग करके पौधों की रोग प्रतिरोधक क्षमता बढ़ाएं।",
+      ],
+      ta: [
+        "வெள்ளை ஈக்களைக் கட்டுப்படுத்த ஏக்கருக்கு 15-20 மஞ்சள் வண்ண ஒட்டும் பொறிகளை பயிர் மட்டத்தில் வைக்கவும்.",
+        "வைரஸ் பரவாமல் தடுக்க அதிகம் பாதிக்கப்பட்ட செடிகளைப் பிடுங்கி மண்ணில் புதைக்கவும்.",
+        "வயலைச் சுற்றி மக்காச்சோளம் அல்லது சோளத்தை 3-4 வரிசைகளில் தடுப்புப் பயிராக நடவும்.",
+        "இயற்கைக் கட்டுப்பாட்டிற்கு 5% வேப்பங்கொட்டை கரைசல் (NSKE) தெளிக்கவும்.",
+        "செடிகளின் நோய் எதிர்ப்புத் திறனை அதிகரிக்க சாம்பல் சத்து (பொட்டாஷ்) சமச்சீராக இடவும்.",
+      ],
+      kn: [
+        "ಬಿಳಿ ನೊಣಗಳ ನಿಯಂತ್ರಣಕ್ಕಾಗಿ ಎಕರೆಗೆ 15-20 ಹಳದಿ ಅಂಟು ಬಲೆಗಳನ್ನು ಬೆಳೆಯ ಎತ್ತರದಲ್ಲಿ ಅಳವಡಿಸಿ.",
+        "ರೋಗ ಹರಡುವುದನ್ನು ತಡೆಯಲು ತೀವ್ರವಾಗಿ ಮುದುಡಿದ ಗಿಡಗಳನ್ನು ಕಿತ್ತು ದೂರ ಹೂತುಹಾಕಿ.",
+        "ಹೊಲದ ಸುತ್ತಲೂ 3-4 ಸಾಲುಗಳಲ್ಲಿ ಮೆಕ್ಕೆಜೋಳ ಅಥವಾ ಜೋಳವನ್ನು ತಡೆಗೋಡೆ ಬೆಳೆಯಾಗಿ ಬೆಳೆಯಿರಿ.",
+        "ನೈಸರ್ಗಿಕ ಹತೋಟಿಗಾಗಿ 5% ಬೇವಿನ ಬೀಜದ ಕಷಾಯ (NSKE) ಸಿಂಪಡಿಸಿ.",
+        "ಸಮತೋಲಿತ ಪೊಟ್ಯಾಷ್ ಗೊಬ್ಬರ ನೀಡಿ ಗಿಡದ ರೋಗನಿರೋಧಕ ಶಕ್ತಿಯನ್ನು ಹೆಚ್ಚಿಸಿ.",
+      ],
+      mr: [
+        "पांढऱ्या माशीच्या नियंत्रणासाठी एकरी १५-२० पिवळे चिकट सापळे पिकाच्या उंचीवर लावा.",
+        "विषाणूचा प्रसार रोखण्यासाठी जास्त प्रादुर्भाव झालेली रोपे उपटून जमिनीत गाडून टाका.",
+        "शेताभोवती मका किंवा ज्वारीच्या ३-४ ओळी संरक्षक पीक म्हणून लावा.",
+        "नैसर्गिक नियंत्रणासाठी ५% निंबोळी अर्क किंवा १०,००० पीपीएम निंबोळी तेल फवारा.",
+        "पिकाची प्रतिकारशक्ती वाढवण्यासाठी संतुलित पोटॅश खतांचा वापर करा.",
+      ],
+    },
+  },
   "cercospora-leaf-spot": {
     visual: {
       en: (pct, band) => `Visual inspection demonstrates circular 'frogeye' lesions with prominent white-to-bleached ash centers, distinct dark reddish-brown margins, and chlorotic yellow halos affecting ${pct}% of visible leaf tissue (${band} intensity).`,
@@ -1334,6 +1397,30 @@ export function generateLlamaAnalysis(
     actions = [targetLang === "te" ? "స్పష్టమైన ఫోటో తీయండి." : "Retake photo in natural daylight."];
   }
 
+  // Generate Plain-language, farmer-friendly summary explaining meaning and immediate action in simple words
+  let simpleSummary = "";
+  if (t) {
+    const probName = l(targetLang, t.name);
+    const firstAction = actions[0] || "";
+    if (targetLang === "te") {
+      simpleSummary = `🔍 **ఈ సమస్య ఏమిటి?**: మీ పైరులో "${probName}" కనిపిస్తోంది. దీనివల్ల ఆకులు దెబ్బతిని పంట ఎదుగుదల తగ్గుతుంది.\n💡 **రైతు వెంటనే చేయాల్సింది**: భయపడవద్దు. వెంటనే పొలంలో యూరియా వాడకం ఆపండి. ${firstAction} స్థానిక వ్యవసాయ నిపుణుల సలహాలు పాటించండి.`;
+    } else if (targetLang === "hi") {
+      simpleSummary = `🔍 **यह क्या समस्या है?**: आपकी फसल में "${probName}" का प्रभाव देखा गया है, जिससे पत्तियों और पौधों को नुकसान हो सकता है।\n💡 **किसान तुरंत क्या करें?**: घबराएं नहीं। तुरंत यूरिया डालना बंद करें। ${firstAction} नजदीकी कृषि केंद्र की सलाह अनुसार कदम उठाएं।`;
+    } else if (targetLang === "ta") {
+      simpleSummary = `🔍 **இது என்ன பிரச்சனை?**: உங்கள் பயிரில் "${probName}" பாதிப்பு உள்ளது.\n💡 **நீங்கள் என்ன செய்ய வேண்டும்?**: யூரியாவை தற்காலிகமாக நிறுத்துங்கள். ${firstAction}`;
+    } else if (targetLang === "kn") {
+      simpleSummary = `🔍 **ಇದು ಯಾವ ಸಮಸ್ಯೆ?**: ನಿಮ್ಮ ಬೆಳೆಯಲ್ಲಿ "${probName}" ಲಕ್ಷಣಗಳಿವೆ.\n💡 **ರೈತರು ತಕ್ಷಣ ಮಾಡಬೇಕಾದದ್ದು**: ಯೂರಿಯಾ ಗೊಬ್ಬರ ಕೊಡುವುದನ್ನು ನಿಲ್ಲಿಸಿ. ${firstAction}`;
+    } else if (targetLang === "mr") {
+      simpleSummary = `🔍 **ही काय अडचण आहे?**: पिकावर "${probName}" चे लक्षण आढळले आहे.\n💡 **शेतकऱ्यांनी लगेच काय करावे?**: अतिरिक्त युरिया बंद करा. ${firstAction}`;
+    } else {
+      simpleSummary = `🔍 **What is this problem?**: Your crop shows signs of "${probName}". This affects foliage and can lower harvest yield if neglected.\n💡 **What should you do right now?**: Do not panic. Avoid excessive nitrogen/urea. ${firstAction} Follow local university/extension guidelines.`;
+    }
+  } else {
+    simpleSummary = targetLang === "te"
+      ? "చిత్రం స్పష్టంగా లేదు లేదా పంట ఆకు కాదు. దయచేసి మంచి వెలుతురులో నిజమైన ఆకు ఫోటో తీయండి."
+      : "The photo is not clear or not a recognized crop leaf. Please photograph a real crop leaf in good daylight.";
+  }
+
   return {
     model: "Llama-3.2-1B-Instruct (Multimodal)",
     lang: targetLang,
@@ -1342,6 +1429,7 @@ export function generateLlamaAnalysis(
     fieldRisk: risk,
     actionPlan: actions,
     fullNarrative: `${visual} ${risk}`,
+    simpleSummary,
   };
 }
 
