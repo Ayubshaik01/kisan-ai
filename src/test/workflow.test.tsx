@@ -220,5 +220,39 @@ describe("Multilingual I18n & Offline Agronomic Synthesis", () => {
       expect(res.text).toContain("CIB&RC");
     }
   });
+
+  it("handles conversational intents (greeting, action, cause, simple summary) dynamically", async () => {
+    const { generateLlamaChatResponse } = await import("@/features/crop-care/services/llama");
+    const scanCtx = {
+      crop: "rice" as const,
+      topicSlug: "rice-blast",
+      severity: { scale: "irri-ses" as const, score: 7, max: 9, band: "severe" as const },
+    };
+
+    // 1. Casual greeting "bro" with scan context attached
+    const greetingRes = generateLlamaChatResponse("bro", "en", scanCtx);
+    expect(greetingRes.text).toContain("Rice Blast");
+    expect(greetingRes.text).toContain("What should I do?");
+    expect(greetingRes.text).not.toContain("Visual Pathology"); // Should not dump static raw report
+
+    // 2. Action query "what should I do"
+    const actionRes = generateLlamaChatResponse("what should I do", "en", scanCtx);
+    expect(actionRes.text).toContain("Recommended Action Plan for Rice Blast");
+    expect(actionRes.text).toContain("Safety Notice");
+
+    // 3. Cause query "why did this happen"
+    const causeRes = generateLlamaChatResponse("why did this happen", "en", scanCtx);
+    expect(causeRes.text).toContain("Causes & Spread of Rice Blast");
+    expect(causeRes.text).toContain("Magnaporthe oryzae");
+
+    // 4. Simple summary "explain in simple words"
+    const simpleRes = generateLlamaChatResponse("explain in simple words", "en", scanCtx);
+    expect(simpleRes.text).toContain("Rice Blast in Simple Words");
+
+    // 5. Vernacular greeting "బ్రో" in Telugu
+    const teGreetingRes = generateLlamaChatResponse("బ్రో", "te", scanCtx);
+    expect(teGreetingRes.text).toContain("అగ్గి తెగులు");
+    expect(teGreetingRes.text).toContain("ఏం చేయాలి?");
+  });
 });
 
