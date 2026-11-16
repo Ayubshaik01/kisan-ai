@@ -1624,9 +1624,11 @@ export function generateLlamaChatResponse(
 
   // 3. User Intent Classification
   const isGreetingWord = (w: string) => /^(bro|hi|hello|hey|yo|sup|namaste|namaskar|vanakkam|kisan|bot|assistant|anna|bhai|bhaiya|dada|help|హాయ్|హలో|నమస్కారం|నమస్తే|బ్రో|అన్నా|బాగున్నారా|చెప్పు|नमस्ते|भाई|हैलो|हाय|मदद|सुनो|बताओ|राम राम|प्रणाम|வணக்கம்|ஹலோ|ஹாய்|உதவி|ನಮಸ್ಕಾರ|ಹಲೋ|ಹಾಯ್|ಸಹಾಯ|नमस्कार|हॅलो|भाऊ|मदत)$/i.test(w);
-  const isGreeting = (words.length > 0 && words.length <= 4 && words.every(w => isGreetingWord(w) || /^(there|you|kisanai|ji|aru|sir|mitra)$/i.test(w))) || (words.length === 1 && isGreetingWord(words[0]));
+  const isGreeting = (words.length > 0 && words.length <= 5 && words.every(w => isGreetingWord(w) || /^(there|you|kisanai|ji|aru|sir|mitra|man|mate)$/i.test(w))) || (words.length === 1 && isGreetingWord(words[0]));
 
   const isGratitude = /thank|thanks|helpful|great|awesome|good job|dhanyavad|shukriya|ధన్యవాదాలు|థాంక్స్|బాగుంది|धन्यवाद|शुक्रिया|நன்றி|ಧನ್ಯವಾದ|मदत/i.test(qClean);
+
+  const isConcern = /serious|danger|dangerous|critical|kill|die|worry|worried|ruin|destroy|loss|yield loss|హాని|చనిపోతుందా|ప్రమాదకరమా|తీవ్రమా|నష్టం|खतरा|गंभीर|मर जाएगा|नुकसान|பாதிப்பு|ஆபத்து|ತೀವ್ರ|ಅಪಾಯ/i.test(qClean);
 
   const isPersona = /who are you|what is your name|who made you|what can you do|about you|tell me about yourself|నువ్వు ఎవరు|నీ పేరేంటి|నువ్వు ఏమి చేయగలవు|तुम कौन हो|तुम्हारा नाम क्या है|तुम क्या कर सकते हो|நீ யார்|ಯಾರು ನೀನು|तू कोण आहेस/i.test(qClean);
 
@@ -1891,20 +1893,53 @@ export function generateLlamaChatResponse(
     suggestions = ["🛠️ What should I do now?", "⚠️ Why did this happen?", "🌾 Explain in simple words", "🧪 Fertilizer schedule"];
   }
 
-  // N. FULL REPORT / GENERAL FALLBACK WITH TOPIC
-  else if (topic && prof) {
-    const visualBlock = visualText;
-    const riskBlock = riskText;
-    const actionsBlock = actionsList.map((a, i) => `${i + 1}. ${a}`).join("\n");
-
-    responseText = `🌾 **${probName} Diagnostic & Management Protocol**:\n\n` +
-      `🔍 **Visual Pathology**:\n${visualBlock}\n\n` +
-      `⚠️ **Epidemiology & Risk**:\n${riskBlock}\n\n` +
-      `🛠️ **Recommended Action Plan**:\n${actionsBlock}`;
-    suggestions = ["🛠️ Action steps only", "⚠️ Why did this happen?", "🌾 Explain in simple words", "🛡️ Prevention"];
+  // N. SERIOUSNESS / CONCERN / DAMAGE RISK
+  else if (isConcern && topic) {
+    if (targetLang === "te") {
+      responseText = `కంగారు పడకండి! **${probName}** (${sevBandLocal} దశ) తీవ్రమైన సమస్యే అయినప్పటికీ, సకాలంలో తగిన చర్యలు తీసుకుంటే మీ పైరును ఖచ్చితంగా కాపాడుకోవచ్చు.\n\n` +
+        `• **ప్రమాద స్థాయి**: సకాలంలో నివారించకపోతే ఆకులు ఎండిపోయి దిగుబడి తగ్గే అవకాశం ఉంది.\n` +
+        `• **తక్షణమే చేయాల్సింది**: నత్రజని (యూరియా) వేయడం వెంటనే ఆపండి, పొలంలో నిలిచిన నీటిని తీసివేయండి.\n` +
+        `• **రక్షణ చర్యలు**: తక్షణ నివారణ ప్రణాళిక కోసం క్రింది సూచనలను చూడండి.`;
+      suggestions = ["🛠️ ఏం చేయాలి?", "⚠️ ఎందుకు వచ్చింది?", "🌾 సులభంగా వివరించు", "🛡️ రాకుండా ముందుజాగ్రత్తలు"];
+    } else if (targetLang === "hi") {
+      responseText = `घबराएं नहीं! यद्यपि **${probName}** (${sevBandLocal} स्तर) एक गंभीर समस्या है, लेकिन सही समय पर उचित कदम उठाकर आपकी फसल को सुरक्षित बचाया जा सकता है।\n\n` +
+        `• **खतरे का स्तर**: यदि ध्यान न दिया जाए तो यह आगे चलकर बालियों या तने को नुकसान पहुँचा सकता है।\n` +
+        `• **तत्काल सावधानियां**: यूरिया का छिड़काव तुरंत बंद करें और खेत में जलजमाव न होने दें।\n` +
+        `• **समाधान**: उपचार के कदम देखने के लिए नीचे दिए गए बटन पर टैप करें।`;
+      suggestions = ["🛠️ क्या करें?", "⚠️ क्यों हुआ?", "🌾 सरल शब्दों में बताओ", "🛡️ बचाव के उपाय"];
+    } else {
+      responseText = `Don't panic! While **${probName}** at **${sevBand}** severity is serious and can damage yield if neglected, your crop can be protected and saved with swift action.\n\n` +
+        `• **Risk Factor**: Unchecked foliar lesions can spread to new leaves and heading panicles/nodes.\n` +
+        `• **Immediate Containment**: Immediately stop all supplementary urea (nitrogen), drain excessive water, and avoid handling wet plants.\n` +
+        `• **Treatment**: Follow the biological and cultural action plan to suppress the pathogen.`;
+      suggestions = ["🛠️ What should I do right now?", "⚠️ Why did this happen?", "🌾 Explain in simple words", "🛡️ Prevention & future care"];
+    }
   }
 
-  // O. GENERAL FALLBACK WITHOUT TOPIC
+  // O. CONVERSATIONAL TOPIC RESPONSE (Natural agronomist dialogue)
+  else if (topic) {
+    if (targetLang === "te") {
+      responseText = `మీరు ${cropName} పంటపై **${probName}** (${sevBandLocal} దశ) గురించి అడుగుతున్నారు.\n\n` +
+        `• **పంట పరిస్థితి**: ఆకులపై తెగులు వ్యాప్తి చెందుతోంది. కంకి మరియు పిలకల దశకు చేరకుండా వెంటనే అరికట్టాలి.\n` +
+        `• **రైతుకు ముఖ్యమైన సలహా**: యూరియా ఎరువును వెంటనే ఆపి, పొలంలో పలుచటి నీరు (2-3 సెం.మీ) మాత్రమే ఉంచండి.\n` +
+        `• నేను మీకు ఏ అంశంలో వివరంగా సహాయపడగలను?`;
+      suggestions = ["🛠️ ఏం చేయాలి?", "⚠️ ఎందుకు వచ్చింది?", "🌾 సులభంగా వివరించు", "🛡️ రాకుండా ముందుజాగ్రత్తలు"];
+    } else if (targetLang === "hi") {
+      responseText = `आप ${cropName} पर **${probName}** (${sevBandLocal} स्तर) के बारे में पूछ रहे हैं।\n\n` +
+        `• **फसल की स्थिति**: पत्तियों पर संक्रमण दिख रहा है। इसे नई पत्तियों व बालियों पर फैलने से तुरंत रोकना आवश्यक है।\n` +
+        `• **मुख्य सलाह**: यूरिया डालना तुरंत बंद करें और खेत से अतिरिक्त पानी निकाल दें।\n` +
+        `• आप इसके बारे में क्या जानना चाहते हैं?`;
+      suggestions = ["🛠️ क्या करें?", "⚠️ क्यों हुआ?", "🌾 सरल शब्दों में बताओ", "🛡️ बचाव के उपाय"];
+    } else {
+      responseText = `Regarding your crop with **${probName}** (${sevBand} severity) on **${cropName}**:\n\n` +
+        `• **Field Status**: Foliar pathology requires active containment before it penetrates nodes or reproductive organs.\n` +
+        `• **Priority Rule**: Suspend urea top-dressing right away; high nitrogen weakens cellular resistance.\n` +
+        `• How can I best guide you forward? Choose below or ask any question:`;
+      suggestions = ["🛠️ What should I do right now?", "⚠️ Why did this happen?", "🌾 Explain in simple words", "🛡️ Prevention & future care"];
+    }
+  }
+
+  // P. GENERAL FALLBACK WITHOUT TOPIC
   else {
     responseText = `Hello! I am your on-device KisanAI (Meta Llama 3.2 1B Instruct) Agricultural Assistant.\n\n` +
       `Please describe the symptoms in your field or ask about specific conditions:\n` +

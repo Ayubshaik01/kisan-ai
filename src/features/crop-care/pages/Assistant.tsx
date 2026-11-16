@@ -310,52 +310,103 @@ export function AssistantPage() {
 
       {/* Multimodal Photo Active Context Banner */}
       {activeScan && (
-        <div className="mt-2.5 flex items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-2 sm:px-3 animate-in fade-in">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <img
-              src={activeScan.image}
-              alt="Active Scan"
-              className="size-9 rounded-xl object-cover border border-line shrink-0 shadow-xs"
-            />
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-bold text-primary uppercase tracking-wide">
-                  Active Photo Context Attached
-                </span>
-                <span className="text-[10px] text-muted-foreground capitalize">
-                  • {activeScan.crop}
-                </span>
+        <div className="mt-2.5 flex flex-col gap-2 rounded-2xl border border-primary/30 bg-primary/5 p-2.5 sm:px-3 animate-in fade-in">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <img
+                src={activeScan.image}
+                alt="Active Scan"
+                className="size-9 rounded-xl object-cover border border-line shrink-0 shadow-xs"
+              />
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-primary uppercase tracking-wide">
+                    Active Photo Context Attached
+                  </span>
+                  <span className="text-[10px] text-muted-foreground capitalize">
+                    • {activeScan.crop}
+                  </span>
+                </div>
+                <p className="truncate text-xs font-semibold text-foreground">
+                  {activeScan.topicSlug
+                    ? l(
+                        lang,
+                        getTopic(activeScan.crop, activeScan.topicSlug)?.name || {
+                          en: activeScan.topicSlug,
+                          hi: activeScan.topicSlug,
+                          te: activeScan.topicSlug,
+                        }
+                      )
+                    : "Field Specimen"}
+                  {activeScan.severity && ` · ${activeScan.severity.band}`}
+                </p>
               </div>
-              <p className="truncate text-xs font-semibold text-foreground">
-                {activeScan.topicSlug
-                  ? l(
-                      lang,
-                      getTopic(activeScan.crop, activeScan.topicSlug)?.name || {
-                        en: activeScan.topicSlug,
-                        hi: activeScan.topicSlug,
-                        te: activeScan.topicSlug,
-                      }
-                    )
-                  : "Field Specimen"}
-                {activeScan.severity && ` · ${activeScan.severity.band}`}
-              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Link
+                to="/scans/$scanId"
+                params={{ scanId: activeScan.id }}
+                className="text-xs font-semibold text-primary hover:underline"
+              >
+                View Scan
+              </Link>
+              <button
+                type="button"
+                onClick={() => setActiveScanId(undefined)}
+                className="rounded-lg p-1 text-muted-foreground hover:bg-surface hover:text-foreground"
+                title="Detach photo context"
+              >
+                <X className="size-3.5" />
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Link
-              to="/scans/$scanId"
-              params={{ scanId: activeScan.id }}
-              className="text-xs font-semibold text-primary hover:underline"
-            >
-              View Scan
-            </Link>
+
+          {/* Quick AI Action Pills */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-primary/10">
             <button
               type="button"
-              onClick={() => setActiveScanId(undefined)}
-              className="rounded-lg p-1 text-muted-foreground hover:bg-surface hover:text-foreground"
-              title="Detach photo context"
+              onClick={() => handleSendPrompt(
+                lang === "te" ? "ఈ తెగులు గురించి సాధారణ రైతు మాటల్లో సులభమైన వివరణ మరియు అర్థం చెప్పు" :
+                lang === "hi" ? "इस रोग के बारे में सरल शब्दों में अर्थ और आसान सारांश बताएं" :
+                "Explain in simple words with meaning and summary"
+              )}
+              className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary hover:bg-primary/20 transition-all active:scale-95 shadow-2xs"
             >
-              <X className="size-3.5" />
+              <Sparkles className="size-3 text-primary" />
+              ✨ {lang === "te" ? "ఏఐ సులభమైన వివరణ" : lang === "hi" ? "एआई सरल सारांश" : "Summarize with AI"}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSendPrompt(
+                lang === "te" ? "దీనిని అరికట్టడానికి నేను వెంటనే ఏం చేయాలి?" :
+                lang === "hi" ? "इसे रोकने के लिए मुझे तुरंत क्या करना चाहिए?" :
+                "What should I do right now to stop this spreading?"
+              )}
+              className="inline-flex items-center gap-1 rounded-lg border border-line bg-surface/80 px-2 py-1 text-[11px] font-medium text-foreground hover:bg-surface transition-all active:scale-95"
+            >
+              🛠️ {lang === "te" ? "ఏం చేయాలి?" : lang === "hi" ? "क्या करें?" : "What to do?"}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSendPrompt(
+                lang === "te" ? "ఈ తెగులు ఎందుకు వచ్చింది? కారణాలు ఏమిటి?" :
+                lang === "hi" ? "यह रोग क्यों हुआ और कैसे फैलता है?" :
+                "Why did this happen and how does it spread?"
+              )}
+              className="inline-flex items-center gap-1 rounded-lg border border-line bg-surface/80 px-2 py-1 text-[11px] font-medium text-foreground hover:bg-surface transition-all active:scale-95"
+            >
+              ⚠️ {lang === "te" ? "ఎందుకు వచ్చింది?" : lang === "hi" ? "कारण व फैलाव" : "Why did it happen?"}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSendPrompt(
+                lang === "te" ? "యూరియా ఎరువు వేయవచ్చా? ఎరువుల జాగ్రత్తలు ఏమిటి?" :
+                lang === "hi" ? "क्या यूरिया डाल सकते हैं? खाद के नियम क्या हैं?" :
+                "Can I spray urea or what fertilizer should I apply?"
+              )}
+              className="inline-flex items-center gap-1 rounded-lg border border-line bg-surface/80 px-2 py-1 text-[11px] font-medium text-foreground hover:bg-surface transition-all active:scale-95"
+            >
+              🧪 {lang === "te" ? "యూరియా & ఎరువులు" : lang === "hi" ? "यूरिया व खाद" : "Fertilizer Rules"}
             </button>
           </div>
         </div>

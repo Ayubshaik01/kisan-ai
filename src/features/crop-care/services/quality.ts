@@ -33,10 +33,36 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
   const sharpness = count ? lapSq / count - mean * mean : 0;
   const greenShare = green / n;
 
+  // Real foliage vs cartoon/drawing/non-plant entropy check
+  const colorMap = new Map<number, number>();
+  let neonCount = 0;
+  for (let i = 0; i < n; i++) {
+    const r = data[i * 4]!, g = data[i * 4 + 1]!, b = data[i * 4 + 2]!;
+    // 5-bit color quantization
+    const key = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
+    colorMap.set(key, (colorMap.get(key) || 0) + 1);
+
+    // Artificial neon colors common in cartoons/clipart
+    if ((r > 230 && g > 230 && b < 30) || (g > 230 && r < 30 && b > 230) || (r < 30 && g > 240 && b < 30)) {
+      neonCount++;
+    }
+  }
+
+  let maxColorOccurrences = 0;
+  for (const occ of colorMap.values()) {
+    if (occ > maxColorOccurrences) maxColorOccurrences = occ;
+  }
+  const topColorShare = maxColorOccurrences / n;
+  const uniqueColorCount = colorMap.size;
+
+  // Reject flat vector art, drawings, cartoons, or non-botanical scenes
+  const isCartoonOrDrawing = uniqueColorCount < 40 || topColorShare > 0.45 || (neonCount / n > 0.15);
+  const leafOk = !isCartoonOrDrawing;
+
   const sharpOk = sharpness >= 40;
   const lightOk = brightness >= 45 && brightness <= 235;
   const subjectOk = contrast >= 18;
-  const suitable = sharpOk && lightOk && subjectOk;
+  const suitable = sharpOk && lightOk && subjectOk && leafOk;
 
   return {
     ok: suitable,
@@ -45,6 +71,7 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
     contrast: Math.round(contrast),
     greenShare: Math.round(greenShare * 100) / 100,
     checks: [
+      { id: "leaf", pass: leafOk, tip: leafOk ? "Real botanical foliage detected." : "Drawing or non-plant image detected. Please photograph a real crop leaf." },
       { id: "blur", pass: sharpOk, tip: sharpOk ? "Sharp enough to see detail." : "The photo looks blurry. Hold the phone steady and tap the screen to focus." },
       { id: "dark", pass: lightOk, tip: lightOk ? "Lighting is good." : brightness < 45 ? "The photo is too dark. Move into daylight or turn on the flash." : "The photo is too bright. Avoid direct glare on the leaf." },
       { id: "subject", pass: subjectOk, tip: subjectOk ? "The subject stands out." : "The plant doesn't stand out. Move closer so the affected area fills the frame." },

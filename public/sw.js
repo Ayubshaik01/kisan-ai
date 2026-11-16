@@ -18,7 +18,11 @@ const OFFLINE_ROUTES = [
   "/manifest.webmanifest",
   "/favicon.ico",
   "/logo.svg",
-  "/favicon.svg"
+  "/favicon.svg",
+  "/models/rice_mobilenetv3.onnx",
+  "/models/chilli_mobilenetv3.onnx",
+  "/models/rice_hgb_model.json",
+  "/models/chilli_hgb_model.json"
 ];
 
 self.addEventListener("install", (event) => {

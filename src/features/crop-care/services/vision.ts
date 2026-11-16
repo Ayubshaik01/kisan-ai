@@ -83,6 +83,115 @@ async function loadHgbModel(crop: CropKey): Promise<any> {
   return null;
 }
 
+let ortSessionCache: Record<string, any> = {};
+
+async function runOnnxInference(
+  crop: CropKey,
+  canvas: HTMLCanvasElement
+): Promise<{ slug: string; confidence: number; candidates: { slug: string; confidence: number }[] } | null> {
+  if (typeof window === "undefined") return null;
+  try {
+    const ort = await import("onnxruntime-web");
+    const modelPath = crop === "rice" ? "/models/rice_mobilenetv3.onnx" : "/models/chilli_mobilenetv3.onnx";
+    if (!ortSessionCache[crop]) {
+      ortSessionCache[crop] = await ort.InferenceSession.create(modelPath, {
+        executionProviders: ["wasm"],
+      });
+    }
+    const session = ortSessionCache[crop];
+    if (!session) return null;
+
+    // Rescale to 224x224 offscreen
+    const offscreen = document.createElement("canvas");
+    offscreen.width = 224;
+    offscreen.height = 224;
+    const ctx = offscreen.getContext("2d");
+    if (!ctx) return null;
+    ctx.drawImage(canvas, 0, 0, 224, 224);
+    const { data } = ctx.getImageData(0, 0, 224, 224);
+
+    const floatArr = new Float32Array(1 * 3 * 224 * 224);
+    const mean = [0.485, 0.456, 0.406];
+    const std = [0.229, 0.224, 0.225];
+
+    for (let i = 0; i < 224 * 224; i++) {
+      const r = data[i * 4] / 255.0;
+      const g = data[i * 4 + 1] / 255.0;
+      const b = data[i * 4 + 2] / 255.0;
+
+      floatArr[0 * 224 * 224 + i] = (r - mean[0]) / std[0];
+      floatArr[1 * 224 * 224 + i] = (g - mean[1]) / std[1];
+      floatArr[2 * 224 * 224 + i] = (b - mean[2]) / std[2];
+    }
+
+    const inputTensor = new ort.Tensor("float32", floatArr, [1, 3, 224, 224]);
+    const output = await session.run({ input: inputTensor });
+    const logits = output.output.data as Float32Array;
+
+    let maxLogit = -Infinity;
+    for (let k = 0; k < logits.length; k++) {
+      if (logits[k] > maxLogit) maxLogit = logits[k];
+    }
+    let sumExp = 0;
+    const expArr = new Float32Array(logits.length);
+    for (let k = 0; k < logits.length; k++) {
+      expArr[k] = Math.exp(logits[k] - maxLogit);
+      sumExp += expArr[k];
+    }
+    const probs = new Float32Array(logits.length);
+    for (let k = 0; k < logits.length; k++) {
+      probs[k] = expArr[k] / Math.max(1e-6, sumExp);
+    }
+
+    const classes = crop === "rice"
+      ? [
+          "rice-blast",
+          "rice-blast",
+          "brown-spot",
+          "bacterial-leaf-blight",
+          "tungro",
+          "brown-planthopper",
+          "yellow-stem-borer",
+          "leaf-folder",
+          "gall-midge",
+          "healthy",
+          "unknown",
+        ]
+      : [
+          "leaf-curl",
+          "cercospora-leaf-spot",
+          "bacterial-leaf-spot",
+          "powdery-mildew",
+          "anthracnose",
+          "thrips",
+          "mites",
+          "whitefly",
+          "aphids",
+          "healthy",
+          "unknown",
+        ];
+
+    const mappedCandidates: { slug: string; confidence: number }[] = [];
+    for (let k = 0; k < classes.length; k++) {
+      if (classes[k] !== "unknown") {
+        mappedCandidates.push({ slug: classes[k], confidence: Math.round(probs[k] * 100) / 100 });
+      }
+    }
+    mappedCandidates.sort((a, b) => b.confidence - a.confidence);
+    const top = mappedCandidates[0];
+    if (top && top.confidence >= 0.20) {
+      return {
+        slug: top.slug,
+        confidence: top.confidence,
+        candidates: mappedCandidates.slice(0, 5),
+      };
+    }
+  } catch (err) {
+    console.warn("ONNX WebAssembly inference notice:", err);
+  }
+  return null;
+}
+
 function evaluateHgb(model: any, feat: number[]): { slug: string; confidence: number; candidates: { slug: string; confidence: number }[] } | null {
   if (!model || !model.trees || !model.classes) return null;
   const K = model.classes.length;
@@ -308,15 +417,16 @@ export async function analyzeImageWithVision(
       const topColorDominance = maxColorFrequency / totalPixels;
       const uniqueColorCount = colorHistogram.size;
       const isCartoonOrClipart =
-        uniqueColorCount < 45 || // Extremely low color entropy (solid graphic fills)
-        topColorDominance > 0.38 || // One single flat block covers >38% of canvas
-        (saturatedFlatCount / totalPixels > 0.25 && uniqueColorCount < 180); // Neon flat drawing
+        uniqueColorCount < 60 || // Low color entropy (solid graphic fills)
+        topColorDominance > 0.35 || // One single flat block covers >35% of canvas
+        (saturatedFlatCount / totalPixels > 0.12 && uniqueColorCount < 220) || // Saturated cartoon illustration
+        (stdG < 0.08 && stdR < 0.08 && uniqueColorCount < 120); // Flat non-textured image
 
       if (isCartoonOrClipart) {
         return resolve({
           source: "model",
           outcome: "unknown",
-          confidence: 0.25,
+          confidence: 0.18,
           diagnostics: {
             plantPixels: totalFoliage,
             lesionPixels: 0,
@@ -419,7 +529,12 @@ export async function analyzeImageWithVision(
         // Local server offline; fall through to client model
       }
 
-      // 2. Query the trained client gradient boosted model or embedded pathology
+      // 2. Query In-Browser ONNX WebAssembly Deep Neural Network (100% Offline client-side)
+      if (!deepModelResult) {
+        deepModelResult = await runOnnxInference(crop, canvas);
+      }
+
+      // 3. Query the trained client gradient boosted model or embedded pathology
       const hgbModel = await loadHgbModel(crop);
       const hgbRes = hgbModel ? evaluateHgb(hgbModel, featVector) : null;
 

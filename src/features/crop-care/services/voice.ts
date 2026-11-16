@@ -87,9 +87,11 @@ class VoiceAgentService {
     // Cancel any ongoing speech
     this.stop();
 
-    // Clean markdown, symbols, and formatting for clean natural speech
+    // Clean markdown, symbols, emojis, and formatting for natural human speech
     const cleanText = text
+      .replace(/[\u{1F300}-\u{1FAFF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, "") // Remove emojis
       .replace(/[*_#`~[\]()<>|]/g, " ")
+      .replace(/•\s*/g, ". ")
       .replace(/\s+/g, " ")
       .trim();
 
@@ -100,26 +102,31 @@ class VoiceAgentService {
       const candidateTags = BCP47_LANG_TAGS[lang] || ["en-IN", "en"];
       const primaryTag = candidateTags[0]!;
       utterance.lang = primaryTag;
-      utterance.rate = 0.92; // Slightly slower, comfortable listening speed for farmers
+      utterance.rate = 0.90; // Natural, clear listening speed for farmers
       utterance.pitch = 1.0;
 
       // Select regional voice if available in browser
       const voices = this.synth.getVoices();
       let regionalVoice: SpeechSynthesisVoice | undefined;
 
-      // 1. Try exact matches from candidate tags
+      // 1. Try exact match from candidate tags
       for (const tag of candidateTags) {
-        regionalVoice = voices.find((v) => v.lang.toLowerCase() === tag.toLowerCase() || v.lang.toLowerCase().replace("_", "-") === tag.toLowerCase());
+        regionalVoice = voices.find((v) => {
+          const vLang = v.lang.toLowerCase().replace("_", "-");
+          return vLang === tag.toLowerCase() || vLang.startsWith(`${tag.toLowerCase()}-`);
+        });
         if (regionalVoice) break;
       }
 
-      // 2. Try prefix match (e.g., "te", "hi", "ta", "kn", "mr")
+      // 2. Try language name match in voice title (e.g. "Hindi", "Telugu", "Tamil", "India")
       if (!regionalVoice) {
-        const langPrefix = lang.toLowerCase();
-        regionalVoice = voices.find((v) => {
-          const lCode = v.lang.toLowerCase().replace("_", "-");
-          return lCode === langPrefix || lCode.startsWith(`${langPrefix}-`) || v.name.toLowerCase().includes(langPrefix);
-        });
+        const langName = lang === "hi" ? "hindi" : lang === "te" ? "telugu" : lang === "ta" ? "tamil" : lang === "kn" ? "kannada" : lang === "mr" ? "marathi" : "india";
+        regionalVoice = voices.find((v) => v.name.toLowerCase().includes(langName) || v.lang.toLowerCase().includes(langName));
+      }
+
+      // 3. Fallback to Indian English or first voice if vernacular voice is not installed on OS
+      if (!regionalVoice) {
+        regionalVoice = voices.find((v) => v.lang.toLowerCase().includes("in") || v.name.toLowerCase().includes("india"));
       }
 
       if (regionalVoice) {

@@ -23,3 +23,4 @@ ENV PORT=8000
 EXPOSE 8000
 
 CMD ["python", "ml/server/local_ai_server.py"]
+
