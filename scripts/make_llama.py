@@ -88,3 +88,4 @@ type AgronomicDetail = {
 with open("scripts/build_llama_part1.txt", "w", encoding="utf-8") as f:
     f.write(content)
 print("Part 1 written")
+

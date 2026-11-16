@@ -1,44 +1,26 @@
 {
-  "model_name": "Chilli Disease & Pest MobileNetV3-Small",
-  "architecture": "MobileNetV3-Small",
+  "dataset": "COLD (Chili Leaf Disease) & Entomology Field Archive",
   "crop": "chilli",
-  "input_shape": [
-    1,
-    3,
-    224,
-    224
-  ],
-  "preprocessing": {
-    "resize": [
-      224,
-      224
-    ],
-    "mean": [
-      0.485,
-      0.456,
-      0.406
-    ],
-    "std": [
-      0.229,
-      0.224,
-      0.225
-    ]
-  },
   "classes": [
     "chilli_leaf_curl",
     "chilli_cercospora_leaf_spot",
     "chilli_bacterial_leaf_spot",
     "chilli_powdery_mildew",
-    "chilli_anthracnose_fruit_rot",
+    "chilli_anthracnose",
     "chilli_thrips",
     "chilli_mites",
     "chilli_whiteflies",
     "chilli_aphids",
-    "chilli_healthy",
-    "unknown"
+    "chilli_healthy"
   ],
-  "num_classes": 11,
-  "confidence_threshold": 0.58,
-  "calibrated_temperature": 1.0,
-  "target_runtime": "ExecuTorch + XNNPACK / PyTorch Mobile (Android)"
+  "input_resolution": [
+    3,
+    224,
+    224
+  ],
+  "exported_at": "2026-11-16T01:48:49Z",
+  "best_val_accuracy": 52.29,
+  "test_accuracy": 63.01,
+  "architecture": "EfficientNetV2-B0 / MobileNetV3 Calibrated Head",
+  "total_images": 732
 }

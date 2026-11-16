@@ -19,3 +19,4 @@ print("Writing full llama.ts...")
 with open("scripts/run_gen.py", "w", encoding="utf-8") as f:
     f.write(script_content)
 print("run_gen.py created")
+
