@@ -40,6 +40,8 @@ export type SavedItem = { id: string; kind: SavedKind; crop: CropKey; slug?: str
 
 export type Season = "kharif" | "rabi" | "zaid" | "early-kharif" | "post-monsoon";
 export type ThemePref = "dark" | "light" | "system";
+export type LLMProvider = "auto" | "gemini" | "groq" | "openai" | "ollama" | "local";
+
 export type Settings = {
   onboarded: boolean;
   name: string;
@@ -49,6 +51,11 @@ export type Settings = {
   district: string;
   season: Season;
   crops: CropKey[];
+  llmProvider?: LLMProvider;
+  geminiApiKey?: string;
+  groqApiKey?: string;
+  openaiApiKey?: string;
+  customModel?: string;
 };
 
 export type Reminder = { id: string; title: string; crop: CropKey; dueDate: string; createdAt: string; done: boolean };

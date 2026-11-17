@@ -7,12 +7,16 @@ import {
   ChevronRight,
   Copy,
   CornerDownLeft,
+  Cpu,
+  ExternalLink,
   Image as ImageIcon,
   Info,
+  Key,
   Leaf,
   MessageCircle,
   RotateCcw,
   Send,
+  Settings as SettingsIcon,
   ShieldAlert,
   Sparkles,
   Sprout,
@@ -21,6 +25,7 @@ import {
   Volume2,
   VolumeX,
   X,
+  Zap,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -170,7 +175,7 @@ const samplePromptsByLang: Record<Lang, { category: string; questions: string[] 
 };
 
 export function AssistantPage() {
-  const { t, lang, messages, typing, ask, clearChat, scans, updateSettings } = useCropCare();
+  const { t, lang, messages, typing, ask, clearChat, scans, settings, updateSettings } = useCropCare();
   const search = useSearch({ strict: false }) as { scanId?: string };
   const initialScanId = search?.scanId;
   const [activeScanId, setActiveScanId] = useState<string | undefined>(
@@ -180,8 +185,113 @@ export function AssistantPage() {
   const [input, setInput] = useState("");
   const [activePlayingId, setActivePlayingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showModelModal, setShowModelModal] = useState(false);
+
+  // Model settings configuration state
+  const [selectedProvider, setSelectedProvider] = useState<string>(
+    settings?.llmProvider || (settings?.geminiApiKey ? "gemini" : settings?.groqApiKey ? "groq" : "auto")
+  );
+  const [geminiKeyInput, setGeminiKeyInput] = useState(settings?.geminiApiKey || "");
+  const [groqKeyInput, setGroqKeyInput] = useState(settings?.groqApiKey || "");
+  const [openaiKeyInput, setOpenaiKeyInput] = useState(settings?.openaiApiKey || "");
+  const [testStatus, setTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
+  const [testMsg, setTestMsg] = useState("");
+
   const endRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const activeModelName = useMemo(() => {
+    if (settings?.geminiApiKey && (settings.llmProvider === "gemini" || settings.llmProvider === "auto" || !settings.llmProvider)) {
+      return "✨ Google Gemini 2.0 Flash";
+    }
+    if (settings?.groqApiKey && (settings.llmProvider === "groq" || settings.llmProvider === "auto")) {
+      return "⚡ Meta Llama 3.3 70B (Groq)";
+    }
+    if (settings?.openaiApiKey && (settings.llmProvider === "openai" || settings.llmProvider === "auto")) {
+      return "🤖 OpenAI GPT-4o-mini";
+    }
+    if (settings?.llmProvider === "ollama") {
+      return "🦙 Ollama Local";
+    }
+    return "🌿 KisanAI Neural (Local)";
+  }, [settings]);
+
+  const hasCloudKey = Boolean(settings?.geminiApiKey || settings?.groqApiKey || settings?.openaiApiKey);
+
+  const handleTestConnection = async () => {
+    setTestStatus("testing");
+    setTestMsg("");
+    try {
+      if (selectedProvider === "gemini" || (selectedProvider === "auto" && geminiKeyInput.trim())) {
+        if (!geminiKeyInput.trim()) throw new Error("Please enter your Google Gemini API Key first.");
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKeyInput.trim()}`;
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: "Hello" }] }] }),
+          signal: AbortSignal.timeout(7000),
+        });
+        if (res.ok) {
+          setTestStatus("success");
+          setTestMsg("✓ Connected to Google Gemini 2.0 Flash successfully!");
+        } else {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err?.error?.message || `Gemini API error (Status ${res.status})`);
+        }
+      } else if (selectedProvider === "groq" || (selectedProvider === "auto" && groqKeyInput.trim())) {
+        if (!groqKeyInput.trim()) throw new Error("Please enter your Groq API Key first.");
+        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${groqKeyInput.trim()}`,
+          },
+          body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            messages: [{ role: "user", content: "Hello" }],
+            max_tokens: 10,
+          }),
+          signal: AbortSignal.timeout(7000),
+        });
+        if (res.ok) {
+          setTestStatus("success");
+          setTestMsg("✓ Connected to Groq Llama 3.3 70B successfully!");
+        } else {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err?.error?.message || `Groq API error (Status ${res.status})`);
+        }
+      } else if (selectedProvider === "ollama") {
+        const res = await fetch("http://localhost:11434/api/tags", { signal: AbortSignal.timeout(3000) });
+        if (res.ok) {
+          setTestStatus("success");
+          setTestMsg("✓ Local Ollama detected on port 11434!");
+        } else {
+          throw new Error("Could not reach Ollama at http://localhost:11434");
+        }
+      } else {
+        const res = await fetch("http://localhost:8000/health", { signal: AbortSignal.timeout(3000) });
+        if (res.ok) {
+          setTestStatus("success");
+          setTestMsg("✓ Local KisanAI Deep Learning server verified on port 8000!");
+        } else {
+          throw new Error("Local server not responding at http://localhost:8000");
+        }
+      }
+    } catch (e: any) {
+      setTestStatus("error");
+      setTestMsg(e?.message || "Failed to reach model service.");
+    }
+  };
+
+  const handleSaveModelConfig = () => {
+    updateSettings({
+      llmProvider: selectedProvider as any,
+      geminiApiKey: geminiKeyInput.trim(),
+      groqApiKey: groqKeyInput.trim(),
+      openaiApiKey: openaiKeyInput.trim(),
+    });
+    setShowModelModal(false);
+  };
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -258,13 +368,19 @@ export function AssistantPage() {
               <Bot className="size-6 text-primary" />
               {t("navAssistant")}
             </h1>
-            <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Llama 3.2 1B Active
-            </span>
+            <button
+              type="button"
+              onClick={() => setShowModelModal(true)}
+              className="flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/25 px-2.5 py-1 text-[11px] font-bold text-primary hover:bg-primary/20 transition-all cursor-pointer shadow-2xs active:scale-95"
+              title="Click to configure Official AI Model (Gemini / Groq / OpenAI / Ollama)"
+            >
+              <Sparkles className="size-3 text-primary animate-pulse" />
+              <span>{activeModelName}</span>
+              <SettingsIcon className="size-3 opacity-60 ml-0.5" />
+            </button>
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {t("assistantSub")} · Offline-First ICAR / ANGRAU Agronomic AI
+            {t("assistantSub")} · Official Multilingual Agronomic AI
           </p>
         </div>
 
@@ -288,6 +404,16 @@ export function AssistantPage() {
             ))}
           </div>
 
+          <button
+            type="button"
+            onClick={() => setShowModelModal(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-surface px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-accent/40 transition-all shadow-2xs"
+            title="Configure AI Models"
+          >
+            <Cpu className="size-3.5 text-primary" />
+            <span className="hidden sm:inline">Model</span>
+          </button>
+
           {messages.length > 0 && (
             <Confirm
               trigger={
@@ -307,6 +433,25 @@ export function AssistantPage() {
           )}
         </div>
       </div>
+
+      {/* Cloud LLM Key Banner */}
+      {!hasCloudKey && (
+        <div className="mt-2.5 flex items-center justify-between gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200 animate-in fade-in">
+          <div className="flex items-center gap-2 min-w-0">
+            <Zap className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <p className="truncate text-xs">
+              <span className="font-bold">Official AI Chatbot:</span> Connect your free Google Gemini or Groq key for unconstrained, conversational reasoning.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowModelModal(true)}
+            className="shrink-0 rounded-lg bg-amber-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-amber-700 transition-all shadow-xs active:scale-95 cursor-pointer"
+          >
+            Connect Key
+          </button>
+        </div>
+      )}
 
       {/* Multimodal Photo Active Context Banner */}
       {activeScan && (
@@ -653,10 +798,184 @@ export function AssistantPage() {
           </button>
         </form>
 
-        <p className="mt-2 text-center text-[10px] text-muted-foreground">
-          {t("llmMissing")} · 100% offline-ready & private
+        <p className="mt-2 text-center text-[10px] text-muted-foreground flex items-center justify-center gap-1.5">
+          <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span>{activeModelName} active</span>
+          <span>·</span>
+          <span>100% offline-ready & private</span>
         </p>
       </div>
+
+      {/* Official AI Model Configuration Modal */}
+      {showModelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-lg rounded-3xl border border-line bg-card p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-2 border-b border-line">
+              <div className="flex items-center gap-2.5">
+                <div className="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary">
+                  <Sparkles className="size-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-foreground">Official AI Model & Chatbot</h2>
+                  <p className="text-xs text-muted-foreground">Select real cloud or on-device LLMs</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowModelModal(false)}
+                className="rounded-xl p-1.5 text-muted-foreground hover:bg-surface hover:text-foreground transition-all cursor-pointer"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            {/* Provider Selection */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-foreground">AI Intelligence Provider</label>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {[
+                  { id: "auto", name: "⚡ Auto (Best)", badge: "Smart" },
+                  { id: "gemini", name: "✨ Google Gemini", badge: "2.0 Flash" },
+                  { id: "groq", name: "⚡ Groq Cloud", badge: "Llama 3.3 70B" },
+                  { id: "openai", name: "🤖 OpenAI", badge: "GPT-4o" },
+                  { id: "ollama", name: "🦙 Ollama", badge: "Local" },
+                  { id: "local", name: "🌿 Local AI", badge: "On-Device" },
+                ].map((prov) => (
+                  <button
+                    key={prov.id}
+                    type="button"
+                    onClick={() => setSelectedProvider(prov.id)}
+                    className={cn(
+                      "flex flex-col items-start rounded-xl border p-2.5 text-left transition-all cursor-pointer",
+                      selectedProvider === prov.id
+                        ? "border-primary bg-primary/10 ring-1 ring-primary shadow-xs"
+                        : "border-line bg-surface hover:border-line-hover"
+                    )}
+                  >
+                    <span className="text-xs font-bold text-foreground">{prov.name}</span>
+                    <span className="text-[10px] text-muted-foreground">{prov.badge}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Google Gemini Inputs */}
+            {(selectedProvider === "gemini" || selectedProvider === "auto") && (
+              <div className="rounded-2xl border border-line bg-surface/60 p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <Sparkles className="size-3.5 text-primary" />
+                    Google Gemini API Key
+                  </span>
+                  <a
+                    href="https://aistudio.google.com/apikey"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                  >
+                    Get Free Key <ExternalLink className="size-3" />
+                  </a>
+                </div>
+                <input
+                  type="password"
+                  value={geminiKeyInput}
+                  onChange={(e) => setGeminiKeyInput(e.target.value)}
+                  placeholder="Paste your Google AI Studio key (AIzaSy...)"
+                  className="w-full rounded-xl border border-line bg-card px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-primary"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Official Google DeepMind Gemini 2.0 Flash — zero cost with free tier, highest agricultural reasoning.
+                </p>
+              </div>
+            )}
+
+            {/* Groq Cloud Inputs */}
+            {(selectedProvider === "groq" || selectedProvider === "auto") && (
+              <div className="rounded-2xl border border-line bg-surface/60 p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <Zap className="size-3.5 text-amber-500" />
+                    Groq API Key (Meta Llama 3.3 70B)
+                  </span>
+                  <a
+                    href="https://console.groq.com/keys"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                  >
+                    Get Free Key <ExternalLink className="size-3" />
+                  </a>
+                </div>
+                <input
+                  type="password"
+                  value={groqKeyInput}
+                  onChange={(e) => setGroqKeyInput(e.target.value)}
+                  placeholder="Paste your Groq key (gsk_...)"
+                  className="w-full rounded-xl border border-line bg-card px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-primary"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Blazing fast ~500 tokens/second Llama 3.3 70B Versatile model.
+                </p>
+              </div>
+            )}
+
+            {/* OpenAI Inputs */}
+            {selectedProvider === "openai" && (
+              <div className="rounded-2xl border border-line bg-surface/60 p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <Key className="size-3.5 text-blue-500" />
+                    OpenAI / Compatible API Key
+                  </span>
+                </div>
+                <input
+                  type="password"
+                  value={openaiKeyInput}
+                  onChange={(e) => setOpenaiKeyInput(e.target.value)}
+                  placeholder="Paste your OpenAI key (sk-...)"
+                  className="w-full rounded-xl border border-line bg-card px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-primary"
+                />
+              </div>
+            )}
+
+            {/* Test Status feedback */}
+            {testStatus !== "idle" && (
+              <div
+                className={cn(
+                  "rounded-xl p-3 text-xs flex items-center gap-2",
+                  testStatus === "testing" && "bg-surface text-muted-foreground",
+                  testStatus === "success" && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-semibold",
+                  testStatus === "error" && "bg-coral/10 text-coral border border-coral/20 font-semibold"
+                )}
+              >
+                {testStatus === "testing" && <Sparkles className="size-3.5 animate-spin shrink-0" />}
+                {testStatus === "success" && <CheckCircle2 className="size-3.5 shrink-0" />}
+                {testStatus === "error" && <AlertTriangle className="size-3.5 shrink-0" />}
+                <span>{testStatus === "testing" ? "Testing model connectivity..." : testMsg}</span>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-line">
+              <button
+                type="button"
+                onClick={handleTestConnection}
+                disabled={testStatus === "testing"}
+                className="rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-foreground hover:bg-surface/80 transition-all cursor-pointer"
+              >
+                Test Connection
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveModelConfig}
+                className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all cursor-pointer active:scale-95"
+              >
+                Save & Activate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1437,13 +1437,122 @@ export function generateLlamaAnalysis(
 export async function queryLiveLlamaEndpoint(
   prompt: string,
   systemPrompt: string,
-  history?: ChatMessage[]
+  history?: ChatMessage[],
+  settings?: any
 ): Promise<string | null> {
   if (typeof navigator !== "undefined" && !navigator.onLine) {
     return null;
   }
 
-  // Auto-detect installed Ollama model if Ollama is running locally
+  const provider = settings?.llmProvider || "auto";
+
+  // 1. Google Gemini Official API (Gemini 2.0 Flash / 1.5 Flash)
+  if (settings?.geminiApiKey && (provider === "gemini" || provider === "auto")) {
+    try {
+      const model = settings.customModel?.trim() || "gemini-2.0-flash";
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${settings.geminiApiKey.trim()}`;
+      const contents = [
+        ...(history || []).slice(-6).map((m) => ({
+          role: m.role === "farmer" ? "user" : "model",
+          parts: [{ text: m.text }],
+        })),
+        { role: "user", parts: [{ text: prompt }] },
+      ];
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents,
+          generationConfig: {
+            temperature: 0.4,
+            maxOutputTokens: 1024,
+          },
+        }),
+        signal: AbortSignal.timeout(12000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text && typeof text === "string" && text.trim().length > 5) {
+          return text.trim();
+        }
+      }
+    } catch (err) {
+      console.warn("Gemini API call failed, falling back to local:", err);
+    }
+  }
+
+  // 2. Groq Cloud Official API (Llama 3.3 70B / Llama 3.1 8B - 500 tok/sec)
+  const chatMessages = [
+    { role: "system", content: systemPrompt },
+    ...(history || []).slice(-6).map((m) => ({
+      role: m.role === "farmer" ? "user" : "assistant",
+      content: m.text,
+    })),
+    { role: "user", content: prompt },
+  ];
+
+  if (settings?.groqApiKey && (provider === "groq" || provider === "auto")) {
+    try {
+      const model = settings.customModel?.trim() || "llama-3.3-70b-versatile";
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.groqApiKey.trim()}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: chatMessages,
+          max_tokens: 1024,
+          temperature: 0.4,
+        }),
+        signal: AbortSignal.timeout(12000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const text = data?.choices?.[0]?.message?.content;
+        if (text && typeof text === "string" && text.trim().length > 5) {
+          return text.trim();
+        }
+      }
+    } catch (err) {
+      console.warn("Groq API call failed, falling back to local:", err);
+    }
+  }
+
+  // 3. OpenAI / OpenRouter Official API
+  if (settings?.openaiApiKey && (provider === "openai" || provider === "auto")) {
+    try {
+      const model = settings.customModel?.trim() || "gpt-4o-mini";
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${settings.openaiApiKey.trim()}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: chatMessages,
+          max_tokens: 1024,
+          temperature: 0.4,
+        }),
+        signal: AbortSignal.timeout(12000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const text = data?.choices?.[0]?.message?.content;
+        if (text && typeof text === "string" && text.trim().length > 5) {
+          return text.trim();
+        }
+      }
+    } catch (err) {
+      console.warn("OpenAI API call failed, falling back to local:", err);
+    }
+  }
+
+  // 4. Auto-detect installed Ollama model if Ollama is running locally
   let ollamaModel = "llama3.2:1b";
   try {
     const tagsRes = await fetch("http://localhost:11434/api/tags", {
@@ -1453,7 +1562,7 @@ export async function queryLiveLlamaEndpoint(
       const data = await tagsRes.json();
       if (Array.isArray(data?.models) && data.models.length > 0) {
         const found = data.models.find((m: any) =>
-          typeof m.name === "string" && (m.name.includes("llama") || m.name.includes("crop") || m.name.includes("kisan"))
+          typeof m.name === "string" && (m.name.includes("llama") || m.name.includes("crop") || m.name.includes("kisan") || m.name.includes("qwen"))
         );
         ollamaModel = found?.name || data.models[0].name;
       }
@@ -1473,15 +1582,6 @@ export async function queryLiveLlamaEndpoint(
     },
   ];
 
-  const chatMessages = [
-    { role: "system", content: systemPrompt },
-    ...(history || []).slice(-4).map((m) => ({
-      role: m.role === "farmer" ? "user" : "assistant",
-      content: m.text,
-    })),
-    { role: "user", content: prompt },
-  ];
-
   for (const ep of endpoints) {
     try {
       const res = await fetch(ep.url, {
@@ -1490,10 +1590,10 @@ export async function queryLiveLlamaEndpoint(
         body: JSON.stringify({
           model: ep.model,
           messages: chatMessages,
-          max_tokens: 500,
+          max_tokens: 600,
           temperature: 0.3,
         }),
-        signal: AbortSignal.timeout(2200),
+        signal: AbortSignal.timeout(8000),
       });
       if (res.ok) {
         const data = await res.json();

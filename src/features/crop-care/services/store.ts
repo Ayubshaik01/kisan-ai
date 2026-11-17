@@ -29,6 +29,11 @@ export const defaultSettings: Settings = {
   district: "Guntur",
   season: "kharif",
   crops: ["rice", "chilli"],
+  llmProvider: "auto",
+  geminiApiKey: "",
+  groqApiKey: "",
+  openaiApiKey: "",
+  customModel: "",
 };
 
 function read<T>(key: StoreKey, fallback: T): T {

@@ -215,17 +215,36 @@ export function CropCareProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Dual-mode execution: attempt live Docker / online Llama 3.2 endpoint with seamless offline fallback
+    // Live LLM execution: Query official LLM (Gemini / Groq / OpenAI / Ollama / Local Server) with seamless offline fallback
+    const systemPrompt = `You are KisanAI, a world-class AI Agricultural Agronomist and official farm assistant. You provide intelligent, scientifically grounded, empathetic advice for rice and chilli crops following ICAR, ANGRAU, and PJTSAU university guidelines.
+- Strictly adhere to statutory CIB&RC guidelines: do NOT hallucinate chemical dosages or promote unapproved chemical mixes.
+- Provide practical cultural, biological (e.g. Trichoderma, Pseudomonas, Neem), and balanced fertilizer guidance.
+- Respond fluently in the farmer's chosen language: ${
+      settings.lang === "te"
+        ? "Telugu (తెలుగు)"
+        : settings.lang === "hi"
+        ? "Hindi (हिंदी)"
+        : settings.lang === "ta"
+        ? "Tamil (தமிழ்)"
+        : settings.lang === "kn"
+        ? "Kannada (ಕನ್ನಡ)"
+        : settings.lang === "mr"
+        ? "Marathi (मराठी)"
+        : "English"
+    }.
+- If the farmer greets you casually, converse warmly like a friendly, expert digital agronomist.`;
+
     queryLiveLlamaEndpoint(
-      `Crop context: ${ctx?.crop || "rice/chilli"}, condition: ${ctx?.slug || "general health"}\nFarmer Question in ${settings.lang}: ${question}`,
-      "You are the Meta Llama 3.2 1B Instruct Agricultural Assistant. Provide verified ICAR/ANGRAU guidance without chemical dosages.",
-      messages
+      `Crop context: ${ctx?.crop || "rice/chilli"}, condition: ${ctx?.slug || "general health"}\nFarmer Question: ${question}`,
+      systemPrompt,
+      messages,
+      settings
     ).then((liveText) => {
       finish(liveText || llamaRes.text);
     }).catch(() => {
       finish(llamaRes.text);
     });
-  }, [settings.lang, online, messages]);
+  }, [settings, online, messages]);
 
   const clearChat = useCallback(() => { setMessages([]); chatStore.save([]); }, []);
   const clearData = useCallback((scope: "history" | "saved" | "chat" | "all") => {
