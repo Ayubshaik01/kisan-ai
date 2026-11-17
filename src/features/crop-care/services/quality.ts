@@ -55,13 +55,26 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
   const topColorShare = maxColorOccurrences / n;
   const uniqueColorCount = colorMap.size;
 
+  // Local spatial flat-fill analysis
+  let zeroDiffCount = 0;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width - 1; x++) {
+      const i1 = (y * width + x) * 4;
+      const i2 = (y * width + x + 1) * 4;
+      if (data[i1] === data[i2] && data[i1 + 1] === data[i2 + 1] && data[i1 + 2] === data[i2 + 2]) {
+        zeroDiffCount++;
+      }
+    }
+  }
+  const zeroDiffFrac = zeroDiffCount / Math.max(1, height * (width - 1));
+
   // Reject flat vector art, drawings, cartoons, or non-botanical scenes:
-  // A cartoon/drawing has very low color entropy (few distinct colors < 35), flat solid blocks, or neon tones.
-  // A real leaf photograph has hundreds of natural foliage gradients and textures.
+  // A cartoon/drawing has very low color entropy, large identical adjacent fills, or neon tones.
   const isCartoonOrDrawing =
-    uniqueColorCount < 35 ||
-    (uniqueColorCount < 75 && topColorShare > 0.45) ||
-    topColorShare > 0.70 ||
+    zeroDiffFrac > 0.18 ||
+    (uniqueColorCount < 350 && zeroDiffFrac > 0.06) ||
+    (topColorShare > 0.60 && uniqueColorCount < 500) ||
+    uniqueColorCount < 100 ||
     neonCount / n > 0.10;
   const leafOk = !isCartoonOrDrawing;
 

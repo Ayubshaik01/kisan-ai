@@ -92,6 +92,10 @@ async function runOnnxInference(
   if (typeof window === "undefined") return null;
   try {
     const ort = await import("onnxruntime-web");
+    if (ort?.env?.wasm) {
+      ort.env.wasm.wasmPaths = "/";
+      ort.env.wasm.numThreads = 1;
+    }
     const modelPath = crop === "rice" ? "/models/rice_mobilenetv3.onnx" : "/models/chilli_mobilenetv3.onnx";
     if (!ortSessionCache[crop]) {
       ortSessionCache[crop] = await ort.InferenceSession.create(modelPath, {
@@ -154,7 +158,7 @@ async function runOnnxInference(
           "yellow-stem-borer",
           "hispa",
           "downy-mildew",
-          "healthy",
+          "rice-healthy",
           "unknown",
         ]
       : [
@@ -162,7 +166,7 @@ async function runOnnxInference(
           "cercospora-leaf-spot",
           "powdery-mildew",
           "thrips",
-          "healthy",
+          "chilli-healthy",
           "unknown",
         ];
 

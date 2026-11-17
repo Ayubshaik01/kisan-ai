@@ -91,8 +91,10 @@ export function DiagnosePage() {
   );
   const [cameraError, setCameraError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const reticleRef = useRef<HTMLDivElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   // Sample analysis walkthrough states
   const [analysisStep, setAnalysisStep] = useState(0);
@@ -152,17 +154,55 @@ export function DiagnosePage() {
     };
   }, [step, capturedImage, cameraFacing]);
 
-  // Capture still from video stream
+  // Capture still from video stream, cropping strictly to the square reticle
   const captureFromVideo = () => {
     if (!videoRef.current) return;
     const video = videoRef.current;
+    const vw = video.videoWidth || 640;
+    const vh = video.videoHeight || 480;
+
+    let sx = 0;
+    let sy = 0;
+    let sSize = Math.min(vw, vh);
+
+    const reticleEl = reticleRef.current;
+    const videoEl = videoRef.current;
+
+    if (reticleEl && videoEl) {
+      const vRect = videoEl.getBoundingClientRect();
+      const rRect = reticleEl.getBoundingClientRect();
+
+      // Video element uses object-cover, scaling to cover vRect while preserving aspect ratio
+      const scale = Math.max(vw / Math.max(1, vRect.width), vh / Math.max(1, vRect.height));
+      const renderedW = vw / scale;
+      const renderedH = vh / scale;
+      const offsetX = (vRect.width - renderedW) / 2;
+      const offsetY = (vRect.height - renderedH) / 2;
+
+      const relX = rRect.left - vRect.left - offsetX;
+      const relY = rRect.top - vRect.top - offsetY;
+
+      sx = Math.max(0, Math.min(vw - 50, Math.floor(relX * scale)));
+      sy = Math.max(0, Math.min(vh - 50, Math.floor(relY * scale)));
+      const rawW = Math.floor(rRect.width * scale);
+      const rawH = Math.floor(rRect.height * scale);
+      sSize = Math.max(64, Math.min(rawW, rawH, vw - sx, vh - sy));
+    } else {
+      // Symmetrical center square crop
+      sSize = Math.min(vw, vh);
+      sx = Math.floor((vw - sSize) / 2);
+      sy = Math.floor((vh - sSize) / 2);
+    }
+
+    const targetSize = Math.min(sSize, 960);
     const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
+    canvas.width = targetSize;
+    canvas.height = targetSize;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    // Draw only the cropped square area
+    ctx.drawImage(video, sx, sy, sSize, sSize, 0, 0, targetSize, targetSize);
     stopCamera();
 
     compressPhoto(canvas)
@@ -173,6 +213,45 @@ export function DiagnosePage() {
       .catch((err) => {
         console.error("Compression failed:", err);
         toast.error("Failed to process photo");
+      });
+  };
+
+  // Drag and drop handlers for specimen images
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDraggingOver) setIsDraggingOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setIsDraggingOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please drop an image file (JPG, PNG, WebP)");
+      return;
+    }
+
+    stopCamera();
+    compressPhoto(file)
+      .then((dataUrl) => {
+        setCapturedImage(dataUrl);
+        runQualityAssessment(dataUrl);
+      })
+      .catch((err) => {
+        console.error("Image loading failed:", err);
+        toast.error("Invalid image format");
       });
   };
 
@@ -553,8 +632,16 @@ export function DiagnosePage() {
           </span>
         </div>
 
-        {/* Viewfinder Card */}
-        <div className="relative overflow-hidden rounded-3xl border border-line bg-black shadow-2xl">
+        {/* Viewfinder Card with Drag & Drop */}
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={cn(
+            "relative overflow-hidden rounded-3xl border border-line bg-black shadow-2xl transition-all",
+            isDraggingOver && "ring-4 ring-primary shadow-primary/30"
+          )}
+        >
           {/* Aspect Container */}
           <div className="relative aspect-[4/3] w-full max-h-[62vh] overflow-hidden bg-neutral-950 sm:aspect-[16/10]">
             {cameraActive ? (
@@ -572,7 +659,7 @@ export function DiagnosePage() {
                   {cameraError || t("camStarting")}
                 </p>
                 <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-                  Take a photo or choose an existing clear image from your gallery.
+                  Take a photo, choose an existing image, or drag & drop a file here.
                 </p>
                 <button
                   type="button"
@@ -584,18 +671,36 @@ export function DiagnosePage() {
               </div>
             )}
 
-            {/* Framing reticle overlay for active camera */}
+            {/* Framing reticle overlay for active camera (Cropped strictly to this square) */}
             {cameraActive && (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-8">
-                <div className="relative size-60 rounded-2xl border-2 border-dashed border-primary/70 sm:size-72">
+                <div
+                  ref={reticleRef}
+                  className="relative size-60 rounded-2xl border-2 border-dashed border-primary/70 sm:size-72"
+                >
                   <span className="absolute -left-1 -top-1 size-5 rounded-tl-lg border-l-4 border-t-4 border-primary" />
                   <span className="absolute -right-1 -top-1 size-5 rounded-tr-lg border-r-4 border-t-4 border-primary" />
                   <span className="absolute -bottom-1 -left-1 size-5 rounded-bl-lg border-b-4 border-l-4 border-primary" />
                   <span className="absolute -bottom-1 -right-1 size-5 rounded-br-lg border-b-4 border-r-4 border-primary" />
                   <p className="absolute -top-7 inset-x-0 text-center font-mono text-[11px] font-semibold uppercase tracking-wider text-primary drop-shadow">
-                    Align affected leaf
+                    Align affected leaf · Square crop
                   </p>
                 </div>
+              </div>
+            )}
+
+            {/* Drag & drop active drop overlay */}
+            {isDraggingOver && (
+              <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 p-6 text-center backdrop-blur-sm animate-in fade-in">
+                <span className="grid size-16 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/30 animate-bounce">
+                  <Upload className="size-8" />
+                </span>
+                <p className="mt-4 text-lg font-bold text-white drop-shadow">
+                  Drop Leaf Image Here
+                </p>
+                <p className="mt-1 text-xs text-neutral-300">
+                  Instant offline AI diagnosis will start automatically
+                </p>
               </div>
             )}
           </div>
@@ -608,6 +713,7 @@ export function DiagnosePage() {
               onClick={() => fileInputRef.current?.click()}
               className="grid size-12 place-items-center rounded-xl bg-neutral-800 text-neutral-300 transition-colors hover:bg-neutral-700 hover:text-white"
               aria-label="Gallery"
+              title="Upload photo from disk / gallery"
             >
               <ImageIcon className="size-5" />
             </button>
@@ -619,6 +725,7 @@ export function DiagnosePage() {
                 onClick={captureFromVideo}
                 className="grid size-18 place-items-center rounded-full bg-white p-1 shadow-lg shadow-white/20 transition-transform active:scale-95"
                 aria-label={t("capture")}
+                title="Capture & Crop to Viewfinder Square"
               >
                 <span className="size-full rounded-full border-2 border-neutral-900 bg-primary" />
               </button>
@@ -645,6 +752,38 @@ export function DiagnosePage() {
             >
               <SwitchCamera className="size-5" />
             </button>
+          </div>
+        </div>
+
+        {/* Drag & Drop Upload Zone */}
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className={cn(
+            "group relative cursor-pointer overflow-hidden rounded-3xl border-2 border-dashed p-4 sm:p-5 text-center transition-all shadow-sm",
+            isDraggingOver
+              ? "border-primary bg-primary/15 scale-[1.01] shadow-lg shadow-primary/20 ring-4 ring-primary/20"
+              : "border-line bg-card hover:border-primary/50 hover:bg-surface/80"
+          )}
+        >
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5">
+            <div className={cn(
+              "grid size-11 place-items-center rounded-2xl transition-all shadow-xs",
+              isDraggingOver ? "bg-primary text-primary-foreground scale-110" : "bg-primary/10 text-primary group-hover:scale-105"
+            )}>
+              <Upload className="size-5" />
+            </div>
+            <div className="text-center sm:text-left">
+              <p className="text-sm font-bold text-foreground flex items-center justify-center sm:justify-start gap-2">
+                <span>{isDraggingOver ? "Release to drop & diagnose leaf" : "Drag & drop leaf photo here, or browse files"}</span>
+                <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold text-primary">DRAG & DROP</span>
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Drop your photo here from computer or gallery · 100% On-device offline MobileNetV3 diagnosis
+              </p>
+            </div>
           </div>
         </div>
 
