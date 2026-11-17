@@ -235,11 +235,13 @@ export function CropCareProvider({ children }: { children: ReactNode }) {
 - CONVERSATIONAL RULES:
   * When greeted casually (e.g. "bro", "hi", "hello", "hey"), greet the farmer back warmly like a friendly farming friend, acknowledge their crop condition if an active scan is present, and ask how you can help.
   * Answer questions directly, concisely, and conversationally. Do NOT regurgitate static document headers or raw protocols unless specifically asked for a full diagnostic protocol.
-  * When asked to explain in simple words or summarize, give an intuitive, easy-to-understand explanation with meaning and practical next steps.`;
+  * When asked to explain in simple words or summarize, give an intuitive, easy-to-understand explanation with meaning and practical next steps.${
+    ctx?.slug
+      ? `\n- ACTIVE PHOTO SCAN CONTEXT: The farmer has attached a scan of their ${ctx.crop || "rice"} crop with diagnosed issue: "${ctx.slug}"${ctx.severityBand ? ` at ${ctx.severityBand} severity` : ""}. Keep this context in mind when answering questions about disease, remedies, sprays, fertilizers, or causes. If the user gives a greeting (like "bro", "hi", "hey"), greet them warmly and mention their crop situation naturally.`
+      : ""
+  }`;
 
-    const userPrompt = ctx?.slug
-      ? `[Crop Context: ${ctx.crop || "rice"}, Disease/Issue: ${ctx.slug}${ctx.severityBand ? `, Severity: ${ctx.severityBand}` : ""}]\nFarmer Question: ${question}`
-      : question;
+    const userPrompt = question;
 
     queryLiveLlamaEndpoint(
       userPrompt,

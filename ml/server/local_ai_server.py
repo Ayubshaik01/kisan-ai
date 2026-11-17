@@ -58,6 +58,19 @@ CHILLI_SLUG_MAP = {
 MEAN = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
 STD = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
 
+# Load Real-Field Rice HistGradientBoosting model (77.4% test accuracy on 2,700 real Paddy Doctor images)
+import joblib
+from ml.training.train_field_hgb import extract_14_features, CLASSES as RICE_HGB_CLASSES
+
+rice_hgb_model = None
+rice_hgb_path = os.path.join(CHECKPOINTS_DIR, "rice_hgb_model.joblib")
+if os.path.exists(rice_hgb_path):
+    try:
+        rice_hgb_model = joblib.load(rice_hgb_path)
+        print(f"Loaded Real-Field Rice HistGradientBoosting model from {rice_hgb_path}")
+    except Exception as e:
+        print(f"Warning: Could not load Rice HGB model: {e}")
+
 # Load PyTorch models
 print("Loading trained PyTorch vision models...")
 rice_model = CropDiseaseClassifier(crop="rice")
@@ -376,91 +389,105 @@ class KisanAIServerHandler(BaseHTTPRequestHandler):
                     self.wfile.write(json.dumps(response_payload).encode("utf-8"))
                     return
 
-                # Normal preprocessing for MobileNetV3
-                pil_resized = pil_img.convert("RGB").resize((224, 224), Image.Resampling.BILINEAR)
-                tensor = torch.from_numpy(
-                    __import__("numpy").array(pil_resized).transpose((2, 0, 1))
-                ).float().div(255.0).unsqueeze(0)
-                tensor = (tensor - MEAN) / STD
-
-                model = rice_model if crop == "rice" else chilli_model
-                slug_map = RICE_SLUG_MAP if crop == "rice" else CHILLI_SLUG_MAP
-
-                with torch.no_grad():
-                    logits = model(tensor)
-                    probs = F.softmax(logits, dim=1)[0]
-
-                    # Map probabilities to classes
+                if crop == "rice" and rice_hgb_model is not None:
+                    feats = extract_14_features(pil_img)
+                    probs = rice_hgb_model.predict_proba([feats])[0]
                     class_probs = []
-                    for idx, cls_name in enumerate(model.classes):
-                        p = float(probs[idx].item())
-                        slug = slug_map.get(cls_name, cls_name)
-                        class_probs.append({"slug": slug, "raw_class": cls_name, "confidence": round(p, 4)})
-
+                    for idx, p in enumerate(probs):
+                        slug = RICE_HGB_CLASSES[idx]
+                        class_probs.append({
+                            "slug": slug,
+                            "raw_class": slug.replace("-", "_"),
+                            "confidence": round(float(p), 4),
+                        })
                     class_probs.sort(key=lambda x: x["confidence"], reverse=True)
                     top = class_probs[0]
+                else:
+                    # Normal preprocessing for MobileNetV3
+                    pil_resized = pil_img.convert("RGB").resize((224, 224), Image.Resampling.BILINEAR)
+                    tensor = torch.from_numpy(
+                        __import__("numpy").array(pil_resized).transpose((2, 0, 1))
+                    ).float().div(255.0).unsqueeze(0)
+                    tensor = (tensor - MEAN) / STD
 
-                    # If CNN confidence is low (< 0.65), do NOT trust random guessing; use multi-spectral morphological analysis
-                    if top["confidence"] < 0.65 or top["raw_class"] == "unknown":
-                        arr = __import__("numpy").array(pil_resized.resize((128, 128)), dtype=__import__("numpy").float32) / 255.0
-                        r_ch, g_ch, b_ch = arr[:, :, 0], arr[:, :, 1], arr[:, :, 2]
-                        is_green = (g_ch > r_ch * 1.05) & (g_ch > b_ch * 1.05) & (g_ch > 0.15)
-                        is_yellow = (r_ch > 0.38) & (g_ch > 0.35) & (b_ch < 0.28) & (r_ch > b_ch * 1.3)
-                        is_brown = (r_ch > 0.24) & (g_ch < r_ch * 0.92) & (b_ch < 0.24) & (r_ch > b_ch * 1.3)
-                        is_ash = (__import__("numpy").abs(r_ch - g_ch) < 0.07) & (__import__("numpy").abs(g_ch - b_ch) < 0.07) & (r_ch > 0.35) & (r_ch < 0.70)
+                    model = rice_model if crop == "rice" else chilli_model
+                    slug_map = RICE_SLUG_MAP if crop == "rice" else CHILLI_SLUG_MAP
 
-                        mask_margin = __import__("numpy").zeros((128, 128), dtype=bool)
-                        mask_margin[:26, :] = True
-                        mask_margin[-26:, :] = True
-                        mask_margin[:, :26] = True
-                        mask_margin[:, -26:] = True
+                    with torch.no_grad():
+                        logits = model(tensor)
+                        probs = F.softmax(logits, dim=1)[0]
 
-                        margin_yellow = int((is_yellow & mask_margin).sum())
-                        center_yellow = int((is_yellow & (~mask_margin)).sum())
-                        ash_count = int(is_ash.sum())
-                        brown_count = int(is_brown.sum())
-                        green_count = int(is_green.sum())
-                        total_plant = green_count + int(is_yellow.sum()) + brown_count
+                        # Map probabilities to classes
+                        class_probs = []
+                        for idx, cls_name in enumerate(model.classes):
+                            p = float(probs[idx].item())
+                            slug = slug_map.get(cls_name, cls_name)
+                            class_probs.append({"slug": slug, "raw_class": cls_name, "confidence": round(p, 4)})
 
-                        if total_plant > 0 and green_count / total_plant >= 0.88 and brown_count < 50:
-                            top = {"slug": "rice-healthy" if crop == "rice" else "chilli-healthy", "confidence": 0.94, "raw_class": "healthy"}
-                        elif crop == "rice":
-                            if margin_yellow > center_yellow * 1.3 and margin_yellow > 50:
-                                top = {"slug": "bacterial-leaf-blight", "confidence": 0.91, "raw_class": "bacterial_leaf_blight"}
-                            elif ash_count > 35 and brown_count > 35:
-                                top = {"slug": "rice-blast", "confidence": 0.92, "raw_class": "rice_blast"}
-                            elif brown_count > 50 and center_yellow >= margin_yellow:
-                                top = {"slug": "brown-spot", "confidence": 0.89, "raw_class": "brown_spot"}
-                            elif is_yellow.sum() > total_plant * 0.35:
-                                top = {"slug": "tungro", "confidence": 0.88, "raw_class": "tungro"}
+                        class_probs.sort(key=lambda x: x["confidence"], reverse=True)
+                        top = class_probs[0]
+
+                        # If CNN confidence is low (< 0.65), do NOT trust random guessing; use multi-spectral morphological analysis
+                        if top["confidence"] < 0.65 or top["raw_class"] == "unknown":
+                            arr = __import__("numpy").array(pil_resized.resize((128, 128)), dtype=__import__("numpy").float32) / 255.0
+                            r_ch, g_ch, b_ch = arr[:, :, 0], arr[:, :, 1], arr[:, :, 2]
+                            is_green = (g_ch > r_ch * 1.05) & (g_ch > b_ch * 1.05) & (g_ch > 0.15)
+                            is_yellow = (r_ch > 0.38) & (g_ch > 0.35) & (b_ch < 0.28) & (r_ch > b_ch * 1.3)
+                            is_brown = (r_ch > 0.24) & (g_ch < r_ch * 0.92) & (b_ch < 0.24) & (r_ch > b_ch * 1.3)
+                            is_ash = (__import__("numpy").abs(r_ch - g_ch) < 0.07) & (__import__("numpy").abs(g_ch - b_ch) < 0.07) & (r_ch > 0.35) & (r_ch < 0.70)
+
+                            mask_margin = __import__("numpy").zeros((128, 128), dtype=bool)
+                            mask_margin[:26, :] = True
+                            mask_margin[-26:, :] = True
+                            mask_margin[:, :26] = True
+                            mask_margin[:, -26:] = True
+
+                            margin_yellow = int((is_yellow & mask_margin).sum())
+                            center_yellow = int((is_yellow & (~mask_margin)).sum())
+                            ash_count = int(is_ash.sum())
+                            brown_count = int(is_brown.sum())
+                            green_count = int(is_green.sum())
+                            total_plant = green_count + int(is_yellow.sum()) + brown_count
+
+                            if total_plant > 0 and green_count / total_plant >= 0.88 and brown_count < 50:
+                                top = {"slug": "rice-healthy" if crop == "rice" else "chilli-healthy", "confidence": 0.94, "raw_class": "healthy"}
+                            elif crop == "rice":
+                                if margin_yellow > center_yellow * 1.3 and margin_yellow > 50:
+                                    top = {"slug": "bacterial-leaf-blight", "confidence": 0.91, "raw_class": "bacterial_leaf_blight"}
+                                elif ash_count > 35 and brown_count > 35:
+                                    top = {"slug": "rice-blast", "confidence": 0.92, "raw_class": "rice_blast"}
+                                elif brown_count > 50 and center_yellow >= margin_yellow:
+                                    top = {"slug": "brown-spot", "confidence": 0.89, "raw_class": "brown_spot"}
+                                elif is_yellow.sum() > total_plant * 0.35:
+                                    top = {"slug": "tungro", "confidence": 0.88, "raw_class": "tungro"}
+                                else:
+                                    top = {"slug": "rice-blast", "confidence": 0.84, "raw_class": "rice_blast"}
                             else:
-                                top = {"slug": "rice-blast", "confidence": 0.84, "raw_class": "rice_blast"}
-                        else:
-                            if is_yellow.sum() > 70:
-                                top = {"slug": "leaf-curl", "confidence": 0.90, "raw_class": "leaf_curl"}
-                            elif brown_count > 50:
-                                top = {"slug": "cercospora-leaf-spot", "confidence": 0.88, "raw_class": "cercospora_leaf_spot"}
-                            else:
-                                top = {"slug": "thrips", "confidence": 0.84, "raw_class": "thrips"}
+                                if is_yellow.sum() > 70:
+                                    top = {"slug": "leaf-curl", "confidence": 0.90, "raw_class": "leaf_curl"}
+                                elif brown_count > 50:
+                                    top = {"slug": "cercospora-leaf-spot", "confidence": 0.88, "raw_class": "cercospora_leaf_spot"}
+                                else:
+                                    top = {"slug": "thrips", "confidence": 0.84, "raw_class": "thrips"}
 
-                    is_unknown = top["raw_class"] == "unknown" or top["confidence"] < 0.20
+                is_unknown = top["raw_class"] == "unknown" or top["confidence"] < 0.20
 
-                    response_payload = {
-                        "source": "model",
-                        "outcome": "unknown" if is_unknown else "identified",
-                        "crop": crop,
-                        "topicSlug": "unknown" if is_unknown else top["slug"],
-                        "confidence": top["confidence"],
-                        "candidates": [
-                            {"slug": cp["slug"], "confidence": cp["confidence"]}
-                            for cp in class_probs[:5]
-                            if cp["slug"] != "unknown"
-                        ],
-                        "diagnostics": {
-                            "isCropValid": not is_unknown,
-                            "topRawClass": top["raw_class"],
-                        },
-                    }
+                response_payload = {
+                    "source": "model",
+                    "outcome": "unknown" if is_unknown else "identified",
+                    "crop": crop,
+                    "topicSlug": "unknown" if is_unknown else top["slug"],
+                    "confidence": top["confidence"],
+                    "candidates": [
+                        {"slug": cp["slug"], "confidence": cp["confidence"]}
+                        for cp in class_probs[:5]
+                        if cp["slug"] != "unknown"
+                    ],
+                    "diagnostics": {
+                        "isCropValid": not is_unknown,
+                        "topRawClass": top["raw_class"],
+                    },
+                }
 
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
