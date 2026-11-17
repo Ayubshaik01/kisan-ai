@@ -216,7 +216,7 @@ export function CropCareProvider({ children }: { children: ReactNode }) {
     }
 
     // Live LLM execution: Query official LLM (Gemini / Groq / OpenAI / Ollama / Local Server) with seamless offline fallback
-    const systemPrompt = `You are KisanAI, a world-class AI Agricultural Agronomist and official farm assistant. You provide intelligent, scientifically grounded, empathetic advice for rice and chilli crops following ICAR, ANGRAU, and PJTSAU university guidelines.
+    const systemPrompt = `You are KisanAI, a world-class AI Agricultural Agronomist and friendly digital crop care chat assistant. You talk naturally, warmly, concisely, and intelligently just like ChatGPT / Claude / Gemini.
 - Strictly adhere to statutory CIB&RC guidelines: do NOT hallucinate chemical dosages or promote unapproved chemical mixes.
 - Provide practical cultural, biological (e.g. Trichoderma, Pseudomonas, Neem), and balanced fertilizer guidance.
 - Respond fluently in the farmer's chosen language: ${
@@ -232,10 +232,17 @@ export function CropCareProvider({ children }: { children: ReactNode }) {
         ? "Marathi (मराठी)"
         : "English"
     }.
-- If the farmer greets you casually, converse warmly like a friendly, expert digital agronomist.`;
+- CONVERSATIONAL RULES:
+  * When greeted casually (e.g. "bro", "hi", "hello", "hey"), greet the farmer back warmly like a friendly farming friend, acknowledge their crop condition if an active scan is present, and ask how you can help.
+  * Answer questions directly, concisely, and conversationally. Do NOT regurgitate static document headers or raw protocols unless specifically asked for a full diagnostic protocol.
+  * When asked to explain in simple words or summarize, give an intuitive, easy-to-understand explanation with meaning and practical next steps.`;
+
+    const userPrompt = ctx?.slug
+      ? `[Crop Context: ${ctx.crop || "rice"}, Disease/Issue: ${ctx.slug}${ctx.severityBand ? `, Severity: ${ctx.severityBand}` : ""}]\nFarmer Question: ${question}`
+      : question;
 
     queryLiveLlamaEndpoint(
-      `Crop context: ${ctx?.crop || "rice/chilli"}, condition: ${ctx?.slug || "general health"}\nFarmer Question: ${question}`,
+      userPrompt,
       systemPrompt,
       messages,
       settings

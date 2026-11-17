@@ -411,18 +411,33 @@ export async function analyzeImageWithVision(
       }
       const topColorDominance = maxColorFrequency / totalPixels;
       const uniqueColorCount = colorHistogram.size;
+      // Local spatial flat-fill analysis:
+      let zeroDiffCount = 0;
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W - 1; x++) {
+          const i1 = (y * W + x) * 4;
+          const i2 = (y * W + x + 1) * 4;
+          if (data[i1] === data[i2] && data[i1 + 1] === data[i2 + 1] && data[i1 + 2] === data[i2 + 2]) {
+            zeroDiffCount++;
+          }
+        }
+      }
+      const zeroDiffFrac = zeroDiffCount / (H * (W - 1));
+
       const isCartoonOrClipart =
-        uniqueColorCount < 35 || // Extremely low color entropy (simple drawings/clipart)
-        (topColorDominance > 0.45 && uniqueColorCount < 80) || // Monochromatic graphic with low variety
-        topColorDominance > 0.75 || // Dominant uniform solid block covering >75%
-        (saturatedFlatCount / totalPixels > 0.15 && uniqueColorCount < 160) || // Saturated cartoon illustration
-        (stdG < 0.06 && stdR < 0.06 && uniqueColorCount < 80); // Flat non-textured image
+        zeroDiffFrac > 0.18 || // Large identical flat digital fills
+        (uniqueColorCount < 350 && zeroDiffFrac > 0.06) || // Quantized digital graphic
+        (topColorDominance > 0.60 && uniqueColorCount < 500) || // Dominant uniform solid block typical of clipart
+        uniqueColorCount < 100 || // Extremely low color entropy typical of cartoons/drawings
+        (saturatedFlatCount / totalPixels > 0.18 && uniqueColorCount < 350);
+
+      const totalBotanicalPixels = foliarCount + yellowTissueCount + brownLesionCount + ashCoreCount + pureFoliageCount + chloroticCount;
 
       if (isCartoonOrClipart) {
         return resolve({
           source: "model",
           outcome: "unknown",
-          confidence: 0.18,
+          confidence: 0.15,
           diagnostics: {
             plantPixels: totalFoliage,
             lesionPixels: 0,
@@ -433,16 +448,14 @@ export async function analyzeImageWithVision(
         });
       }
 
-      // Strict Out-of-Distribution (OOD) Check:
-      // A genuine crop leaf photograph must exhibit recognizable plant foliage (at least 2,200 pixels ~ 3.4% of frame)
-      // and pure green foliar tissue of at least 600 pixels. Non-leaf scenes (desks, faces, walls, clothing) fail this test.
-      if (totalFoliage < 2200 || (totalFoliage / totalPixels) < 0.034 || (pureFoliageCount < 600 && chloroticCount < 800)) {
+      // Guard 2: Reject scenes with virtually no botanical leaf tissue
+      if (totalBotanicalPixels < 250) {
         return resolve({
           source: "model",
           outcome: "unknown",
-          confidence: 0.35,
+          confidence: 0.25,
           diagnostics: {
-            plantPixels: totalFoliage,
+            plantPixels: totalBotanicalPixels,
             lesionPixels: 0,
             affectedPercent: 0,
             isCropValid: false,
@@ -534,12 +547,12 @@ export async function analyzeImageWithVision(
       const hgbModel = await loadHgbModel(crop);
       const hgbRes = hgbModel ? evaluateHgb(hgbModel, featVector) : null;
 
-      if (deepModelResult) {
+      if (deepModelResult && deepModelResult.slug && deepModelResult.slug !== "unknown") {
         detectedSlug = deepModelResult.slug;
         confidence = Math.min(0.98, Math.max(0.70, deepModelResult.confidence));
         patternName = detectedSlug.replace("-", "_");
         candidates = deepModelResult.candidates;
-      } else if (hgbRes && hgbRes.confidence >= 0.20) {
+      } else if (hgbRes && hgbRes.confidence >= 0.20 && hgbRes.slug !== "unknown") {
         detectedSlug = hgbRes.slug;
         confidence = Math.min(0.96, Math.max(0.68, hgbRes.confidence));
         patternName = detectedSlug.replace("-", "_");

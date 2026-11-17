@@ -124,14 +124,12 @@ class VoiceAgentService {
         regionalVoice = voices.find((v) => v.name.toLowerCase().includes(langName) || v.lang.toLowerCase().includes(langName));
       }
 
-      // 3. Fallback to Indian English or first voice if vernacular voice is not installed on OS
-      if (!regionalVoice) {
-        regionalVoice = voices.find((v) => v.lang.toLowerCase().includes("in") || v.name.toLowerCase().includes("india"));
-      }
-
       if (regionalVoice) {
         utterance.voice = regionalVoice;
         utterance.lang = regionalVoice.lang;
+      } else {
+        // Keep primary regional tag so browser speech engine synthesizes in requested language
+        utterance.lang = primaryTag;
       }
 
       utterance.onstart = () => {

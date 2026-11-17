@@ -259,6 +259,40 @@ def is_greeting_word(w: str) -> bool:
     ]
 
 
+def is_cartoon_or_non_leaf(pil_img):
+    """
+    Mathematical botanical discriminator:
+    1. Distinguishes natural organic photographic textures from flat vector art, drawings, and cartoons.
+    2. Ensures image contains actual plant tissue (green foliage, chlorotic yellow, or necrotic brown).
+    """
+    img = pil_img.convert("RGB").resize((128, 128))
+    arr = __import__("numpy").array(img, dtype=__import__("numpy").int32)
+    # Quantize to 5 bits per channel (0..31)
+    q = ((arr[:, :, 0] >> 3) << 10) | ((arr[:, :, 1] >> 3) << 5) | (arr[:, :, 2] >> 3)
+    vals, counts = __import__("numpy").unique(q, return_counts=True)
+    unique_colors = len(vals)
+    top_share = float(counts.max()) / (128 * 128)
+    h_diff = __import__("numpy").abs(arr[:, 1:, :] - arr[:, :-1, :]).sum(axis=2)
+    zero_diff_frac = float((h_diff == 0).sum()) / (128 * 127)
+
+    # Simple cartoon / flat clipart / vector graphic has low color entropy or large identical flat fills
+    if zero_diff_frac > 0.18 or (unique_colors < 350 and zero_diff_frac > 0.06) or (top_share > 0.60 and unique_colors < 500) or unique_colors < 100:
+        return True, "rejected_illustration_or_drawing"
+
+    # Botanical foliage check: leaves must have some plant tissue
+    r = arr[:, :, 0] / 255.0
+    g = arr[:, :, 1] / 255.0
+    b = arr[:, :, 2] / 255.0
+    is_green = (g > r * 1.04) & (g > b * 1.04) & (g > 0.15)
+    is_yellow = (r > 0.35) & (g > 0.35) & (b < 0.28) & (r > b * 1.2)
+    is_brown = (r > 0.25) & (g < r * 0.95) & (b < 0.25) & (r > b * 1.2)
+    botanical_pixels = int((is_green | is_yellow | is_brown).sum())
+    if botanical_pixels < 150: # less than 1% botanical tissue
+        return True, "out_of_distribution_non_leaf"
+
+    return False, "valid_leaf"
+
+
 class KisanAIServerHandler(BaseHTTPRequestHandler):
     def _send_cors(self):
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -319,20 +353,21 @@ class KisanAIServerHandler(BaseHTTPRequestHandler):
                 img_bytes = base64.b64decode(data_url)
                 pil_img = Image.open(io.BytesIO(img_bytes))
 
-                # Check if image is a real botanical leaf vs cartoon or non-leaf
-                is_leaf, reason = is_valid_plant_leaf(pil_img)
-                if not is_leaf:
+                # Step 1: Mathematical botanical discriminator (rejects cartoons, flat drawings, non-plant graphics)
+                is_invalid, reject_pattern = is_cartoon_or_non_leaf(pil_img)
+                if is_invalid:
                     response_payload = {
                         "source": "model",
                         "outcome": "unknown",
                         "crop": crop,
                         "topicSlug": "unknown",
-                        "confidence": 0.20,
+                        "confidence": 0.15,
+                        "candidates": [],
                         "diagnostics": {
                             "isCropValid": False,
-                            "pattern": reason,
+                            "topRawClass": "unknown",
+                            "pattern": reject_pattern,
                         },
-                        "candidates": [],
                     }
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
@@ -365,7 +400,8 @@ class KisanAIServerHandler(BaseHTTPRequestHandler):
                     class_probs.sort(key=lambda x: x["confidence"], reverse=True)
                     top = class_probs[0]
 
-                    is_unknown = top["raw_class"] == "unknown" or top["confidence"] < 0.16
+                    # Only declare unknown if the neural network itself classifies as unknown or confidence is extremely low
+                    is_unknown = top["raw_class"] == "unknown" or top["confidence"] < 0.14
 
                     response_payload = {
                         "source": "model",
@@ -378,6 +414,10 @@ class KisanAIServerHandler(BaseHTTPRequestHandler):
                             for cp in class_probs[:5]
                             if cp["slug"] != "unknown"
                         ],
+                        "diagnostics": {
+                            "isCropValid": not is_unknown,
+                            "topRawClass": top["raw_class"],
+                        },
                     }
 
                 self.send_response(200)
@@ -405,8 +445,10 @@ class KisanAIServerHandler(BaseHTTPRequestHandler):
 
             # Extract user query if embedded in context prompt
             user_query = last_msg
-            if "Farmer Question in" in last_msg:
-                user_query = last_msg.split("Farmer Question in", 1)[1]
+            if "Farmer Question:" in last_msg:
+                user_query = last_msg.split("Farmer Question:", 1)[1].strip()
+            elif "Farmer Question" in last_msg:
+                user_query = last_msg.split("Farmer Question", 1)[1]
                 if ":" in user_query:
                     user_query = user_query.split(":", 1)[1].strip()
 
