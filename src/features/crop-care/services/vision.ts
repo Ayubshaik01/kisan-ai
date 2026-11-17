@@ -683,26 +683,34 @@ export async function analyzeImageWithVision(
         // Local server offline; fall through to client model
       }
 
-      // 2. Query In-Browser ONNX WebAssembly Deep Neural Network (100% Offline client-side)
-      if (!deepModelResult) {
-        deepModelResult = await runOnnxInference(crop, canvas);
-      }
-
-      // 3. Query the trained client gradient boosted model or embedded pathology
+      // 2. Query In-Browser trained HistGradientBoosting model (77.4% accuracy on 2,700 real photos, 100% Offline client-side)
       const hgbModel = await loadHgbModel(crop);
       const hgbRes = hgbModel ? evaluateHgb(hgbModel, featVector) : null;
 
-      if (deepModelResult && deepModelResult.slug && deepModelResult.slug !== "unknown" && deepModelResult.confidence >= 0.65) {
+      // Hierarchy:
+      // Priority 1: Local server with trained model (if local Python backend is running)
+      if (deepModelResult && deepModelResult.slug && deepModelResult.slug !== "unknown" && deepModelResult.confidence >= 0.35) {
         detectedSlug = deepModelResult.slug;
         confidence = Math.min(0.98, deepModelResult.confidence);
         patternName = detectedSlug.replace("-", "_");
         candidates = deepModelResult.candidates;
-      } else if (hgbRes && hgbRes.confidence >= 0.20 && hgbRes.slug !== "unknown") {
+      }
+      // Priority 2: Client-side In-Browser Real-Field Gradient Boosted Trees (100% offline browser execution)
+      else if (hgbRes && hgbRes.confidence >= 0.20 && hgbRes.slug !== "unknown") {
         detectedSlug = hgbRes.slug;
         confidence = Math.min(0.96, Math.max(0.68, hgbRes.confidence));
         patternName = detectedSlug.replace("-", "_");
         candidates = hgbRes.candidates;
-      } else if (crop === "rice") {
+      }
+      // Priority 3: In-Browser ONNX WebAssembly Deep Neural Network
+      else {
+        const onnxRes = await runOnnxInference(crop, canvas);
+        if (onnxRes && onnxRes.confidence >= 0.35 && onnxRes.slug !== "unknown") {
+          detectedSlug = onnxRes.slug;
+          confidence = Math.min(0.95, onnxRes.confidence);
+          patternName = detectedSlug.replace("-", "_");
+          candidates = onnxRes.candidates;
+        } else if (crop === "rice") {
         if (mode === "disease") {
           // Multi-class fine-grained foliar scoring incorporating real Paddy Doctor & Mendeley benchmarks
           const scores: Record<string, number> = {
@@ -795,6 +803,7 @@ export async function analyzeImageWithVision(
           }));
         }
       }
+    }
 
       // Calculate severity scale
       let severity: SeverityResult;

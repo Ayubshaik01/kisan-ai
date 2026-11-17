@@ -71,6 +71,48 @@ if os.path.exists(rice_hgb_path):
     except Exception as e:
         print(f"Warning: Could not load Rice HGB model: {e}")
 
+# Load Chilli HistGradientBoosting model
+chilli_hgb_model = None
+chilli_hgb_path = os.path.join(REPO_ROOT, "public/models/chilli_hgb_model.json")
+if os.path.exists(chilli_hgb_path):
+    try:
+        with open(chilli_hgb_path, "r", encoding="utf-8") as f:
+            chilli_hgb_model = json.load(f)
+        print(f"Loaded Chilli HistGradientBoosting model from {chilli_hgb_path}")
+    except Exception as e:
+        print(f"Warning: Could not load Chilli HGB model: {e}")
+
+
+def evaluate_chilli_hgb(feat: list) -> list:
+    """Evaluates the trained gradient boosted trees for Chilli."""
+    if not chilli_hgb_model or "trees" not in chilli_hgb_model:
+        return []
+    classes = chilli_hgb_model["classes"]
+    K = len(classes)
+    trees = chilli_hgb_model["trees"]
+    baseline = chilli_hgb_model.get("baseline", [[0.0] * K])[0]
+    raw_scores = list(baseline)
+    for iter_trees in trees:
+        for k in range(K):
+            tree_nodes = iter_trees[k]
+            curr = 0
+            while curr < len(tree_nodes) and not tree_nodes[curr].get("leaf", False):
+                node = tree_nodes[curr]
+                feat_idx = node.get("feat", 0)
+                thresh = node.get("thresh", 0.0)
+                if feat_idx < len(feat) and feat[feat_idx] <= thresh:
+                    curr = node.get("left", 0)
+                else:
+                    curr = node.get("right", 0)
+            if curr < len(tree_nodes):
+                raw_scores[k] += tree_nodes[curr].get("val", 0.0)
+    import numpy as np
+    max_s = max(raw_scores)
+    exp_s = [np.exp(s - max_s) for s in raw_scores]
+    sum_exp = sum(exp_s)
+    probs = [float(e / max(1e-6, sum_exp)) for e in exp_s]
+    return [{"slug": classes[k], "confidence": round(probs[k], 4)} for k in range(K)]
+
 # Load PyTorch models
 print("Loading trained PyTorch vision models...")
 rice_model = CropDiseaseClassifier(crop="rice")
@@ -402,6 +444,15 @@ class KisanAIServerHandler(BaseHTTPRequestHandler):
                         })
                     class_probs.sort(key=lambda x: x["confidence"], reverse=True)
                     top = class_probs[0]
+                elif crop == "chilli" and chilli_hgb_model is not None:
+                    feats = extract_14_features(pil_img)
+                    chilli_candidates = evaluate_chilli_hgb(feats)
+                    class_probs = [
+                        {"slug": c["slug"], "raw_class": c["slug"].replace("-", "_"), "confidence": c["confidence"]}
+                        for c in chilli_candidates
+                    ]
+                    class_probs.sort(key=lambda x: x["confidence"], reverse=True)
+                    top = class_probs[0] if class_probs else {"slug": "healthy", "raw_class": "healthy", "confidence": 0.50}
                 else:
                     # Normal preprocessing for MobileNetV3
                     pil_resized = pil_img.convert("RGB").resize((224, 224), Image.Resampling.BILINEAR)
