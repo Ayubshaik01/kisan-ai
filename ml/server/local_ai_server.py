@@ -36,11 +36,11 @@ RICE_SLUG_MAP = {
     "rice_blast_neck": "rice-blast",
     "rice_brown_spot": "brown-spot",
     "rice_bacterial_leaf_blight": "bacterial-leaf-blight",
+    "rice_bacterial_leaf_streak": "bacterial-leaf-streak",
     "rice_tungro": "tungro",
-    "rice_brown_planthopper": "brown-planthopper",
     "rice_yellow_stem_borer": "yellow-stem-borer",
-    "rice_leaf_folder": "leaf-folder",
-    "rice_gall_midge": "gall-midge",
+    "rice_hispa": "hispa",
+    "rice_downy_mildew": "downy-mildew",
     "rice_healthy": "healthy",
     "unknown": "unknown",
 }
@@ -48,13 +48,8 @@ RICE_SLUG_MAP = {
 CHILLI_SLUG_MAP = {
     "chilli_leaf_curl": "leaf-curl",
     "chilli_cercospora_leaf_spot": "cercospora-leaf-spot",
-    "chilli_bacterial_leaf_spot": "bacterial-leaf-spot",
     "chilli_powdery_mildew": "powdery-mildew",
-    "chilli_anthracnose_fruit_rot": "anthracnose",
     "chilli_thrips": "thrips",
-    "chilli_mites": "mites",
-    "chilli_whiteflies": "whitefly",
-    "chilli_aphids": "aphids",
     "chilli_healthy": "healthy",
     "unknown": "unknown",
 }
@@ -95,8 +90,11 @@ def is_valid_plant_leaf(img: Image.Image) -> tuple[bool, str]:
 
     # Check top color dominance (e.g. solid background or flat cartoon fill)
     if colors:
+        num_colors = len(colors)
         max_freq = max(c[0] for c in colors)
-        if max_freq / total > 0.40:
+        top_share = max_freq / total
+        # Reject cartoons/flat art: low color variety with high dominance, or extreme dominance (>75%)
+        if (num_colors < 80 and top_share > 0.45) or top_share > 0.75:
             return False, "rejected_solid_graphic_fill"
 
     # 2. Check for real botanical foliage pixels (chlorophyll or foliar lesion tissue)
@@ -367,7 +365,7 @@ class KisanAIServerHandler(BaseHTTPRequestHandler):
                     class_probs.sort(key=lambda x: x["confidence"], reverse=True)
                     top = class_probs[0]
 
-                    is_unknown = top["raw_class"] == "unknown" or top["confidence"] < 0.35
+                    is_unknown = top["raw_class"] == "unknown" or top["confidence"] < 0.16
 
                     response_payload = {
                         "source": "model",

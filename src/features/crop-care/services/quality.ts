@@ -55,8 +55,14 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
   const topColorShare = maxColorOccurrences / n;
   const uniqueColorCount = colorMap.size;
 
-  // Reject flat vector art, drawings, cartoons, or non-botanical scenes
-  const isCartoonOrDrawing = uniqueColorCount < 40 || topColorShare > 0.45 || (neonCount / n > 0.15);
+  // Reject flat vector art, drawings, cartoons, or non-botanical scenes:
+  // A cartoon/drawing has very low color entropy (few distinct colors < 35), flat solid blocks, or neon tones.
+  // A real leaf photograph has hundreds of natural foliage gradients and textures.
+  const isCartoonOrDrawing =
+    uniqueColorCount < 35 ||
+    (uniqueColorCount < 75 && topColorShare > 0.45) ||
+    topColorShare > 0.70 ||
+    neonCount / n > 0.10;
   const leafOk = !isCartoonOrDrawing;
 
   const sharpOk = sharpness >= 40;

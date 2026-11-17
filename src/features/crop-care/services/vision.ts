@@ -149,24 +149,19 @@ async function runOnnxInference(
           "rice-blast",
           "brown-spot",
           "bacterial-leaf-blight",
+          "bacterial-leaf-streak",
           "tungro",
-          "brown-planthopper",
           "yellow-stem-borer",
-          "leaf-folder",
-          "gall-midge",
+          "hispa",
+          "downy-mildew",
           "healthy",
           "unknown",
         ]
       : [
           "leaf-curl",
           "cercospora-leaf-spot",
-          "bacterial-leaf-spot",
           "powdery-mildew",
-          "anthracnose",
           "thrips",
-          "mites",
-          "whitefly",
-          "aphids",
           "healthy",
           "unknown",
         ];
@@ -417,10 +412,11 @@ export async function analyzeImageWithVision(
       const topColorDominance = maxColorFrequency / totalPixels;
       const uniqueColorCount = colorHistogram.size;
       const isCartoonOrClipart =
-        uniqueColorCount < 60 || // Low color entropy (solid graphic fills)
-        topColorDominance > 0.35 || // One single flat block covers >35% of canvas
-        (saturatedFlatCount / totalPixels > 0.12 && uniqueColorCount < 220) || // Saturated cartoon illustration
-        (stdG < 0.08 && stdR < 0.08 && uniqueColorCount < 120); // Flat non-textured image
+        uniqueColorCount < 35 || // Extremely low color entropy (simple drawings/clipart)
+        (topColorDominance > 0.45 && uniqueColorCount < 80) || // Monochromatic graphic with low variety
+        topColorDominance > 0.75 || // Dominant uniform solid block covering >75%
+        (saturatedFlatCount / totalPixels > 0.15 && uniqueColorCount < 160) || // Saturated cartoon illustration
+        (stdG < 0.06 && stdR < 0.06 && uniqueColorCount < 80); // Flat non-textured image
 
       if (isCartoonOrClipart) {
         return resolve({

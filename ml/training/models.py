@@ -14,11 +14,11 @@ RICE_CLASSES = [
     "rice_blast_neck",
     "rice_brown_spot",
     "rice_bacterial_leaf_blight",
+    "rice_bacterial_leaf_streak",
     "rice_tungro",
-    "rice_brown_planthopper",
     "rice_yellow_stem_borer",
-    "rice_leaf_folder",
-    "rice_gall_midge",
+    "rice_hispa",
+    "rice_downy_mildew",
     "rice_healthy",
     "unknown",
 ]
@@ -26,13 +26,8 @@ RICE_CLASSES = [
 CHILLI_CLASSES = [
     "chilli_leaf_curl",
     "chilli_cercospora_leaf_spot",
-    "chilli_bacterial_leaf_spot",
     "chilli_powdery_mildew",
-    "chilli_anthracnose_fruit_rot",
     "chilli_thrips",
-    "chilli_mites",
-    "chilli_whiteflies",
-    "chilli_aphids",
     "chilli_healthy",
     "unknown",
 ]
