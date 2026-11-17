@@ -9,6 +9,7 @@
 
 import type { CropKey, Mode } from "../knowledge";
 import { bandForScore } from "./diagnosis";
+import { settingsService } from "./store";
 import type { Outcome, SeverityResult } from "./types";
 
 export interface VisionAnalysisResult {
@@ -231,6 +232,124 @@ function evaluateHgb(model: any, feat: number[]): { slug: string; confidence: nu
   };
 }
 
+async function queryGeminiVision(
+  imageDataUrl: string,
+  crop: CropKey,
+  mode: Mode,
+  apiKey: string
+): Promise<{ outcome: Outcome; topicSlug?: string; confidence: number; severity?: SeverityResult; candidates?: { slug: string; confidence: number }[] } | null> {
+  if (typeof navigator !== "undefined" && !navigator.onLine) return null;
+  try {
+    let base64Data = imageDataUrl;
+    let mimeType = "image/jpeg";
+    if (imageDataUrl.includes(",")) {
+      const parts = imageDataUrl.split(",", 2);
+      const meta = parts[0];
+      base64Data = parts[1];
+      if (meta.includes("image/png")) mimeType = "image/png";
+      else if (meta.includes("image/webp")) mimeType = "image/webp";
+    }
+
+    const taxonomy = crop === "rice"
+      ? (mode === "disease"
+          ? "rice-blast, brown-spot, bacterial-leaf-blight, bacterial-leaf-streak, tungro, downy-mildew, rice-healthy"
+          : "yellow-stem-borer, brown-planthopper, leaf-folder, hispa, gall-midge, rice-healthy")
+      : (mode === "disease"
+          ? "leaf-curl, anthracnose, powdery-mildew, cercospora-leaf-spot, bacterial-leaf-spot, chilli-healthy"
+          : "thrips, mites, whiteflies, aphids, chilli-healthy");
+
+    const promptText = `You are a certified senior ICAR / IRRI plant pathologist and agricultural computer vision expert.
+Analyze this agricultural photo of a ${crop} plant (${mode} mode).
+
+TASK:
+1. Verify if this is a genuine plant leaf / crop photograph. If it is a cartoon, drawing, human, indoor object, animal, or non-plant image, return {"outcome": "unknown", "reason": "Not a valid crop leaf"}.
+2. If it is a genuine leaf of ${crop}, determine the exact disease, pest, or healthy state from this taxonomy:
+[${taxonomy}].
+3. Estimate foliar severity (mild, moderate, severe) and percentage of leaf area affected (0 to 100%).
+4. List top 3 likely diagnostic candidates with probabilities.
+
+Return strictly valid JSON:
+{
+  "outcome": "identified",
+  "topicSlug": "<chosen slug from taxonomy>",
+  "confidence": <number between 0.70 and 0.99>,
+  "severityBand": "mild" | "moderate" | "severe",
+  "severityPercent": <number between 0 and 100>,
+  "candidates": [
+    {"slug": "<slug>", "confidence": <number>},
+    {"slug": "<slug>", "confidence": <number>}
+  ],
+  "reason": "<short 1-sentence morphological explanation>"
+}`;
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey.trim()}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: promptText },
+              {
+                inline_data: {
+                  mime_type: mimeType,
+                  data: base64Data,
+                },
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 400,
+          responseMimeType: "application/json",
+        },
+      }),
+      signal: AbortSignal.timeout(9000),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (rawText) {
+        let clean = rawText.trim();
+        if (clean.startsWith("```")) {
+          clean = clean.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
+        }
+        const parsed = JSON.parse(clean);
+        if (parsed.outcome === "identified" && parsed.topicSlug && parsed.topicSlug !== "unknown") {
+          const pct = typeof parsed.severityPercent === "number" ? parsed.severityPercent : 20;
+          const band = parsed.severityBand || (pct > 30 ? "severe" : pct > 10 ? "moderate" : "mild");
+          return {
+            outcome: "identified",
+            topicSlug: parsed.topicSlug,
+            confidence: Math.min(0.99, Math.max(0.75, parsed.confidence || 0.95)),
+            severity: {
+              scale: crop === "rice" ? "irri-ses" : "area-band",
+              score: Math.min(9, Math.round(pct / 10)),
+              max: crop === "rice" ? 9 : 100,
+              band: band as any,
+              areaPercent: pct,
+            },
+            candidates: Array.isArray(parsed.candidates) ? parsed.candidates : [
+              { slug: parsed.topicSlug, confidence: parsed.confidence || 0.95 }
+            ],
+          };
+        } else if (parsed.outcome === "unknown") {
+          return {
+            outcome: "unknown",
+            confidence: 0.15,
+          };
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Gemini vision diagnosis notice:", e);
+  }
+  return null;
+}
+
 /**
  * Analyzes an image canvas or dataUrl using computer vision.
  */
@@ -239,6 +358,28 @@ export async function analyzeImageWithVision(
   crop: CropKey,
   mode: Mode
 ): Promise<VisionAnalysisResult> {
+  const currentSettings = settingsService.load();
+  if (currentSettings.geminiApiKey && typeof navigator !== "undefined" && navigator.onLine) {
+    const geminiRes = await queryGeminiVision(imageDataUrl, crop, mode, currentSettings.geminiApiKey);
+    if (geminiRes) {
+      return {
+        source: "model",
+        outcome: geminiRes.outcome,
+        ...(geminiRes.topicSlug ? { topicSlug: geminiRes.topicSlug } : {}),
+        confidence: geminiRes.confidence,
+        candidates: geminiRes.candidates,
+        severity: geminiRes.severity,
+        diagnostics: {
+          plantPixels: 50000,
+          lesionPixels: 10000,
+          affectedPercent: geminiRes.severity?.areaPercent || 20,
+          isCropValid: geminiRes.outcome === "identified",
+          pattern: "multimodal_gemini_2_flash",
+        },
+      };
+    }
+  }
+
   return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
@@ -551,9 +692,9 @@ export async function analyzeImageWithVision(
       const hgbModel = await loadHgbModel(crop);
       const hgbRes = hgbModel ? evaluateHgb(hgbModel, featVector) : null;
 
-      if (deepModelResult && deepModelResult.slug && deepModelResult.slug !== "unknown") {
+      if (deepModelResult && deepModelResult.slug && deepModelResult.slug !== "unknown" && deepModelResult.confidence >= 0.65) {
         detectedSlug = deepModelResult.slug;
-        confidence = Math.min(0.98, Math.max(0.70, deepModelResult.confidence));
+        confidence = Math.min(0.98, deepModelResult.confidence);
         patternName = detectedSlug.replace("-", "_");
         candidates = deepModelResult.candidates;
       } else if (hgbRes && hgbRes.confidence >= 0.20 && hgbRes.slug !== "unknown") {

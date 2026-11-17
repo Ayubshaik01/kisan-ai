@@ -419,14 +419,15 @@ export function AssistantPage() {
               trigger={
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-surface hover:text-coral transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-surface px-2.5 py-1 text-xs font-semibold text-muted-foreground hover:bg-surface hover:text-coral transition-colors"
                   title="Clear conversation"
                 >
                   <Trash2 className="size-3.5" />
+                  <span className="hidden sm:inline">New Chat</span>
                 </button>
               }
               title={t("clearChat")}
-              body="All messages in this conversation will be cleared from this device."
+              body="All messages in this conversation will be cleared from this device so you can start a fresh dialogue."
               confirmLabel={t("clearChat")}
               onConfirm={clearChat}
             />

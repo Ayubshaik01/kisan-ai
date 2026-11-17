@@ -47,7 +47,7 @@ import { Eye } from "lucide-react";
 import { useCropCare } from "../context";
 import type { Lang } from "../i18n";
 import { getTopic, l, type CropKey } from "../knowledge";
-import { generateLlamaAnalysis } from "../services/llama";
+import { generateLlamaAnalysis, generateLiveLlamaCure } from "../services/llama";
 import {
   areaBands,
   bandForScore,
@@ -58,7 +58,7 @@ import {
 } from "../services/diagnosis";
 import { safetyPrecautions } from "../services/advisory";
 import { voiceAgent } from "../services/voice";
-import type { Scan, SeverityResult } from "../services/types";
+import type { DynamicCurePlan, Scan, SeverityResult } from "../services/types";
 import {
   BackButton,
   bandColor,
@@ -144,11 +144,42 @@ export function ScanResultPage() {
 
   const [analysisLang, setAnalysisLang] = useState<Lang>(lang);
   const [isPlayingVoice, setIsPlayingVoice] = useState(false);
+  const [curePlan, setCurePlan] = useState<DynamicCurePlan | null>(scan?.curePlan || null);
+  const [isGeneratingCure, setIsGeneratingCure] = useState(false);
 
   // Synchronize report language dynamically when user changes header language
   useEffect(() => {
     setAnalysisLang(lang);
   }, [lang]);
+
+  // Generate live dynamic LLM cure if not already stored
+  useEffect(() => {
+    if (topic && !scan?.curePlan && !isGeneratingCure) {
+      setIsGeneratingCure(true);
+      generateLiveLlamaCure(scan, topic, lang, settings)
+        .then((plan) => {
+          setCurePlan(plan);
+          updateScan(scan.id, { curePlan: plan });
+        })
+        .finally(() => setIsGeneratingCure(false));
+    }
+  }, [scan?.id, topic?.slug, lang]);
+
+  const handleRegenerateCure = async () => {
+    if (!topic || isGeneratingCure) return;
+    setIsGeneratingCure(true);
+    toast.info("Regenerating dynamic cure protocol with AI agronomist...");
+    try {
+      const plan = await generateLiveLlamaCure(scan, topic, lang, settings);
+      setCurePlan(plan);
+      updateScan(scan.id, { curePlan: plan });
+      toast.success("AI cure protocol updated!");
+    } catch {
+      toast.error("Failed to generate cure with AI.");
+    } finally {
+      setIsGeneratingCure(false);
+    }
+  };
 
   const llamaReport = topic
     ? generateLlamaAnalysis(
@@ -694,7 +725,7 @@ Note: ${note || "No specific farmer notes recorded."}
                 <span>{t("actionProtocol")}</span>
               </div>
               <ul className="space-y-1.5 text-xs leading-relaxed text-foreground/90 list-disc pl-3.5">
-                {llamaReport.actionPlan.map((action, idx) => (
+                {(curePlan?.immediate || llamaReport.actionPlan).map((action, idx) => (
                   <li key={idx}>{action}</li>
                 ))}
               </ul>
@@ -723,6 +754,37 @@ Note: ${note || "No specific farmer notes recorded."}
       {/* ========================================================= */}
       {topic && (
         <div className="space-y-6">
+          {/* Dynamic AI Cure Protocol Banner */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/10 p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <span className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground shadow-xs shrink-0">
+                <Sparkles className="size-5 animate-pulse" />
+              </span>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                    AI Agronomic Cure & Containment Protocol
+                  </span>
+                  <span className="rounded-full bg-surface border border-line px-2 py-0.5 text-[10px] font-mono font-semibold text-foreground">
+                    {curePlan?.model || (settings.geminiApiKey ? "Google Gemini 2.0 Flash" : "Meta Llama 3.2 1B Instruct")}
+                  </span>
+                </div>
+                <p className="text-xs text-foreground font-medium mt-0.5">
+                  {curePlan?.markdownNarrative || `Tailored agronomic recovery plan for ${l(lang, topic.name)}.`}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleRegenerateCure}
+              disabled={isGeneratingCure}
+              className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-1.5 text-xs font-bold text-foreground hover:bg-accent active:scale-95 transition-all cursor-pointer shadow-2xs"
+            >
+              <RotateCcw className={cn("size-3.5 text-primary", isGeneratingCure && "animate-spin")} />
+              <span>{isGeneratingCure ? "Generating with AI..." : "Regenerate with AI"}</span>
+            </button>
+          </div>
+
           {/* Affected Plant Parts & Symptoms */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className={cn(card, "p-5")}>
@@ -753,33 +815,54 @@ Note: ${note || "No specific farmer notes recorded."}
             </div>
           </div>
 
-          {/* Immediate Steps (What to do today) */}
+          {/* Immediate Steps (What to do today) - LLM Powered */}
           <div className={cn(card, "p-6")}>
             <div className="flex items-center gap-2 mb-3">
               <span className="grid size-8 place-items-center rounded-lg bg-primary/15 text-primary">
                 <CheckCircle2 className="size-5" />
               </span>
               <h3 className="text-lg font-bold text-foreground">
-                {t("immediate")}
+                ⚡ {t("immediate")} (Today / First 48 Hours)
               </h3>
             </div>
             <p className="text-xs text-muted-foreground mb-4">
-              Practical steps you can take today to protect healthy plants nearby.
+              AI-generated emergency containment steps to halt secondary infection spread across healthy rows.
             </p>
-            <ListCard items={topic.immediate} ordered />
+            <ListCard items={curePlan?.immediate || topic.immediate} ordered />
           </div>
 
-          {/* Cultural Intervention & Field Management */}
+          {/* Biological & Organic Controls - LLM Powered */}
+          {curePlan?.biological && curePlan.biological.length > 0 && (
+            <div className={cn(card, "p-6")}>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="grid size-8 place-items-center rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                  <Sprout className="size-5" />
+                </span>
+                <h3 className="text-lg font-bold text-foreground">
+                  🌿 Biological & Organic Solutions (IPM)
+                </h3>
+              </div>
+              <p className="text-xs text-muted-foreground mb-4">
+                Safe, university-tested biological agents, botanical extracts, and mechanical vector interceptors.
+              </p>
+              <ListCard items={curePlan.biological} />
+            </div>
+          )}
+
+          {/* Cultural Intervention & Field Nutrition - LLM Powered */}
           <div className={cn(card, "p-6")}>
             <div className="flex items-center gap-2 mb-3">
               <span className="grid size-8 place-items-center rounded-lg bg-primary/15 text-primary">
                 <Leaf className="size-5" />
               </span>
               <h3 className="text-lg font-bold text-foreground">
-                {t("intervention")}
+                🌾 {t("intervention")} & Field Nutrition
               </h3>
             </div>
-            <ListCard items={topic.cultural} />
+            <p className="text-xs text-muted-foreground mb-4">
+              Water regulation (AWD), balanced potassium nutrition, and canopy aeration practices.
+            </p>
+            <ListCard items={curePlan?.cultural || topic.cultural} />
           </div>
 
           {/* Chemical Advisory / Regulatory Disclaimer Notice */}
@@ -791,7 +874,7 @@ Note: ${note || "No specific farmer notes recorded."}
                   {t("noChemical")}
                 </h4>
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  {t("noChemicalSub")}
+                  {curePlan?.statutory || t("noChemicalSub")}
                 </p>
               </div>
             </div>

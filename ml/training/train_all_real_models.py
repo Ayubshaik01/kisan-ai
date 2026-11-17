@@ -395,3 +395,4 @@ if __name__ == "__main__":
     rice_m = train_rice()
     chilli_m = train_chilli()
     print("\n🎉 ALL REAL VISION MODELS SUCCESSFULLY TRAINED AND DEPLOYED!")
+

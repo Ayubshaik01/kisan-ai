@@ -19,6 +19,16 @@ export type SeverityResult = { scale: SeverityScale; score: number; max: number;
 export type ResultSource = "model" | "sample" | "none";
 export type Outcome = "identified" | "unknown" | "unanalysed";
 
+export type DynamicCurePlan = {
+  model: string;
+  generatedAt: number;
+  immediate: string[];
+  biological: string[];
+  cultural: string[];
+  statutory: string;
+  markdownNarrative?: string;
+};
+
 export type Scan = {
   id: string;
   crop: CropKey;
@@ -32,6 +42,7 @@ export type Scan = {
   candidates?: { slug: string; confidence: number }[];
   severity?: SeverityResult;
   quality?: QualityReport;
+  curePlan?: DynamicCurePlan;
   note?: string;
 };
 
