@@ -39,6 +39,10 @@ export type Scan = {
   outcome: Outcome;
   topicSlug?: string;
   confidence?: number;
+  confidenceStatus?: "calibrated" | "calibrated_uncertain" | "unreliable_input";
+  visibleEvidence?: string[];
+  insectDirectlyVisible?: boolean;
+  severityMethod?: string;
   candidates?: { slug: string; confidence: number }[];
   severity?: SeverityResult;
   quality?: QualityReport;

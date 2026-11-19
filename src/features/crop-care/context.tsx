@@ -221,12 +221,13 @@ export function CropCareProvider({ children }: { children: ReactNode }) {
       confidence: ctx.confidence ?? 0.90,
       confidenceCalibrationStatus: (ctx.confidence && ctx.confidence > 0.8) ? "high" : "moderate",
       imageQualityStatus: "good",
-      visibleSymptomsDetected: [ctx.slug || "foliar symptoms"],
+      visibleSymptomsDetected: ctx.visibleEvidence && ctx.visibleEvidence.length > 0 ? ctx.visibleEvidence : [ctx.slug || "foliar symptoms"],
+      insectDirectlyVisible: ctx.insectDirectlyVisible ?? false,
       severityScore: ctx.severityBand === "severe" ? 75 : ctx.severityBand === "moderate" ? 35 : 10,
       severityCategory: (ctx.severityBand as any) || "moderate",
-      measurementMethod: (ctx.crop === "rice" ? "irri-ses" : "opencv-foliar-mask") as any,
+      measurementMethod: (ctx.severityMethod || (ctx.crop === "rice" ? "irri-ses" : "opencv-foliar-mask")) as any,
       diagnosisTimestamp: Date.now(),
-      modelVersion: "1.0 (Real-Field HGB)",
+      modelVersion: "1.0 (Real-Field Hierarchical Vision)",
       isUncertainOrOOD: (ctx.confidence ?? 0.90) < 0.40,
     } : null;
 

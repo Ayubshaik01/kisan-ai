@@ -465,3 +465,4 @@ export function LiveWeatherCard() {
     </div>
   );
 }
+

@@ -47,7 +47,18 @@ export function getAdvisory(crop: CropKey, slug: string, region: { district: str
 }
 
 // ---------- AssistantService ----------
-export type AssistantContext = { crop?: CropKey; slug?: string; confidence?: number; severityBand?: string; sample?: boolean };
+export type AssistantContext = {
+  crop?: CropKey;
+  slug?: string;
+  name?: string;
+  confidence?: number;
+  confidenceStatus?: "calibrated" | "calibrated_uncertain" | "unreliable_input";
+  severityBand?: string;
+  severityMethod?: string;
+  visibleEvidence?: string[];
+  insectDirectlyVisible?: boolean;
+  sample?: boolean;
+};
 export type AssistantReply = { text: string; refs: { crop: CropKey; slug: string }[]; safety: boolean };
 
 const chemicalWords = ["dose", "dosage", "spray", "pesticide", "insecticide", "fungicide", "chemical", "ml", "litre", "liter", "gram", "kitna", "कितना", "दवा", "छिड़काव", "మందు", "పిచికారీ", "మోతాదు"];

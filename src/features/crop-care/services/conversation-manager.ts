@@ -197,6 +197,7 @@ export class ConversationManager {
 - Measurement Method: ${diag.measurementMethod}
 - Image Quality: ${diag.imageQualityStatus}
 - Visible Pathology: ${diag.visibleSymptomsDetected.join(", ") || "Foliar lesions present"}
+- Insect Body Directly Visible: ${diag.insectDirectlyVisible ? "YES (Macro insect body resolved)" : "NO (Microscopic pest/pathogen identified via foliar feeding scars and leaf morphology)"}
 - Timestamp: ${new Date(diag.diagnosisTimestamp).toISOString()}
 - Out-of-Distribution Warning: ${diag.isUncertainOrOOD ? "YES - Uncertain prediction, recommend rescan" : "NO - Confirmed in-distribution"}
 ` : `[STRUCTURED FIELD DIAGNOSIS CONTEXT: No active leaf photo scan attached. Querying general agronomic knowledge.]`;
@@ -210,7 +211,11 @@ STRICT OPERATIONAL & ETHICAL GUIDELINES:
    - Do NOT invent unverified brand names, custom chemical dosages, or unregistered tank mixes.
    - Adhere strictly to CIB&RC statutory regulations: always advise consulting the local Agricultural Officer or KVK for chemical label validation.
 
-2. CONVERSATIONAL PERSONALITY:
+2. VISUAL EVIDENCE HONESTY & ENTOMOLOGICAL ACCURACY:
+   - If "Insect Body Directly Visible" is NO, NEVER claim that you can see physical insects crawling on the leaf.
+   - Explain to the farmer that microscopic sucking pests (like thrips at 0.5–1mm or mites at 0.2mm) are recognized through their distinctive foliar symptoms (e.g. silvery rasping scars, upward boat-shaped leaf margins, puckering) rather than camera-resolved insect bodies.
+
+3. CONVERSATIONAL PERSONALITY:
    - Talk naturally, warmly, concisely, and intelligently just like ChatGPT / Claude / Gemini.
    - Address the farmer respectfully ("bro", "farmer friend", "రైతు సోదరా", "किसान भाई").
    - Acknowledge their specific crop situation naturally without regurgitating robotic headers.

@@ -26,6 +26,7 @@ export interface DiagnosisContext {
   confidenceCalibrationStatus: ConfidenceCalibration;
   imageQualityStatus: ImageQualityStatus;
   visibleSymptomsDetected: string[];
+  insectDirectlyVisible?: boolean;
   severityScore: number; // 0..9 for rice IRRI-SES or 0..100 for area percent
   severityCategory: SeverityBand;
   measurementMethod: MeasurementMethod;

@@ -48,7 +48,19 @@ export function confidenceLevel(confidence: number): "high" | "moderate" | "low"
 }
 
 // ---------- DiagnosisService ----------
-export type DiagnosisDraft = Pick<Scan, "source" | "outcome" | "topicSlug" | "confidence" | "severity">;
+export type DiagnosisDraft = Pick<
+  Scan,
+  | "source"
+  | "outcome"
+  | "topicSlug"
+  | "confidence"
+  | "confidenceStatus"
+  | "visibleEvidence"
+  | "insectDirectlyVisible"
+  | "severityMethod"
+  | "candidates"
+  | "severity"
+>;
 
 export interface DiagnosisService {
   isModelAvailable(crop: CropKey): boolean;
@@ -116,6 +128,10 @@ export const diagnosisService: DiagnosisService = {
       outcome: visionRes.outcome,
       ...(visionRes.topicSlug ? { topicSlug: visionRes.topicSlug } : {}),
       confidence: visionRes.confidence,
+      ...(visionRes.confidenceStatus ? { confidenceStatus: visionRes.confidenceStatus } : {}),
+      ...(visionRes.visibleEvidence ? { visibleEvidence: visionRes.visibleEvidence } : {}),
+      ...(visionRes.insectDirectlyVisible !== undefined ? { insectDirectlyVisible: visionRes.insectDirectlyVisible } : {}),
+      ...(visionRes.severityMethod ? { severityMethod: visionRes.severityMethod } : {}),
       ...(visionRes.candidates ? { candidates: visionRes.candidates } : {}),
       ...(visionRes.severity ? { severity: visionRes.severity } : {}),
     };

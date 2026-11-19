@@ -114,3 +114,4 @@ export const WeatherAtmosphere: React.FC<WeatherAtmosphereProps> = ({
     </div>
   );
 };
+

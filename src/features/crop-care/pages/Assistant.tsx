@@ -340,7 +340,11 @@ export function AssistantPage() {
             crop: activeScan.crop,
             ...(activeScan.topicSlug ? { slug: activeScan.topicSlug } : {}),
             ...(activeScan.confidence !== undefined ? { confidence: activeScan.confidence } : {}),
+            ...(activeScan.confidenceStatus ? { confidenceStatus: activeScan.confidenceStatus } : {}),
             ...(activeScan.severity?.band ? { severityBand: activeScan.severity.band } : {}),
+            ...(activeScan.visibleEvidence ? { visibleEvidence: activeScan.visibleEvidence } : {}),
+            ...(activeScan.insectDirectlyVisible !== undefined ? { insectDirectlyVisible: activeScan.insectDirectlyVisible } : {}),
+            ...(activeScan.severityMethod ? { severityMethod: activeScan.severityMethod } : {}),
           }
         : {}
     );
