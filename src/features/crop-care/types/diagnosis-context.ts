@@ -53,3 +53,4 @@ export interface FarmerActionPlan {
   actions: ActionPlanItem[];
   updatedAt: number;
 }
+

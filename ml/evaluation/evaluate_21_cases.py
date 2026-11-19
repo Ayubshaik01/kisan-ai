@@ -206,3 +206,4 @@ print(f"  1. {json_path}")
 print(f"  2. {md_path}")
 print(f"Summary: {correct_count}/{len(results)} correct ({accuracy:.1f}%) | Avg Latency: {avg_latency:.1f}ms")
 print(f"========================================================\n")
+
