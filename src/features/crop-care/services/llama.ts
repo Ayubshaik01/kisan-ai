@@ -1567,14 +1567,11 @@ export async function queryLiveLlamaEndpoint(
   history?: ChatMessage[],
   settings?: any
 ): Promise<string | null> {
-  if (typeof navigator !== "undefined" && !navigator.onLine) {
-    return null;
-  }
-
+  const isOnline = typeof navigator === "undefined" || navigator.onLine;
   const provider = settings?.llmProvider || "auto";
 
   // 1. Google Gemini Official API (Gemini 2.0 Flash / 1.5 Flash)
-  if (settings?.geminiApiKey && (provider === "gemini" || provider === "auto")) {
+  if (isOnline && settings?.geminiApiKey && (provider === "gemini" || provider === "auto")) {
     try {
       const model = settings.customModel?.trim() || "gemini-2.0-flash";
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${settings.geminiApiKey.trim()}`;
@@ -1620,7 +1617,7 @@ export async function queryLiveLlamaEndpoint(
     { role: "user", content: prompt },
   ];
 
-  if (settings?.groqApiKey && (provider === "groq" || provider === "auto")) {
+  if (isOnline && settings?.groqApiKey && (provider === "groq" || provider === "auto")) {
     try {
       const model = settings.customModel?.trim() || "llama-3.3-70b-versatile";
       const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -1650,7 +1647,7 @@ export async function queryLiveLlamaEndpoint(
   }
 
   // 3. OpenAI / OpenRouter Official API
-  if (settings?.openaiApiKey && (provider === "openai" || provider === "auto")) {
+  if (isOnline && settings?.openaiApiKey && (provider === "openai" || provider === "auto")) {
     try {
       const model = settings.customModel?.trim() || "gpt-4o-mini";
       const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -1682,8 +1679,8 @@ export async function queryLiveLlamaEndpoint(
   // 4. Auto-detect installed Ollama model if Ollama is running locally
   let ollamaModel = "llama3.2:1b";
   try {
-    const tagsRes = await fetch("http://localhost:11434/api/tags", {
-      signal: AbortSignal.timeout(500),
+    const tagsRes = await fetch("http://127.0.0.1:11434/api/tags", {
+      signal: AbortSignal.timeout(400),
     });
     if (tagsRes.ok) {
       const data = await tagsRes.json();
@@ -1700,12 +1697,20 @@ export async function queryLiveLlamaEndpoint(
 
   const endpoints = [
     {
-      url: "http://localhost:11434/v1/chat/completions",
-      model: ollamaModel,
+      url: "http://127.0.0.1:8000/v1/chat/completions",
+      model: "hf.co/meta-llama/Llama-3.2-1B-Instruct",
     },
     {
       url: "http://localhost:8000/v1/chat/completions",
       model: "hf.co/meta-llama/Llama-3.2-1B-Instruct",
+    },
+    {
+      url: "http://127.0.0.1:11434/v1/chat/completions",
+      model: ollamaModel,
+    },
+    {
+      url: "http://localhost:11434/v1/chat/completions",
+      model: ollamaModel,
     },
   ];
 

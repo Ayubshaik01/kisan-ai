@@ -662,25 +662,30 @@ export async function analyzeImageWithVision(
 
       // 1. Query Local PyTorch Deep Learning Server / Ollama Vision Endpoint if running
       let deepModelResult: { slug: string; confidence: number; candidates: { slug: string; confidence: number }[] } | null = null;
-      try {
-        const localServerRes = await fetch("http://127.0.0.1:8000/api/predict", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image: dataUrl, crop }),
-          signal: AbortSignal.timeout(1800),
-        });
-        if (localServerRes.ok) {
-          const srvData = await localServerRes.json();
-          if (srvData && srvData.outcome === "identified" && srvData.topicSlug && srvData.topicSlug !== "unknown") {
-            deepModelResult = {
-              slug: srvData.topicSlug,
-              confidence: srvData.confidence,
-              candidates: srvData.candidates || [],
-            };
+      const compactDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      const serverUrls = ["http://127.0.0.1:8000/api/predict", "http://localhost:8000/api/predict"];
+      for (const srvUrl of serverUrls) {
+        try {
+          const localServerRes = await fetch(srvUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ image: compactDataUrl, crop }),
+            signal: AbortSignal.timeout(5000),
+          });
+          if (localServerRes.ok) {
+            const srvData = await localServerRes.json();
+            if (srvData && srvData.outcome === "identified" && srvData.topicSlug && srvData.topicSlug !== "unknown") {
+              deepModelResult = {
+                slug: srvData.topicSlug,
+                confidence: srvData.confidence,
+                candidates: srvData.candidates || [],
+              };
+              break;
+            }
           }
+        } catch {
+          // Try next endpoint or fall through to client model
         }
-      } catch {
-        // Local server offline; fall through to client model
       }
 
       // 2. Query In-Browser trained HistGradientBoosting model (77.4% accuracy on 2,700 real photos, 100% Offline client-side)

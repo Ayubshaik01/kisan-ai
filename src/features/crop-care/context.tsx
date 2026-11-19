@@ -208,13 +208,6 @@ export function CropCareProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // 100% Offline execution: When device is offline, instantly deliver local Llama 3.2 1B response
-    const isDeviceOffline = !online || (typeof navigator !== "undefined" && !navigator.onLine);
-    if (isDeviceOffline) {
-      finish(llamaRes.text);
-      return;
-    }
-
     // Live LLM execution: Query official LLM (Gemini / Groq / OpenAI / Ollama / Local Server) with seamless offline fallback
     const systemPrompt = `You are KisanAI, a world-class AI Agricultural Agronomist and friendly digital crop care chat assistant. You talk naturally, warmly, concisely, and intelligently just like ChatGPT / Claude / Gemini.
 - Strictly adhere to statutory CIB&RC guidelines: do NOT hallucinate chemical dosages or promote unapproved chemical mixes.
