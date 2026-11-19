@@ -137,3 +137,4 @@ export const ONLINE_MODELS: Record<string, ModelDescriptor> = {
 };
 
 export const DEFAULT_ONLINE_MODEL_ID = "gpt-6.2-sol";
+

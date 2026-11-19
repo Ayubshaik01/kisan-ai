@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useCropCare } from "../context";
 import { crops, getTopic, l, type CropKey } from "../knowledge";
+import { LiveWeatherCard } from "../ui/LiveWeatherCard";
 import {
   btnPrimary,
   btnSecondary,
@@ -121,6 +122,9 @@ export function HomePage() {
           className="pointer-events-none absolute -bottom-16 -right-16 size-80 rounded-full bg-primary/10 blur-3xl"
         />
       </div>
+
+      {/* Live Cinematic Agricultural Weather Experience */}
+      <LiveWeatherCard />
 
       {/* Quick Actions Grid */}
       <Section title={t("quickActions")}>
