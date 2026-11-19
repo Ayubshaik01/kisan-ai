@@ -26,6 +26,11 @@ from ml.training.models import (
     RICE_CLASSES,
     CHILLI_CLASSES,
 )
+from assistant.rag_engine import OfflineAssistantRAG
+from assistant.safety.safety_checker import SafetyValidator
+
+server_rag = OfflineAssistantRAG()
+server_safety = SafetyValidator()
 
 PORT = int(os.environ.get("PORT", 8000))
 CHECKPOINTS_DIR = os.path.join(REPO_ROOT, "ml/training/checkpoints")
@@ -179,68 +184,12 @@ def is_valid_plant_leaf(img: Image.Image) -> tuple[bool, str]:
 
 
 def generate_conversational_response(user_text: str, messages: list) -> str:
-    """Generate dynamic, natural, conversational responses for the ag chat assistant."""
+    """
+    Generate dynamic, verified, conversational responses for the agricultural assistant.
+    Orchestrates safety checks, structured RAG retrieval, context memory, and post-generation safety.
+    """
     text_clean = user_text.lower().strip()
     words = [w.strip("?!.,;:-\"'") for w in text_clean.split()]
-
-    # Extract crop & condition context from prompt or history
-    crop = None
-    condition = None
-    for m in messages:
-        c = m.get("content", "")
-        if isinstance(c, str):
-            c_low = c.lower()
-            if "brown-spot" in c_low or "brown spot" in c_low:
-                condition = "Brown Spot"
-                crop = "Rice"
-            elif "rice-blast" in c_low or "rice blast" in c_low or "blast" in c_low:
-                condition = "Rice Blast"
-                crop = "Rice"
-            elif "bacterial-leaf-blight" in c_low or "blb" in c_low or "bacterial leaf blight" in c_low:
-                condition = "Bacterial Leaf Blight"
-                crop = "Rice"
-            elif "bacterial-leaf-streak" in c_low or "leaf streak" in c_low:
-                condition = "Bacterial Leaf Streak"
-                crop = "Rice"
-            elif "tungro" in c_low:
-                condition = "Rice Tungro Virus"
-                crop = "Rice"
-            elif "hispa" in c_low:
-                condition = "Rice Hispa"
-                crop = "Rice"
-            elif "downy-mildew" in c_low or "downy mildew" in c_low:
-                condition = "Downy Mildew"
-                crop = "Rice"
-            elif "yellow-stem-borer" in c_low or "stem borer" in c_low or "stem-borer" in c_low:
-                condition = "Yellow Stem Borer"
-                crop = "Rice"
-            elif "rice-healthy" in c_low or "healthy rice" in c_low:
-                condition = "Healthy Rice"
-                crop = "Rice"
-            elif "leaf-curl" in c_low or "leaf curl" in c_low:
-                condition = "Chilli Leaf Curl"
-                crop = "Chilli"
-            elif "thrips" in c_low:
-                condition = "Chilli Thrips"
-                crop = "Chilli"
-            elif "cercospora" in c_low:
-                condition = "Cercospora Leaf Spot"
-                crop = "Chilli"
-            elif "powdery-mildew" in c_low or "powdery mildew" in c_low:
-                condition = "Powdery Mildew"
-                crop = "Chilli"
-            elif "chilli-healthy" in c_low:
-                condition = "Healthy Chilli"
-                crop = "Chilli"
-            elif "crop context: rice" in c_low:
-                crop = "Rice"
-            elif "crop context: chilli" in c_low:
-                crop = "Chilli"
-
-    is_greeting = any(w in words for w in [
-        "bro", "hi", "hello", "hey", "sup", "yo", "kisan", "anna", "bhai", "bhaiya", "namaste", "namaskar",
-        "హాయ్", "హలో", "నమస్కారం", "బ్రో", "అన్నా", "नमस्ते", "भाई", "हाय", "வணக்கம்", "நண்பா", "ನಮಸ್ಕಾರ", "नमस्कार"
-    ]) or (len(words) <= 2 and is_greeting_word(words[0] if words else ""))
 
     # Detect user language
     lang = "en"
@@ -252,6 +201,85 @@ def generate_conversational_response(user_text: str, messages: list) -> str:
         lang = "ta"
     elif any("\u0c80" <= ch <= "\u0cff" for ch in user_text):
         lang = "kn"
+
+    # Step 1: Pre-query Agricultural Safety Validation
+    is_safe, refusal = server_safety.validate_query(user_text, lang=lang)
+    if not is_safe:
+        return refusal
+
+    # Extract crop & condition / problem_slug context from prompt or history
+    crop = None
+    condition = None
+    problem_slug = None
+    for m in messages:
+        c = m.get("content", "")
+        if isinstance(c, str):
+            c_low = c.lower()
+            if "thrips" in c_low or "తామర" in c_low:
+                condition = "Chilli Thrips"
+                problem_slug = "thrips"
+                crop = "chilli"
+            elif "leaf-curl" in c_low or "leaf curl" in c_low:
+                condition = "Chilli Leaf Curl"
+                problem_slug = "leaf-curl"
+                crop = "chilli"
+            elif "brown-spot" in c_low or "brown spot" in c_low:
+                condition = "Brown Spot"
+                problem_slug = "brown-spot"
+                crop = "rice"
+            elif "rice-blast" in c_low or "rice blast" in c_low or "blast" in c_low:
+                condition = "Rice Blast"
+                problem_slug = "rice-blast"
+                crop = "rice"
+            elif "bacterial-leaf-blight" in c_low or "blb" in c_low or "bacterial leaf blight" in c_low:
+                condition = "Bacterial Leaf Blight"
+                problem_slug = "bacterial-leaf-blight"
+                crop = "rice"
+            elif "bacterial-leaf-streak" in c_low or "leaf streak" in c_low:
+                condition = "Bacterial Leaf Streak"
+                problem_slug = "bacterial-leaf-streak"
+                crop = "rice"
+            elif "tungro" in c_low:
+                condition = "Rice Tungro Virus"
+                problem_slug = "tungro"
+                crop = "rice"
+            elif "hispa" in c_low:
+                condition = "Rice Hispa"
+                problem_slug = "hispa"
+                crop = "rice"
+            elif "downy-mildew" in c_low or "downy mildew" in c_low:
+                condition = "Downy Mildew"
+                problem_slug = "downy-mildew"
+                crop = "rice"
+            elif "yellow-stem-borer" in c_low or "stem borer" in c_low or "stem-borer" in c_low:
+                condition = "Yellow Stem Borer"
+                problem_slug = "yellow-stem-borer"
+                crop = "rice"
+            elif "rice-healthy" in c_low or "healthy rice" in c_low:
+                condition = "Healthy Rice"
+                problem_slug = "rice-healthy"
+                crop = "rice"
+            elif "cercospora" in c_low:
+                condition = "Cercospora Leaf Spot"
+                problem_slug = "cercospora-leaf-spot"
+                crop = "chilli"
+            elif "powdery-mildew" in c_low or "powdery mildew" in c_low:
+                condition = "Powdery Mildew"
+                problem_slug = "powdery-mildew"
+                crop = "chilli"
+            elif "chilli-healthy" in c_low:
+                condition = "Healthy Chilli"
+                problem_slug = "chilli-healthy"
+                crop = "chilli"
+            elif "crop context: rice" in c_low:
+                crop = "rice"
+            elif "crop context: chilli" in c_low:
+                crop = "chilli"
+
+    is_greeting = any(w in words for w in [
+        "bro", "hi", "hello", "hey", "sup", "yo", "kisan", "anna", "bhai", "bhaiya", "namaste", "namaskar",
+        "హాయ్", "హలో", "నమస్కారం", "బ్రో", "అన్నా", "नमस्ते", "भाई", "हाय", "வணக்கம்", "நண்பா", "ನಮಸ್ಕಾರ", "नमस्कार"
+    ]) or (len(words) <= 2 and is_greeting_word(words[0] if words else ""))
 
     # 1. User frustration or accuracy / prediction / diagnosis feedback
     is_accuracy_feedback = any(k in text_clean for k in [
@@ -273,7 +301,7 @@ def generate_conversational_response(user_text: str, messages: list) -> str:
     # 2. Friendly conversational greeting / banter
     if is_greeting and len(words) <= 6:
         cond_str = f" with **{condition}**" if condition else ""
-        crop_str = f" on your **{crop}**" if crop else ""
+        crop_str = f" on your **{crop.title()}**" if crop else ""
         if lang == "te":
             prob_te = "వరి అగ్గి తెగులు" if condition == "Rice Blast" else (condition or "పంట సమస్య")
             return (
@@ -299,99 +327,45 @@ def generate_conversational_response(user_text: str, messages: list) -> str:
                 "• Or ask about urea, water drainage, or organic bio-controls!"
             )
 
-    # 3. Cure / Remedy / Sprays / Management inquiries
-    is_cure_query = any(k in text_clean for k in [
-        "cure", "remedy", "remedies", "treatment", "treat", "spray", "sprays", "medicine",
-        "how to cure", "how to treat", "how to control", "how to stop", "solution",
-        "నివారణ", "మందు", "పిచికారీ", "उपचार", "दवा", "छिड़काव"
-    ])
-    if is_cure_query:
-        if condition == "Brown Spot" or "brown spot" in text_clean:
+    # 3. Check for dedicated fertilizer inquiries
+    if any(k in text_clean for k in ["potash", "urea", "fertilizer", "dap", "zinc", "mop", "యూరియా", "ఎరువు", "పొటాష్", "यूरिया", "खाद", "पोटाश"]):
+        if lang == "hi":
             return (
-                "🌾 **Brown Spot (Helminthosporium oryzae) Practical Field Cure**:\n\n"
-                "Brown spot is often called the *poor man's disease* because it attacks crops suffering from nutritional deficiency (especially Potassium and Zinc) or water stress.\n\n"
-                "**1. Stop Extra Urea (Nitrogen)**:\n"
-                "• Suspend immediate urea top-dressing. High nitrogen produces soft foliage that encourages fungal hyphae penetration.\n\n"
-                "**2. Boost Potassium & Micronutrients (Crucial for Brown Spot)**:\n"
-                "• Apply Muriate of Potash (MOP) @ 15–20 kg/acre to strengthen cell walls.\n"
-                "• Spray Zinc Sulfate (0.5%) + Ferrous Sulfate (0.5%) foliar solution if soil is zinc-depleted.\n\n"
-                "**3. Organic / Biological Control**:\n"
-                "• Spray *Pseudomonas fluorescens* (@ 5–10 g/L) or *Trichoderma viride* (@ 5 g/L) in early morning or late evening.\n"
-                "• Apply Neem Seed Kernel Extract (NSKE 5%) or Azadirachtin 1500 ppm (@ 2–3 ml/L).\n\n"
-                "**4. CIB&RC Approved Fungicide Options**:\n"
-                "• For severe foliar spots covering >10% of flag leaf area, spray **Propiconazole 25% EC** (@ 1 ml/L) or **Mancozeb 75% WP** (@ 2 g/L).\n"
-                "• *Always adhere to statutory waiting periods and consult your local Agriculture Officer/KVK before spraying.*"
+                "🧪 **उर्वरक एवं पोषण सलाह (ICAR एवं ANGRAU दिशानिर्देश)**:\n\n"
+                "• **यूरिया (नाइट्रोजन) सावधानी**: यदि फसल में ब्लास्ट, भूरा धब्बा या झुलसा रोग है, तो **यूरिया खाद तुरंत रोकें**! "
+                "अत्यधिक नाइट्रोजन पत्तियों को कोमल बना देता है जिससे फफूंद बहुत तेजी से फैलती है।\n"
+                "• **पोटाश (MOP)**: 15–20 किग्रा/एकड़ पोटाश डालें। पोटाश पत्तियों की बाहरी दीवारों को मजबूत करता है और रोग प्रतिरोधक क्षमता बढ़ाता है।\n"
+                "• **जिंक व सूक्ष्म पोषक तत्व**: यदि पत्तियां पीली या भूरी पड़ रही हैं, तो रोग का फैलाव रुकने के बाद जिंक सल्फेट (0.5%) का छिड़काव करें।"
             )
-        elif condition == "Rice Blast" or "blast" in text_clean:
+        elif lang == "te":
             return (
-                "🌾 **Rice Blast (Magnaporthe oryzae) Immediate Cure & Action Plan**:\n\n"
-                "**1. Cut Nitrogen Immediately**:\n"
-                "• Cease all top-dressing of urea right away. High nitrogen makes leaf cells soft and fuels blast proliferation.\n\n"
-                "**2. Water & Canopy Care**:\n"
-                "• Maintain shallow water depth (2–3 cm); avoid deep flooding or complete drought cracks.\n"
-                "• Do not enter or disturb wet fields in early morning when spores travel on dew droplets.\n\n"
-                "**3. Biological Protection**:\n"
-                "• Foliar spray of *Pseudomonas fluorescens* (@ 10 g/L) at tillering and boot leaf stage.\n\n"
-                "**4. CIB&RC Approved Chemical Control**:\n"
-                "• Spray **Tricyclazole 75% WP** (@ 0.6 g/L water) or **Isoprothiolane 40% EC** (@ 1.5 ml/L water) at the first sign of spindle-shaped lesions."
-            )
-        elif condition == "Bacterial Leaf Blight" or "blb" in text_clean:
-            return (
-                "🌾 **Bacterial Leaf Blight (Xanthomonas oryzae) Field Control**:\n\n"
-                "**1. Water Drainage**:\n"
-                "• Drain standing water completely for 3–4 days to aerate the soil and reduce bacterial flagella movement.\n\n"
-                "**2. Fertilizer Restriction**:\n"
-                "• Suspend urea and apply Potassium (MOP @ 15 kg/acre) as a split dose to induce systemic acquired resistance.\n\n"
-                "**3. Field Spray**:\n"
-                "• Spray Copper Oxychloride 50% WP (@ 2.5 g/L) + Streptocycline (@ 0.1 g/L) or *Pseudomonas fluorescens* (@ 10 g/L)."
-            )
-        elif condition == "Chilli Leaf Curl" or "leaf curl" in text_clean:
-            return (
-                "🌶️ **Chilli Leaf Curl Virus Management**:\n\n"
-                "Leaf curl is caused by Geminivirus transmitted by whiteflies (*Bemisia tabaci*).\n\n"
-                "**1. Vector Control**:\n"
-                "• Set up 12–15 yellow sticky traps per acre to monitor and trap adult whiteflies.\n"
-                "• Eradicate weed hosts along field bunds.\n\n"
-                "**2. Bio-Control & Botanical Spray**:\n"
-                "• Spray Neem oil 1500 ppm (@ 3–5 ml/L water) or *Beauveria bassiana* (@ 5 g/L).\n\n"
-                "**3. Nutrition Support**:\n"
-                "• Spray micronutrient mixture containing Zinc and Boron to stimulate vegetative recovery."
-            )
-
-    # 4. Check for simple summary / plain words request
-    if any(k in text_clean for k in ["simple", "summary", "summarize", "plain words", "easy words", "meaning", "సులభంగా", "సారాంశం", "सरल शब्दों में", "मतलब"]):
-        if lang == "te":
-            return (
-                "🌾 **సులభమైన సారాంశం (రైతు భాషలో)**:\n\n"
-                "• **సమస్య ఏమిటి?**: పంటపై తెగులు లేదా పోషక లోపం వల్ల ఆకులు రంగుమారి లేదా ఎండిపోతున్నాయి.\n"
-                "• **ముఖ్య కారణం**: వాతావరణంలో అధిక తేమ, మంచు లేదా అధిక మోతాదులో యూరియా వేయడం వల్ల ఇది వేగంగా వ్యాపిస్తుంది.\n"
-                "• **మీరు వెంటనే చేయాల్సింది**: \n"
-                "  1. యూరియా ఎరువును వెంటనే నిలిపివేయండి.\n"
-                "  2. పొలంలో నిలిచిన మురుగు నీటిని బయటకు పంపండి.\n"
-                "  3. పొటాష్ ఎరువు లేదా సూడోమోనాస్ వంటి సేంద్రీయ మందులను వాడండి."
-            )
-        elif lang == "hi":
-            return (
-                "🌾 **सरल शब्दों में सारांश (किसान भाइयों के लिए)**:\n\n"
-                "• **समस्या क्या है?**: फसल में फफूंद या कीट के कारण पत्तियों पर धब्बे बन रहे हैं और वे सूख रही हैं।\n"
-                "• **मुख्य कारण**: अत्यधिक नमी, रात की ओस और जरूरत से ज्यादा यूरिया खाद डालने से यह तेजी से फैलता है।\n"
-                "• **तुरंत क्या करें?**: \n"
-                "  1. यूरिया डालना तुरंत रोकें।\n"
-                "  2. खेत से जमा पानी निकाल दें।\n"
-                "  3. पोटाश खाद दें और स्यूडोमोनास या नीम तेल का जैविक छिड़काव करें।"
+                "🧪 **ఎరువుల యాజమాన్యం (ICAR & ANGRAU సిఫార్సులు)**:\n\n"
+                "• **యూరియా నివారణ**: వరిలో అగ్గి తెగులు లేదా ఎండ తెగులు ఉన్నప్పుడు **యూరియా వేయడం వెంటనే ఆపండి**! అధిక నత్రజని తెగులును మరింత ఉధృతం చేస్తుంది.\n"
+                "• **పొటాష్ (MOP)**: ఎకరానికి 15–20 కిలోల పొటాష్ ఎరువు వేయండి. ఇది ఆకుల కణజాలాన్ని గట్టిపరిచి రోగ నిరోధక శక్తిని పెంచుతుంది.\n"
+                "• **నీటి యాజమాన్యం**: పొలంలో నిలిచిన మురుగు నీరు తీసివేసి, 2-3 సెం.మీ తేలికపాటి నీరు ఉండేలా చూడండి."
             )
         else:
             return (
-                "🌾 **Plain & Simple AI Summary**:\n\n"
-                "• **What is happening?**: Your crop foliage has been attacked by a fungal or pest pathogen, causing leaf lesions and tissue drying.\n"
-                "• **Why did it happen?**: High humidity, dewy overcast days, and excessive nitrogen (urea) fertilizer make leaves soft and vulnerable.\n"
-                "• **Your 3 Immediate Action Steps**:\n"
-                "  1. **Stop Urea now**: Extra nitrogen will fuel the disease spread.\n"
-                "  2. **Drain standing water**: High field moisture accelerates spore propagation.\n"
-                "  3. **Apply Potassium & Bio-Control**: Give MOP to strengthen leaf walls, and spray *Pseudomonas fluorescens* or Neem extract."
+                "🧪 **Fertilizer & Nutrition Advisory (ICAR / ANGRAU Guidelines)**:\n\n"
+                "• **Potassium (MOP - Muriate of Potash)**: Apply 15–20 kg/acre Potassium (MOP). Potash strengthens the plant epidermal cell walls, enhances silica deposition, and dramatically suppresses leaf blast and brown spot.\n"
+                "• **Urea (Nitrogen) Caution**: If your field exhibits active blast lesions, blight, or viral curl, **immediately suspend urea top-dressing**! Excess nitrogen accelerates vegetative succulence and fungal mycelium proliferation.\n"
+                "• **Zinc & Micronutrients**: For chlorosis or brown leaf discolouration, spray Zinc Sulfate (0.5%) + Citric Acid (0.05%) after fungal sporulation is curbed."
             )
 
-    # 5. Check for fertilizer / urea inquiries
+    # 3. Step 2 & 3: Structured RAG query execution using verified SQLite knowledge
+    rag_result = server_rag.process_query(
+        query=user_text,
+        crop=crop,
+        problem_slug=problem_slug,
+        lang=lang,
+    )
+    if rag_result and rag_result.get("answer") and not rag_result.get("safety_triggered"):
+        # If RAG returned an answer directly matched to problem
+        ans = rag_result["answer"]
+        is_resp_safe, sanitized_ans = server_safety.validate_response(ans, lang=lang)
+        return sanitized_ans
+
+    # 4. Fallback conversational check for fertilizer / simple words / general advice
     if any(k in text_clean for k in ["urea", "fertilizer", "potash", "dap", "zinc", "యూరియా", "ఎరువు", "यूरिया", "खाद"]):
         return (
             "🧪 **Fertilizer & Nutrition Advisory**:\n\n"
@@ -401,15 +375,17 @@ def generate_conversational_response(user_text: str, messages: list) -> str:
             "• **Zinc & Micronutrients**: If leaves show bronzing or chlorosis, spray Zinc Sulfate (0.5%) + Citric Acid (0.05%) after the disease flare-up subsides."
         )
 
-    # 6. General conversational fallback with real ag advice
-    return (
-        f"Hey there! Regarding *\"{user_text.strip()}\"*:\n\n"
-        "Here are the direct recommendations for your crop health:\n\n"
+    # General conversational fallback with real ag advice
+    raw_reply = (
+        f"Regarding *\"{user_text.strip()}\"*:\n\n"
+        "Here are direct recommendations based on ICAR/ANGRAU guidelines:\n\n"
         "1. **Field Inspection**: Observe whether spots are spindle-shaped (blast), circular with yellow halo (brown spot), or wavy along leaf edges (bacterial leaf blight).\n"
         "2. **Moisture & Aeration**: Ensure shallow water management (2–3 cm) and avoid walking through wet foliage early in the morning.\n"
         "3. **Safe Bio-Protection**: Spray *Pseudomonas fluorescens* (@ 5–10 g/L) or Neem Seed Kernel Extract (5%) as an organic protective shield.\n\n"
-        "Feel free to ask me about specific cures, fertilizer dosage, or what action to take next!"
+        "Feel free to ask about specific cures, fertilizer dosage, or what action to take next!"
     )
+    _, safe_reply = server_safety.validate_response(raw_reply, lang=lang)
+    return safe_reply
 
 
 def is_greeting_word(w: str) -> bool:

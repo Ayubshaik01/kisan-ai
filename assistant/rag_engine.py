@@ -63,12 +63,31 @@ class OfflineAssistantRAG:
         # Step 2: Identify problem from slug or search
         target_problem = None
         if problem_slug:
-            target_problem = self.query_service.get_problem(problem_slug)
-        else:
+            # Normalize slug aliases
+            slug_key = problem_slug.replace("chilli-", "").replace("rice-", "")
+            target_problem = self.query_service.get_problem(problem_slug) or self.query_service.get_problem(slug_key)
+        
+        if not target_problem:
             # Search query across problems
             matches = self.query_service.search_knowledge(query, crop_id=crop)
             if matches:
                 target_problem = matches[0]
+
+        # Multi-lingual keyword fallback for Indian regional queries
+        if not target_problem:
+            q_low = query.lower()
+            if "thrips" in q_low or "తామర" in q_low:
+                target_problem = self.query_service.get_problem("thrips")
+            elif "leaf curl" in q_low or "ముడత" in q_low or "चुरडा" in q_low or "मुरडा" in q_low:
+                target_problem = self.query_service.get_problem("leaf-curl")
+            elif "blast" in q_low or "అగ్గి తెగులు" in q_low or "ब्लास्ट" in q_low:
+                target_problem = self.query_service.get_problem("rice-blast")
+            elif "brown spot" in q_low or "మచ్చ" in q_low or "भूरा धब्बा" in q_low:
+                target_problem = self.query_service.get_problem("brown-spot")
+            elif "blight" in q_low or "ఎండ తెగులు" in q_low or "झुलसा" in q_low:
+                target_problem = self.query_service.get_problem("bacterial-leaf-blight")
+            elif "potash" in q_low or "urea" in q_low or "यूरिया" in q_low or "యూరియా" in q_low or "fertilizer" in q_low:
+                target_problem = self.query_service.get_problem("brown-spot") if crop == "rice" else self.query_service.get_problem("rice-blast")
 
         if not target_problem:
             if lang == "hi":
@@ -95,8 +114,25 @@ class OfflineAssistantRAG:
         name = target_problem["problem_name"]
         sci = target_problem.get("scientific_name", "")
 
+        # Regional vernacular localized names
+        telugu_names = {
+            "Rice Blast": "వరి అగ్గి తెగులు",
+            "Brown Spot": "వరి ఆకుమచ్చ తెగులు",
+            "Bacterial Leaf Blight": "వరి బ్యాక్టీరియా ఎండ తెగులు",
+            "Chilli Thrips": "మిరప తామర పురుగులు",
+            "Chilli Leaf Curl Virus": "మిరప ఆకు ముడత వైరస్",
+        }
+        hindi_names = {
+            "Rice Blast": "धान का झुलसा (ब्लास्ट) रोग",
+            "Brown Spot": "धान का भूरा धब्बा रोग",
+            "Bacterial Leaf Blight": "धान का जीवाणु झुलसा रोग",
+            "Chilli Thrips": "मिर्च का थ्रिप्स कीट",
+            "Chilli Leaf Curl Virus": "मिर्च का पर्ण कुंचन (मुरड़ा) रोग",
+        }
+
         if lang == "hi":
-            parts.append(f"सत्यापित कृषि गाइड — {name} ({sci}):\n")
+            h_name = hindi_names.get(name, name)
+            parts.append(f"सत्यापित कृषि गाइड — {h_name} ({sci}):\n")
             parts.append(f"• मुख्य लक्षण: {target_problem['symptoms']}")
             parts.append(f"• प्रभावित भाग: {target_problem['affected_parts']}")
             if advisory:
@@ -104,7 +140,8 @@ class OfflineAssistantRAG:
                 parts.append(f"• रोकथाम के उपाय: {advisory['preventive_actions']}")
                 parts.append(f"• निगरानी: {advisory['monitoring_guidance']}")
         elif lang == "te":
-            parts.append(f"ధృవీకరించిన వ్యవసాయ గైడ్ — {name} ({sci}):\n")
+            t_name = telugu_names.get(name, name)
+            parts.append(f"ధృవీకరించిన వ్యవసాయ గైడ్ — {t_name} ({sci}):\n")
             parts.append(f"• ప్రధాన లక్షణాలు: {target_problem['symptoms']}")
             parts.append(f"• ప్రభావిత భాగాలు: {target_problem['affected_parts']}")
             if advisory:
@@ -120,10 +157,20 @@ class OfflineAssistantRAG:
                 parts.append(f"• Preventive practices: {advisory['preventive_actions']}")
                 parts.append(f"• Monitoring: {advisory['monitoring_guidance']}")
 
-        # Cultural and biological practices
-        cultural = [t["product_or_method"] for t in treatments if t["treatment_type"] == "cultural"]
-        if cultural:
-            parts.append(f"• Cultural management: {'; '.join(cultural)}")
+        # Cultural, mechanical, and biological practices
+        for t in treatments:
+            ttype = t.get("treatment_type", "management").capitalize()
+            meth = t.get("product_or_method", "")
+            dose = t.get("approved_dose", "")
+            if dose:
+                parts.append(f"• {ttype} management: {meth} ({dose})")
+            else:
+                parts.append(f"• {ttype} management: {meth}")
+
+        if prob_id == "thrips":
+            parts.append("• Mechanical & Biological management: Install blue or yellow sticky traps (15–20/acre); spray Neem oil 1500 ppm or NSKE 5%.")
+        elif prob_id == "leaf-curl":
+            parts.append("• Vector & Biological management: Set up yellow sticky traps for whiteflies; spray Neem extract or Beauveria bassiana.")
 
         answer = "\n".join(parts)
 

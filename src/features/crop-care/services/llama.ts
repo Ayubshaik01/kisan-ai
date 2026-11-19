@@ -1741,6 +1741,9 @@ export async function queryLiveLlamaEndpoint(
   return null;
 }
 
+import { AgriculturalSafetyValidator, STATUTORY_SAFETY_REFUSALS } from "./safety-validator";
+import { OfflineRAGEngine } from "./rag-knowledge";
+
 export function generateLlamaChatResponse(
   query: string,
   targetLang: Lang,
@@ -1749,23 +1752,22 @@ export function generateLlamaChatResponse(
 ): LlamaChatResult {
   const trimmed = query.trim();
 
-  // 1. Statutory CIB&RC Gate Check
-  for (const pattern of HAZARDOUS_PATTERNS) {
-    if (pattern.test(trimmed)) {
-      return {
-        model: "Llama-3.2-1B-Instruct",
-        lang: targetLang,
-        text: REFUSALS[targetLang] ?? REFUSALS.en,
-        isMultimodal: false,
-        safetyTriggered: true,
-        refs: [],
-        suggestions: [
-          targetLang === "te" ? "సేంద్రీయ నివారణలు ఏమిటి?" : "What are organic bio-controls?",
-          targetLang === "te" ? "యూరియా ఎరువు ఎలా వాడాలి?" : "Balanced fertilizer schedule",
-          targetLang === "te" ? "వ్యవసాయ అధికారి సలహా" : "Consult local KVK extension",
-        ],
-      };
-    }
+  // 1. Deterministic Statutory Safety Gate Check
+  const safetyCheck = AgriculturalSafetyValidator.validateUserQuery(trimmed, targetLang);
+  if (!safetyCheck.isSafe) {
+    return {
+      model: "Llama-3.2-1B-Instruct",
+      lang: targetLang,
+      text: safetyCheck.refusalMessage || STATUTORY_SAFETY_REFUSALS[targetLang] || STATUTORY_SAFETY_REFUSALS.en,
+      isMultimodal: false,
+      safetyTriggered: true,
+      refs: [],
+      suggestions: [
+        targetLang === "te" ? "సేంద్రీయ నివారణలు ఏమిటి?" : targetLang === "hi" ? "जैविक नियंत्रण क्या है?" : "What are organic bio-controls?",
+        targetLang === "te" ? "యూరియా ఎరువు ఎలా వాడాలి?" : targetLang === "hi" ? "यूरिया की सही मात्रा" : "Balanced fertilizer schedule",
+        targetLang === "te" ? "వ్యవసాయ అధికారి సలహా" : targetLang === "hi" ? "कृषि विशेषज्ञ से परामर्श" : "Consult local KVK extension",
+      ],
+    };
   }
 
   // 2. Resolve topic:
@@ -1883,6 +1885,8 @@ export function generateLlamaChatResponse(
   const isPrevention = /prevent|prevention|future|next season|next time|avoid|precaution|ముందుజాగ్రత్త|రాకుండా|భవిష్యత్తు|మరోసారి|నివారించడానికి|बचाव|रोकथाम|भविष्य|अगली बार|सावधानी|முன்னெச்சரிக்கை|தடுக்க|அடுத்த முறை|ಮುನ್ನೆಚ್ಚರಿಕೆ|ತಡೆಯಲು|ಮುಂದಿನ ಬಾರಿ|काळजी|प्रतिबंध|पुढील हंगामात/i.test(qClean);
 
   const isSymptoms = /what is this|symptoms|identify|identification|signs|how to recognize|look like|pathology|lesion|color|appearance|లక్షణాలు|గుర్తించడం|ఇది ఏమిటి|ఎలా గుర్తించాలి|మచ్చలు|రంగు|लक्षण|पहचान|यह क्या है|कैसे पहचाने|धब्बे|रंग|அறிகுறிகள்|அடையாளம்|இது என்ன|புள்ளிகள்|ಲಕ್ಷಣಗಳು|ಗುರುತಿಸುವಿಕೆ|ಇದು ಏನು|ಮಚ್ಚೆಗಳು|लक्षणे|ओळख|हे काय आहे|ठिपके/i.test(qClean);
+
+  const isSimilar = /similar|look like|confused with|differentiate|differential|distinguish|difference between|పోలిక|వేరే తెగులు|మరేదైనా|మరో సమస్య|ధర్మం|తేడా|మిగతా|मिलता जुलता|अंतर|दूसरा रोग|पहचान/i.test(qClean);
 
   const prof = topic ? DETAILED_PROFILES[topic.slug] : undefined;
   const visualText = prof
@@ -2148,7 +2152,47 @@ export function generateLlamaChatResponse(
     }
   }
 
-  // O. CONVERSATIONAL TOPIC RESPONSE (Natural agronomist dialogue)
+  // O. DIFFERENTIAL DIAGNOSIS (SIMILAR-LOOKING PROBLEMS)
+  else if (isSimilar && topic) {
+    const evidence = OfflineRAGEngine.retrieveEvidence(topic.crop, topic.slug);
+    if (evidence && evidence.similarDiseases && evidence.similarDiseases.length > 0) {
+      const simList = evidence.similarDiseases.map(s => {
+        const feat = s.distinguishingFeature[targetLang as "en" | "hi" | "te"] || s.distinguishingFeature.en;
+        return `• **${s.name} vs ${probName}**:\n  ${feat}`;
+      }).join("\n\n");
+
+      if (targetLang === "te") {
+        responseText = `🔍 **${probName}తో సమానంగా కనిపించే ఇతర పంట సమస్యల పోలిక (డిఫరెన్షియల్ డయాగ్నసిస్)**:\n\n` +
+          `${simList}\n\n` +
+          `🌾 **రైతు పొలంలో ఎలా నిర్ధారించుకోవాలి?**:\n` +
+          `1. ఆకు అడుగుభాగంలో పురుగులు లేదా బూజు ఆనవాళ్లు ఉన్నాయా చూడండి.\n` +
+          `2. మచ్చల అంచులు గుండ్రంగా ఉన్నాయా లేక కండె ఆకారంలో ఉన్నాయా గమనించండి.\n` +
+          `3. అనుమానం ఉంటే స్పష్టమైన ఫోటోను మరోసారి స్కాన్ చేయండి.`;
+        suggestions = ["🛠️ ఏం చేయాలి?", "⚠️ ఎందుకు వచ్చింది?", "🌾 సులభంగా వివరించు", "🛡️ రాకుండా ముందుజాగ్రత్తలు"];
+      } else if (targetLang === "hi") {
+        responseText = `🔍 **${probName} से मिलते-जुलते अन्य रोग व कीट (अंतर पहचानें)**:\n\n` +
+          `${simList}\n\n` +
+          `🌾 **खेत में सही पहचान कैसे करें?**:\n` +
+          `1. पत्ती की निचली सतह पर कीट या जाला देखें।\n` +
+          `2. धब्बों के किनारे गोल हैं या नुकीली नाव जैसे, यह जांचें।\n` +
+          `3. अनिश्चितता होने पर पौधे का साफ फोटो दोबारा स्कैन करें।`;
+        suggestions = ["🛠️ क्या करें?", "⚠️ क्यों हुआ?", "🌾 सरल शब्दों में बताओ", "🛡️ बचाव के उपाय"];
+      } else {
+        responseText = `🔍 **Differential Diagnosis for ${probName} (${cropName})**:\n\n` +
+          `${simList}\n\n` +
+          `🔬 **How to distinguish in the field**:\n` +
+          `1. Check leaf underside for micro-insects, webbing, or powdery spores.\n` +
+          `2. Observe lesion shapes: spindle diamond (blast) vs circular with yellow halo (brown spot) vs wavy margins (bacterial blight).\n` +
+          `3. If symptoms remain ambiguous, re-scan with a close-up clear photograph.`;
+        suggestions = ["🛠️ What should I do right now?", "⚠️ Why did this happen?", "🌾 Explain in simple words", "🛡️ Prevention & future care"];
+      }
+    } else {
+      responseText = `Regarding similar conditions to **${probName}**: Inspect neighboring plants for pattern spread, and examine both leaf surfaces under daylight.`;
+      suggestions = ["🛠️ What should I do right now?", "⚠️ Why did this happen?"];
+    }
+  }
+
+  // P. CONVERSATIONAL TOPIC RESPONSE (Natural agronomist dialogue)
   else if (topic) {
     if (targetLang === "te") {
       responseText = `మీరు ${cropName} పంటపై **${probName}** (${sevBandLocal} దశ) గురించి అడుగుతున్నారు.\n\n` +
@@ -2171,7 +2215,7 @@ export function generateLlamaChatResponse(
     }
   }
 
-  // P. GENERAL FALLBACK WITHOUT TOPIC
+  // Q. GENERAL FALLBACK WITHOUT TOPIC
   else {
     responseText = `Hello! I am your on-device KisanAI (Meta Llama 3.2 1B Instruct) Agricultural Assistant.\n\n` +
       `Please describe the symptoms in your field or ask about specific conditions:\n` +
@@ -2179,6 +2223,18 @@ export function generateLlamaChatResponse(
       `• **Chilli**: Leaf Curl, Thrips, Mites, Whiteflies, Aphids, Anthracnose / Fruit Rot, Powdery Mildew, Cercospora Spot.\n\n` +
       `You can also scan a leaf photograph to analyze its visual pathology in real-time!`;
     suggestions = ["🌾 Rice blast symptoms", "🌶️ Chilli leaf curl control", "🧪 Balanced NPK schedule", "📷 How to scan a leaf?"];
+  }
+
+  // Deterministic Agricultural Safety Validation of Generated Output
+  const postValidation = AgriculturalSafetyValidator.validateGeneratedResponse(
+    responseText,
+    cropType,
+    topic?.slug,
+    scanCtx?.confidence ?? 0.90,
+    targetLang
+  );
+  if (postValidation.sanitizedResponse) {
+    responseText = postValidation.sanitizedResponse;
   }
 
   return {

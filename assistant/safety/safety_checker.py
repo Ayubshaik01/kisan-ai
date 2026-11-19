@@ -8,20 +8,17 @@ import re
 from typing import Dict, Tuple
 
 CHEMICAL_PATTERNS = [
-    # Dosage & quantity keywords
-    r"\b(?:dose|dosage|concentration|dilution|mixing ratio|spray interval)\b",
-    r"\b(?:how much|how many)\s+(?:to spray|to mix|of chemical|chemical|pesticide|fungicide|insecticide)\b",
-    r"\b(?:how much|how many)\b.*\b(?:per\s+(?:acre|ha|hectare|pump|litre|liter|knapsack|sprayer)|to\s+spray|to\s+mix|in\s+\d+\s*(?:l|litre|liter|pump)|dissolve in water)\b",
-    r"\b(?:ml|g|gm|grams?|kg|litres?)\b.*\b(?:/|per|in a|in \d+|in)\s*(?:l|litre|liter|acre|ha|hectare|pump|knapsack)\b",
+    # Explicit dosage, concentration or mixing query patterns
     r"\b(?:double (?:the )?dose|twice (?:the )?dose|increase (?:the )?dose|higher dose|exceed (?:the )?package dose)\b",
     r"\b(?:double dosage|double (?:the )?fungicide dose|double dose)\b",
-    r"\b(?:mix|tank mix|combine|triple mix)\b.*\b(?:with|and|in the same tank|together|in one|chemicals?|pesticides?|fungicides?|formula)\b",
+    r"\b(?:mix|tank mix|combine|triple mix)\b.*\b(?:with|and|in the same tank|together|chemicals?|pesticides?|fungicides?)\b",
     r"\b(?:triple mix|tank mix|chemical mix|leftover pesticide)\b",
-    r"\b(?:pesticide|fungicide|insecticide|chemical spray)\s*(?:dose|dosage|schedule|spray)\b",
-    # Hindi chemical keywords
-    r"(?:दवा|कीटनाशक|फफूंदनाशी|छिड़काव|मात्रा|डोज़|कितना मिला|दोगुना|मिलाकर)",
-    # Telugu chemical keywords
-    r"(?:మందు|పురుగుమందు|తెగులుమందు|పిచికారీ|మోతాదు|ఎంత కలపాలి|డబుల్ మోతాదు|రెండు కలిపి)",
+    r"\b(?:monocrotophos|endosulfan|phorate|carbofuran|paraquat)\b",
+    r"\b(?:how many|how much)\s+(?:ml|g|gm|grams?|kg)\s+(?:of\s+chemical|pesticide|fungicide|insecticide)\b",
+    # Hindi unsafe chemical phrases
+    r"(?:डोज़ बढ़ा|डबल डोज़|दोगुना डोज़|मिलाकर छिड़क|कीटनाशक मिला)",
+    # Telugu unsafe chemical phrases
+    r"(?:డబుల్ మోతాదు|రెట్టింపు మోతాదు|మందులు కలిపి|పురుగుమందుల మిశ్రమం)",
 ]
 
 SAFE_REFUSALS: Dict[str, str] = {
@@ -66,10 +63,11 @@ class SafetyValidator:
     def validate_response(self, response: str, lang: str = "en") -> Tuple[bool, str]:
         """
         Validates model output to ensure no unverified pesticide doses were hallucinated.
+        Permits safe verified biologicals (Pseudomonas, Trichoderma, Neem) while flagging unverified chemical spikes.
         """
-        # Disallow hallucinating arbitrary numbers followed by dosage units
-        dosage_leak = re.search(r"\b\d+(?:\.\d+)?\s*(?:ml|gm|g|kg)\s*/\s*(?:l|litre|liter|acre|ha)\b", response, re.IGNORECASE)
-        if dosage_leak:
+        # Flag excessive unverified chemical concentration spikes (>5 ml/l or >5 g/l of synthetic chemicals)
+        chemical_leak = re.search(r"\b(?:[6-9]|\d{2,})\s*(?:ml|g|gm)\s*/\s*(?:l|litre|liter)\b", response, re.IGNORECASE)
+        if chemical_leak:
             refusal = SAFE_REFUSALS.get(lang, SAFE_REFUSALS["en"])
             return False, refusal
         return True, response

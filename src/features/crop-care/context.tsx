@@ -43,6 +43,10 @@ type State = {
 const Ctx = createContext<State | null>(null);
 const same = (i: SavedItem, kind: SavedKind, k: SaveKey) => i.kind === kind && i.crop === k.crop && i.slug === k.slug && i.scanId === k.scanId;
 
+import { ConversationManager } from "./services/conversation-manager";
+import { AgriculturalSafetyValidator } from "./services/safety-validator";
+import type { DiagnosisContext } from "./types/diagnosis-context";
+
 export function CropCareProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [settings, setSettings] = useState<Settings>(defaultSettings);
@@ -208,33 +212,27 @@ export function CropCareProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Live LLM execution: Query official LLM (Gemini / Groq / OpenAI / Ollama / Local Server) with seamless offline fallback
-    const systemPrompt = `You are KisanAI, a world-class AI Agricultural Agronomist and friendly digital crop care chat assistant. You talk naturally, warmly, concisely, and intelligently just like ChatGPT / Claude / Gemini.
-- Strictly adhere to statutory CIB&RC guidelines: do NOT hallucinate chemical dosages or promote unapproved chemical mixes.
-- Provide practical cultural, biological (e.g. Trichoderma, Pseudomonas, Neem), and balanced fertilizer guidance.
-- Respond fluently in the farmer's chosen language: ${
-      settings.lang === "te"
-        ? "Telugu (తెలుగు)"
-        : settings.lang === "hi"
-        ? "Hindi (हिंदी)"
-        : settings.lang === "ta"
-        ? "Tamil (தமிழ்)"
-        : settings.lang === "kn"
-        ? "Kannada (ಕನ್ನಡ)"
-        : settings.lang === "mr"
-        ? "Marathi (मराठी)"
-        : "English"
-    }.
-- CONVERSATIONAL RULES:
-  * When greeted casually (e.g. "bro", "hi", "hello", "hey"), greet the farmer back warmly like a friendly farming friend, acknowledge their crop condition if an active scan is present, and ask how you can help.
-  * Answer questions directly, concisely, and conversationally. Do NOT regurgitate static document headers or raw protocols unless specifically asked for a full diagnostic protocol.
-  * When asked to explain in simple words or summarize, give an intuitive, easy-to-understand explanation with meaning and practical next steps.${
-    ctx?.slug
-      ? `\n- ACTIVE PHOTO SCAN CONTEXT: The farmer has attached a scan of their ${ctx.crop || "rice"} crop with diagnosed issue: "${ctx.slug}"${ctx.severityBand ? ` at ${ctx.severityBand} severity` : ""}. Keep this context in mind when answering questions about disease, remedies, sprays, fertilizers, or causes. If the user gives a greeting (like "bro", "hi", "hey"), greet them warmly and mention their crop situation naturally.`
-      : ""
-  }`;
+    // Structured Diagnosis Context creation
+    const diagContext: DiagnosisContext | null = ctx ? {
+      crop: ctx.crop ?? "rice",
+      predictedDiseaseOrPest: ctx.name || ctx.slug || "Crop condition",
+      topicSlug: ctx.slug || "unknown",
+      topPredictions: [{ slug: ctx.slug || "unknown", name: ctx.name || ctx.slug || "Condition", confidence: ctx.confidence ?? 0.90 }],
+      confidence: ctx.confidence ?? 0.90,
+      confidenceCalibrationStatus: (ctx.confidence && ctx.confidence > 0.8) ? "high" : "moderate",
+      imageQualityStatus: "good",
+      visibleSymptomsDetected: [ctx.slug || "foliar symptoms"],
+      severityScore: ctx.severityBand === "severe" ? 75 : ctx.severityBand === "moderate" ? 35 : 10,
+      severityCategory: (ctx.severityBand as any) || "moderate",
+      measurementMethod: (ctx.crop === "rice" ? "irri-ses" : "opencv-foliar-mask") as any,
+      diagnosisTimestamp: Date.now(),
+      modelVersion: "1.0 (Real-Field HGB)",
+      isUncertainOrOOD: (ctx.confidence ?? 0.90) < 0.40,
+    } : null;
 
-    const userPrompt = question;
+    // RAG prompt compilation through ConversationManager
+    const convManager = new ConversationManager(ctx?.crop ?? "rice", (settings.lang === "te" || settings.lang === "hi") ? settings.lang : "en", diagContext);
+    const { prompt: userPrompt, systemPrompt } = convManager.buildPrompt(question);
 
     queryLiveLlamaEndpoint(
       userPrompt,
@@ -242,7 +240,19 @@ export function CropCareProvider({ children }: { children: ReactNode }) {
       messages,
       settings
     ).then((liveText) => {
-      finish(liveText || llamaRes.text);
+      if (liveText) {
+        // Enforce deterministic agricultural safety validation on live output
+        const safeRes = AgriculturalSafetyValidator.validateGeneratedResponse(
+          liveText,
+          ctx?.crop ?? "rice",
+          ctx?.slug,
+          ctx?.confidence ?? 0.90,
+          settings.lang
+        );
+        finish(safeRes.sanitizedResponse || liveText);
+      } else {
+        finish(llamaRes.text);
+      }
     }).catch(() => {
       finish(llamaRes.text);
     });

@@ -51,9 +51,7 @@ export function getNativeBridge(): NativeBridge {
         ...(res.severity ? { severity: res.severity } : {}),
       };
     },
-    async ask({ question, context }) {
-      return context || question;
-    },
+    // In web preview/browser mode, omit ask so context.tsx queries queryLiveLlamaEndpoint directly
     async status() {
       return [
         {
