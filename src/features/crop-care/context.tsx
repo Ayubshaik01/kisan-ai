@@ -230,29 +230,33 @@ export function CropCareProvider({ children }: { children: ReactNode }) {
       isUncertainOrOOD: (ctx.confidence ?? 0.90) < 0.40,
     } : null;
 
-    // RAG prompt compilation through ConversationManager
-    const convManager = new ConversationManager(ctx?.crop ?? "rice", (settings.lang === "te" || settings.lang === "hi") ? settings.lang : "en", diagContext);
-    const { prompt: userPrompt, systemPrompt } = convManager.buildPrompt(question);
-
-    queryLiveLlamaEndpoint(
-      userPrompt,
-      systemPrompt,
-      messages,
-      settings
-    ).then((liveText) => {
-      if (liveText) {
-        // Enforce deterministic agricultural safety validation on live output
-        const safeRes = AgriculturalSafetyValidator.validateGeneratedResponse(
-          liveText,
-          ctx?.crop ?? "rice",
-          ctx?.slug,
-          ctx?.confidence ?? 0.90,
-          settings.lang
-        );
-        finish(safeRes.sanitizedResponse || liveText);
+    // Use AI Engine Router for Hybrid Online/Offline execution
+    import("./services/ai-router").then(({ aiRouter }) => {
+      // Sync engine mode from user settings
+      if (settings.llmProvider === "local" || settings.llmProvider === "ollama") {
+        aiRouter.setMode("offline");
+      } else if (settings.llmProvider === "openai" || settings.llmProvider === "gemini") {
+        aiRouter.setMode("online");
+        if (settings.customModel) aiRouter.setOnlineModel(settings.customModel);
       } else {
-        finish(llamaRes.text);
+        aiRouter.setMode("auto");
       }
+
+      const formattedHistory = messages.slice(-6).map((m) => ({
+        role: m.role === "farmer" ? ("user" as const) : ("assistant" as const),
+        content: m.text,
+      }));
+      formattedHistory.push({ role: "user" as const, content: question });
+
+      aiRouter.executeChat({
+        messages: formattedHistory,
+        diagnosisContext: diagContext || undefined,
+        lang: settings.lang,
+      }).then((result) => {
+        finish(result.text);
+      }).catch(() => {
+        finish(llamaRes.text);
+      });
     }).catch(() => {
       finish(llamaRes.text);
     });

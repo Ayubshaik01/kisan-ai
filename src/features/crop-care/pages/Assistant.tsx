@@ -435,24 +435,57 @@ export function AssistantPage() {
         </div>
       </div>
 
-      {/* Cloud LLM Key Banner */}
-      {!hasCloudKey && (
-        <div className="mt-2.5 flex items-center justify-between gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200 animate-in fade-in">
-          <div className="flex items-center gap-2 min-w-0">
-            <Zap className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
-            <p className="truncate text-xs">
-              <span className="font-bold">Official AI Chatbot:</span> Connect your free Google Gemini or Groq key for unconstrained, conversational reasoning.
-            </p>
+      {/* Hybrid AI Engine Selector Bar */}
+      <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2.5 rounded-2xl border border-line bg-card/90 p-2 text-xs shadow-xs">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider pl-1">
+            AI Engine:
+          </span>
+          <div className="flex items-center gap-1 rounded-xl bg-surface p-0.5 border border-line/60">
+            {(["auto", "offline", "online"] as const).map((mKey) => {
+              const currentMode = settings?.llmProvider === "local" ? "offline" : (settings?.llmProvider === "openai" || settings?.llmProvider === "gemini") ? "online" : "auto";
+              const isActive = currentMode === mKey;
+              return (
+                <button
+                  key={mKey}
+                  type="button"
+                  onClick={() => {
+                    const newProvider = mKey === "offline" ? "local" : mKey === "online" ? "openai" : "auto";
+                    updateSettings({ llmProvider: newProvider });
+                  }}
+                  className={cn(
+                    "rounded-lg px-2.5 py-1 text-xs font-semibold capitalize transition-all",
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-xs"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {mKey === "auto" ? "⚡ Auto" : mKey === "offline" ? "🔒 Offline (Gemma 4)" : "☁️ Online (GPT-6.2)"}
+                </button>
+              );
+            })}
           </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+            <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            {settings?.llmProvider === "local"
+              ? "Google Gemma 4 E2B (LiteRT-LM)"
+              : (settings?.llmProvider === "openai" || settings?.llmProvider === "gemini")
+              ? "OpenAI GPT-6.2 Sol"
+              : "Auto: Best Available (Hybrid)"}
+          </span>
           <button
             type="button"
             onClick={() => setShowModelModal(true)}
-            className="shrink-0 rounded-lg bg-amber-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-amber-700 transition-all shadow-xs active:scale-95 cursor-pointer"
+            className="rounded-lg p-1 text-muted-foreground hover:bg-surface hover:text-foreground"
+            title="Configure model settings"
           >
-            Connect Key
+            <SettingsIcon className="size-3.5" />
           </button>
         </div>
-      )}
+      </div>
 
       {/* Multimodal Photo Active Context Banner */}
       {activeScan && (
