@@ -13,7 +13,7 @@
 | `chilli_healthy_1` | chilli | `chilli-healthy` | `chilli-healthy` | 0.94 | healthy_leaf | ✅ PASS |
 | `chilli_healthy_2` | chilli | `chilli-healthy` | `chilli-healthy` | 0.94 | healthy_leaf | ✅ PASS |
 | `chilli_thrips_1` | chilli | `thrips` | `thrips` | 0.84 | Leaf Area Damage Assessment (7.0... | ✅ PASS |
-| `chilli_thrips_2` | chilli | `thrips` | `thrips` | 0.84 | Leaf Area Damage Assessment (6.9... | ✅ PASS |
+| `chilli_thrips_2` | chilli | `thrips` | `thrips` | 0.84 | Leaf Area Damage Assessment (7.1... | ✅ PASS |
 | `chilli_leaf_curl_1` | chilli | `leaf-curl` | `leaf-curl` | 0.86 | Leaf Area Damage Assessment (37.... | ✅ PASS |
 | `chilli_leaf_curl_2` | chilli | `leaf-curl` | `leaf-curl` | 0.86 | Leaf Area Damage Assessment (37.... | ✅ PASS |
 | `chilli_co_infestation_1` | chilli | `thrips` | `thrips` | 0.88 | Leaf Area Damage Assessment (36.... | ✅ PASS |

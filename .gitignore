@@ -33,6 +33,9 @@ ml/datasets/data/
 ml/datasets/paddy_doctor_repo/
 
 # Editor directories and files
+.gradle/
+android/.gradle/
+android/local.properties
 .vscode/*
 !.vscode/extensions.json
 .idea

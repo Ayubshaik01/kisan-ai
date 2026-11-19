@@ -157,15 +157,11 @@ class OfflineAssistantRAG:
                 parts.append(f"• Preventive practices: {advisory['preventive_actions']}")
                 parts.append(f"• Monitoring: {advisory['monitoring_guidance']}")
 
-        # Cultural, mechanical, and biological practices
+        # Cultural, mechanical, and biological practices (omit raw numeric kg/ha dosages)
         for t in treatments:
             ttype = t.get("treatment_type", "management").capitalize()
             meth = t.get("product_or_method", "")
-            dose = t.get("approved_dose", "")
-            if dose:
-                parts.append(f"• {ttype} management: {meth} ({dose})")
-            else:
-                parts.append(f"• {ttype} management: {meth}")
+            parts.append(f"• {ttype} management: {meth}")
 
         if prob_id == "thrips":
             parts.append("• Mechanical & Biological management: Install blue or yellow sticky traps (15–20/acre); spray Neem oil 1500 ppm or NSKE 5%.")
