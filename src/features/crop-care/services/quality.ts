@@ -48,8 +48,12 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
       neonCount++;
     }
 
-    // Human skin tone detection (Kovac RGB standard)
-    if (r > 95 && g > 40 && b > 20 && r > g && r > b && (r - g) > 15 && (Math.max(r, g, b) - Math.min(r, g, b)) > 15) {
+    // Biometric human skin tone detection (Kovac RGB + YCbCr chromatic space)
+    const yCb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
+    const yCr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
+    const isYcbcrSkin = yCr >= 133 && yCr <= 173 && yCb >= 77 && yCb <= 127;
+    const isKovacSkin = r > 80 && g > 35 && b > 20 && r > g && r > b && (r - g) > 10 && (Math.max(r, g, b) - Math.min(r, g, b)) > 12;
+    if (isYcbcrSkin || isKovacSkin) {
       skinCount++;
     }
   }
@@ -84,7 +88,7 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
     neonCount / n > 0.10;
 
   // Reject human faces and non-plant objects
-  const isSkinDetected = (skinCount / n) > 0.12;
+  const isSkinDetected = (skinCount / n) > 0.08;
   const isMissingBotanicalFoliage = greenShare < 0.08 && !isCartoonOrDrawing && !isSkinDetected;
 
   const leafOk = !isCartoonOrDrawing && !isSkinDetected && !isMissingBotanicalFoliage;

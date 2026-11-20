@@ -22,6 +22,26 @@ describe("Out-Of-Distribution (OOD) Non-Plant & Face Rejection", () => {
     expect(leafCheck?.tip).toContain("Human face or skin detected");
   });
 
+  it("rejects diverse South-Asian skin tones under warm lighting", () => {
+    const W = 64;
+    const H = 64;
+    const pixels = new Uint8ClampedArray(W * H * 4);
+
+    // Warm South-Asian skin tone: R ~ 155, G ~ 118, B ~ 85
+    for (let i = 0; i < W * H; i++) {
+      pixels[i * 4] = 155 + (i % 7);
+      pixels[i * 4 + 1] = 118 + (i % 5);
+      pixels[i * 4 + 2] = 85 + (i % 4);
+      pixels[i * 4 + 3] = 255;
+    }
+
+    const report = assessPixels(pixels, W, H);
+    expect(report.ok).toBe(false);
+    const leafCheck = report.checks.find((c) => c.id === "leaf");
+    expect(leafCheck?.pass).toBe(false);
+    expect(leafCheck?.tip).toContain("Human face or skin detected");
+  });
+
   it("rejects non-plant indoor room / furniture without leaf chlorophyll", () => {
     const W = 64;
     const H = 64;

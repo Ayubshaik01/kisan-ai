@@ -94,6 +94,7 @@ export function DiagnosePage() {
   const reticleRef = useRef<HTMLDivElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const nativeCameraInputRef = useRef<HTMLInputElement | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   // Sample analysis walkthrough states
@@ -114,8 +115,12 @@ export function DiagnosePage() {
     stopCamera();
 
     try {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        throw new Error("Camera API not supported in this browser");
+      if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+        setCameraError(
+          "Web live stream requires HTTPS or localhost. Tap 'Take Photo with Camera' below to open your phone's native camera."
+        );
+        setCameraActive(false);
+        return;
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -138,7 +143,7 @@ export function DiagnosePage() {
     } catch (err: unknown) {
       console.warn("Camera start failed:", err);
       setCameraError(
-        t("camDeniedSub") || "Camera not available. Please allow camera permissions or upload from gallery.",
+        "Camera stream not active. Tap 'Take Photo with Camera' to capture directly with your device camera."
       );
       setCameraActive(false);
     }
@@ -170,7 +175,7 @@ export function DiagnosePage() {
     const reticleEl = reticleRef.current;
     const videoEl = videoRef.current;
 
-    if (reticleEl && videoEl) {
+    if (reticleEl && videoEl && reticleEl.offsetWidth > 0 && videoEl.offsetWidth > 0) {
       const vRect = videoEl.getBoundingClientRect();
       const rRect = reticleEl.getBoundingClientRect();
 
@@ -186,15 +191,15 @@ export function DiagnosePage() {
       const vidCx = (vw / 2) + (rcx - vRect.width / 2) * scale;
       const vidCy = (vh / 2) + (rcy - vRect.height / 2) * scale;
 
-      // Strictly square dimension
+      // Strictly square dimension matching reticle box
       const rawCropSize = Math.min(rRect.width, rRect.height) * scale;
-      sSize = Math.max(64, Math.min(rawCropSize, vw, vh));
+      sSize = Math.max(128, Math.min(rawCropSize, vw, vh));
 
       sx = Math.max(0, Math.min(vw - sSize, Math.floor(vidCx - sSize / 2)));
       sy = Math.max(0, Math.min(vh - sSize, Math.floor(vidCy - sSize / 2)));
     } else {
-      // Symmetrical center square crop
-      sSize = Math.min(vw, vh);
+      // Reticle proportion: 70% of the shortest video dimension centered
+      sSize = Math.round(Math.min(vw, vh) * 0.70);
       sx = Math.floor((vw - sSize) / 2);
       sy = Math.floor((vh - sSize) / 2);
     }
@@ -302,6 +307,10 @@ export function DiagnosePage() {
       setAnalysisStep(5);
 
       setTimeout(() => {
+        // Enforce strict leaf validation: reject human faces, skin, cartoons, drawings, non-leaf scenes
+        const isLeafValid = report ? report.checks.find((c) => c.id === "leaf")?.pass !== false : true;
+        const outcome = isLeafValid && result.outcome === "identified" ? "identified" : "unknown";
+
         const scan: Scan = {
           id: newId(),
           crop: selectedCrop,
@@ -309,11 +318,11 @@ export function DiagnosePage() {
           createdAt: new Date().toISOString(),
           image: dataUrl,
           source: result.source,
-          outcome: result.outcome,
-          ...(result.topicSlug ? { topicSlug: result.topicSlug } : {}),
-          ...(result.confidence !== undefined ? { confidence: result.confidence } : {}),
-          ...(result.candidates ? { candidates: result.candidates } : {}),
-          ...(result.severity ? { severity: result.severity } : {}),
+          outcome,
+          ...(outcome === "identified" && result.topicSlug ? { topicSlug: result.topicSlug } : {}),
+          ...(outcome === "identified" && result.confidence !== undefined ? { confidence: result.confidence } : { confidence: 0.12 }),
+          ...(outcome === "identified" && result.candidates ? { candidates: result.candidates } : {}),
+          ...(outcome === "identified" && result.severity ? { severity: result.severity } : {}),
           ...(report ? { quality: report } : {}),
         };
 
@@ -358,6 +367,9 @@ export function DiagnosePage() {
             image: capturedImage,
           });
 
+          const isLeafValid = qualityReport ? qualityReport.checks.find((c) => c.id === "leaf")?.pass !== false : true;
+          const outcome = isLeafValid && result.outcome === "identified" ? "identified" : "unknown";
+
           const scan: Scan = {
             id: newId(),
             crop: selectedCrop,
@@ -365,15 +377,15 @@ export function DiagnosePage() {
             createdAt: new Date().toISOString(),
             image: capturedImage,
             source: result.source,
-            outcome: result.outcome,
-            ...(result.topicSlug ? { topicSlug: result.topicSlug } : {}),
-            ...(result.confidence !== undefined ? { confidence: result.confidence } : {}),
+            outcome,
+            ...(outcome === "identified" && result.topicSlug ? { topicSlug: result.topicSlug } : {}),
+            ...(outcome === "identified" && result.confidence !== undefined ? { confidence: result.confidence } : { confidence: 0.12 }),
             ...(result.confidenceStatus ? { confidenceStatus: result.confidenceStatus } : {}),
             ...(result.visibleEvidence ? { visibleEvidence: result.visibleEvidence } : {}),
             ...(result.insectDirectlyVisible !== undefined ? { insectDirectlyVisible: result.insectDirectlyVisible } : {}),
             ...(result.severityMethod ? { severityMethod: result.severityMethod } : {}),
-            ...(result.candidates ? { candidates: result.candidates } : {}),
-            ...(result.severity ? { severity: result.severity } : {}),
+            ...(outcome === "identified" && result.candidates ? { candidates: result.candidates } : {}),
+            ...(outcome === "identified" && result.severity ? { severity: result.severity } : {}),
             ...(qualityReport ? { quality: qualityReport } : {}),
           };
 
@@ -674,10 +686,10 @@ export function DiagnosePage() {
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
                   <button
                     type="button"
-                    onClick={() => void startCamera(cameraFacing)}
-                    className={cn(btnPrimary, "min-h-11 px-5 text-sm")}
+                    onClick={() => nativeCameraInputRef.current?.click()}
+                    className={cn(btnPrimary, "min-h-11 px-5 text-sm shadow-md shadow-primary/20")}
                   >
-                    <RefreshCw className="size-4" /> Retry Camera
+                    <Camera className="size-4" /> Take Photo with Camera
                   </button>
                   <button
                     type="button"
@@ -685,6 +697,13 @@ export function DiagnosePage() {
                     className={cn(btnSecondary, "min-h-11 px-5 text-sm")}
                   >
                     <Upload className="size-4" /> Gallery
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void startCamera(cameraFacing)}
+                    className={cn(btnGhost, "min-h-11 px-3 text-xs text-muted-foreground")}
+                  >
+                    <RefreshCw className="size-3.5" /> Try Live Stream
                   </button>
                 </div>
               </div>
@@ -749,13 +768,23 @@ export function DiagnosePage() {
                 <span className="size-full rounded-full border-2 border-neutral-900 bg-primary" />
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={() => void startCamera(cameraFacing)}
-                className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground"
-              >
-                <RefreshCw className="size-4" /> Start Camera
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => nativeCameraInputRef.current?.click()}
+                  className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 active:scale-95 transition-all"
+                >
+                  <Camera className="size-4" /> Take Photo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void startCamera(cameraFacing)}
+                  className="inline-flex min-h-12 items-center gap-1.5 rounded-xl border border-neutral-700 bg-neutral-800 px-3 text-xs font-semibold text-neutral-200 hover:bg-neutral-700 active:scale-95 transition-all"
+                  title="Try live camera stream"
+                >
+                  <RefreshCw className="size-3.5" /> Live
+                </button>
+              </div>
             )}
 
             {/* Flip Camera */}
@@ -811,6 +840,16 @@ export function DiagnosePage() {
           ref={fileInputRef}
           type="file"
           accept="image/*"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
+
+        {/* Native Mobile Camera Input */}
+        <input
+          ref={nativeCameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
           onChange={handleFileUpload}
           className="hidden"
         />

@@ -9,6 +9,7 @@
 
 import type { CropKey, Mode } from "../knowledge";
 import { bandForScore } from "./diagnosis";
+import { assessPixels } from "./quality";
 import { settingsService } from "./store";
 import type { Outcome, SeverityResult } from "./types";
 
@@ -409,6 +410,24 @@ export async function analyzeImageWithVision(
       const data = imgData.data;
       const totalPixels = W * H;
 
+      // Pre-flight image quality and botanical crop leaf validation
+      const preflightQuality = assessPixels(data, W, H);
+      const leafCheck = preflightQuality.checks.find((c) => c.id === "leaf");
+      if (!leafCheck?.pass) {
+        return resolve({
+          source: "model",
+          outcome: "unknown",
+          confidence: 0.12,
+          diagnostics: {
+            plantPixels: 0,
+            lesionPixels: 0,
+            affectedPercent: 0,
+            isCropValid: false,
+            pattern: leafCheck?.tip || "rejected_non_leaf_or_face",
+          },
+        });
+      }
+
       let plantPixels = 0;
       let healthyGreenPixels = 0;
       let pureFoliageCount = 0;
@@ -506,15 +525,13 @@ export async function analyzeImageWithVision(
 
           const [h, s, v] = rgbToHsv(r8, g8, b8);
 
-          // Human skin tone detection (Kovac standard)
-          const isSkin = (
-            r8 > 95 && g8 > 40 && b8 > 20 &&
-            r8 > g8 && r8 > b8 &&
-            (r8 - g8) > 15 &&
-            (Math.max(r8, g8, b8) - Math.min(r8, g8, b8)) > 15 &&
-            ((h >= 0 && h <= 32) || (h >= 335 && h <= 360)) &&
-            s >= 0.15 && s <= 0.75
-          );
+          // Human skin tone detection (Kovac standard + YCbCr chromatic range)
+          const yCb = 128 - 0.168736 * r8 - 0.331264 * g8 + 0.5 * b8;
+          const yCr = 128 + 0.5 * r8 - 0.418688 * g8 - 0.081312 * b8;
+          const isYcbcrSkin = yCr >= 133 && yCr <= 173 && yCb >= 77 && yCb <= 127;
+          const isKovacSkin = r8 > 80 && g8 > 35 && b8 > 20 && r8 > g8 && r8 > b8 && (r8 - g8) > 10;
+          const isHsvSkin = ((h >= 0 && h <= 50) || (h >= 335 && h <= 360)) && s >= 0.12 && s <= 0.75 && v >= 0.15 && r8 > b8;
+          const isSkin = isYcbcrSkin || isKovacSkin || isHsvSkin;
           if (isSkin) skinPixels++;
 
           // Track artificial / neon cartoon colors (extreme saturation with high brightness)
@@ -523,8 +540,8 @@ export async function analyzeImageWithVision(
           }
 
           // Legacy visual masks
-          const isPureGreen = (h >= 45 && h <= 165 && s >= 0.15 && v >= 0.12 && g8 > b8 * 1.08);
-          const isChloroticLeaf = (h >= 32 && h < 45 && s >= 0.20 && v >= 0.18 && g8 > b8 * 1.12 && g8 >= r8 * 0.70);
+          const isPureGreen = (h >= 45 && h <= 165 && s >= 0.15 && v >= 0.12 && g8 > b8 * 1.08 && !isSkin);
+          const isChloroticLeaf = (h >= 42 && h <= 70 && s >= 0.20 && v >= 0.18 && g8 > b8 * 1.12 && g8 >= r8 * 0.70 && !isSkin);
           if (isPureGreen) pureFoliageCount++;
           if (isChloroticLeaf) chloroticCount++;
 
@@ -613,7 +630,7 @@ export async function analyzeImageWithVision(
       }
 
       // Guard 2: Human Face & Skin Detection Rejection
-      if (skinRatio > 0.10) {
+      if (skinRatio > 0.08) {
         return resolve({
           source: "model",
           outcome: "unknown",
@@ -629,7 +646,7 @@ export async function analyzeImageWithVision(
       }
 
       // Guard 3: Reject scenes with virtually no botanical leaf foliage (faces, furniture, rooms, random objects)
-      if (foliarRatio < 0.12 || totalFoliarChlorophyll < 600 || totalBotanicalPixels < 800) {
+      if (pureFoliageCount / totalPixels < 0.06 || foliarRatio < 0.10 || totalFoliarChlorophyll < 600 || totalBotanicalPixels < 800) {
         return resolve({
           source: "model",
           outcome: "unknown",

@@ -35,7 +35,8 @@ import { useCropCare } from "../context";
 
 export function LiveWeatherCard() {
   const { settings, t } = useCropCare();
-  const [data, setData] = useState<WeatherData | null>(() => liveWeatherService.getCachedWeather());
+  const [data, setData] = useState<WeatherData | null>(null);
+  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -104,9 +105,12 @@ export function LiveWeatherCard() {
   };
 
   useEffect(() => {
-    if (!data) {
-      loadWeather(false);
+    setMounted(true);
+    const cached = liveWeatherService.getCachedWeather();
+    if (cached) {
+      setData(cached);
     }
+    loadWeather(false);
   }, [settings.district]);
 
   const handleManualSearch = async (e: React.FormEvent) => {
@@ -186,7 +190,10 @@ export function LiveWeatherCard() {
   const primaryInsight = data?.insights?.[0];
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-line/80 bg-card p-5 sm:p-6 shadow-sm transition-all duration-300">
+    <div
+      className="relative overflow-hidden rounded-3xl border border-line/80 bg-card p-5 sm:p-6 shadow-sm transition-all duration-300"
+      suppressHydrationWarning
+    >
       {/* 1. Cinematic Weather Environment Atmosphere */}
       <WeatherAtmosphere condition={condition} isDay={isDay} />
 
@@ -220,8 +227,8 @@ export function LiveWeatherCard() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[11px] text-muted-foreground hidden sm:inline">
-            Updated {data?.lastUpdated || "recently"}
+          <span className="text-[11px] text-muted-foreground hidden sm:inline" suppressHydrationWarning>
+            Updated {mounted && data?.lastUpdated ? data.lastUpdated : "recently"}
           </span>
           <button
             type="button"

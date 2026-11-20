@@ -1,5 +1,8 @@
 import "./lib/error-capture";
 
+import fs from "node:fs";
+import path from "node:path";
+import { Readable } from "node:stream";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 
@@ -58,14 +61,6 @@ function tryServeApkDownload(request: Request): Response | null {
       "/kisanai.apk",
     ];
     if (downloadRoutes.includes(url.pathname)) {
-      // Dynamic require ensures compatibility across server environments
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const fs = require("node:fs");
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const path = require("node:path");
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { Readable } = require("node:stream");
-
       const candidates = [
         path.resolve(process.cwd(), "android/app/build/outputs/apk/release/app-release.apk"),
         path.resolve(process.cwd(), "android/app/build/outputs/apk/debug/app-debug.apk"),
@@ -77,7 +72,7 @@ function tryServeApkDownload(request: Request): Response | null {
           const nodeStream = fs.createReadStream(candidate);
           const webStream = Readable.toWeb(nodeStream);
 
-          return new Response(webStream, {
+          return new Response(webStream as unknown as BodyInit, {
             status: 200,
             headers: {
               "Content-Type": "application/vnd.android.package-archive",
