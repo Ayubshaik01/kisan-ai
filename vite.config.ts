@@ -63,6 +63,9 @@ export default defineConfig(({ command }) => ({
   server: {
     host: "::",
     port: 3000,
+    watch: {
+      ignored: ["**/.vercel/**", "**/.output/**", "**/android/**"],
+    },
   },
   plugins: [
     apkDownloadPlugin(),
@@ -70,7 +73,11 @@ export default defineConfig(({ command }) => ({
       server: { entry: "server" },
     }),
     tailwindcss(),
-    command === "build" ? nitro({ defaultPreset: "cloudflare-module" }) : undefined,
+    command === "build"
+      ? nitro({
+          defaultPreset: process.env.VERCEL ? "vercel" : (process.env.NITRO_PRESET || "vercel"),
+        })
+      : undefined,
     viteReact(),
   ].filter(Boolean),
 }));
