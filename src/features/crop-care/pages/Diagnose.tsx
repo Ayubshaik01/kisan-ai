@@ -130,13 +130,15 @@ export function DiagnosePage() {
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().catch((err) => console.warn("Video play error:", err));
+        };
       }
       setCameraActive(true);
     } catch (err: unknown) {
       console.warn("Camera start failed:", err);
       setCameraError(
-        t("camDeniedSub") || "Camera not available. Please upload a photo from your gallery.",
+        t("camDeniedSub") || "Camera not available. Please allow camera permissions or upload from gallery.",
       );
       setCameraActive(false);
     }
@@ -172,21 +174,24 @@ export function DiagnosePage() {
       const vRect = videoEl.getBoundingClientRect();
       const rRect = reticleEl.getBoundingClientRect();
 
-      // Video element uses object-cover, scaling to cover vRect while preserving aspect ratio
-      const scale = Math.max(vw / Math.max(1, vRect.width), vh / Math.max(1, vRect.height));
-      const renderedW = vw / scale;
-      const renderedH = vh / scale;
-      const offsetX = (vRect.width - renderedW) / 2;
-      const offsetY = (vRect.height - renderedH) / 2;
+      // Video element uses CSS object-cover:
+      // scale factor maps screen container pixels to video source buffer pixels
+      const scale = Math.min(vw / Math.max(1, vRect.width), vh / Math.max(1, vRect.height));
 
-      const relX = rRect.left - vRect.left - offsetX;
-      const relY = rRect.top - vRect.top - offsetY;
+      // Reticle center relative to video container top-left
+      const rcx = (rRect.left + rRect.width / 2) - vRect.left;
+      const rcy = (rRect.top + rRect.height / 2) - vRect.top;
 
-      sx = Math.max(0, Math.min(vw - 50, Math.floor(relX * scale)));
-      sy = Math.max(0, Math.min(vh - 50, Math.floor(relY * scale)));
-      const rawW = Math.floor(rRect.width * scale);
-      const rawH = Math.floor(rRect.height * scale);
-      sSize = Math.max(64, Math.min(rawW, rawH, vw - sx, vh - sy));
+      // Map reticle center to video frame coordinate system
+      const vidCx = (vw / 2) + (rcx - vRect.width / 2) * scale;
+      const vidCy = (vh / 2) + (rcy - vRect.height / 2) * scale;
+
+      // Strictly square dimension
+      const rawCropSize = Math.min(rRect.width, rRect.height) * scale;
+      sSize = Math.max(64, Math.min(rawCropSize, vw, vh));
+
+      sx = Math.max(0, Math.min(vw - sSize, Math.floor(vidCx - sSize / 2)));
+      sy = Math.max(0, Math.min(vh - sSize, Math.floor(vidCy - sSize / 2)));
     } else {
       // Symmetrical center square crop
       sSize = Math.min(vw, vh);
@@ -648,15 +653,16 @@ export function DiagnosePage() {
         >
           {/* Aspect Container */}
           <div className="relative aspect-[4/3] w-full max-h-[62vh] overflow-hidden bg-neutral-950 sm:aspect-[16/10]">
-            {cameraActive ? (
-              <video
-                ref={videoRef}
-                playsInline
-                autoPlay
-                muted
-                className="size-full object-cover"
-              />
-            ) : (
+            {/* Video element remains unconditionally mounted in DOM so videoRef is ready on first start */}
+            <video
+              ref={videoRef}
+              playsInline
+              autoPlay
+              muted
+              className={cn("size-full object-cover", !cameraActive && "hidden")}
+            />
+
+            {!cameraActive && (
               <div className="flex size-full flex-col items-center justify-center p-6 text-center text-muted-foreground">
                 <Camera className="size-12 text-primary/40" />
                 <p className="mt-3 text-sm font-semibold text-foreground">
@@ -665,13 +671,22 @@ export function DiagnosePage() {
                 <p className="mt-1 max-w-sm text-xs text-muted-foreground">
                   Take a photo, choose an existing image, or drag & drop a file here.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className={cn(btnPrimary, "mt-4 min-h-11 px-5 text-sm")}
-                >
-                  <Upload className="size-4" /> Choose from Gallery
-                </button>
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => void startCamera(cameraFacing)}
+                    className={cn(btnPrimary, "min-h-11 px-5 text-sm")}
+                  >
+                    <RefreshCw className="size-4" /> Retry Camera
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className={cn(btnSecondary, "min-h-11 px-5 text-sm")}
+                  >
+                    <Upload className="size-4" /> Gallery
+                  </button>
+                </div>
               </div>
             )}
 

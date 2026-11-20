@@ -418,6 +418,7 @@ export async function analyzeImageWithVision(
       let blastAshCorePixels = 0;
       let whitePowderyPixels = 0;
       let orangeTungroPixels = 0;
+      let skinPixels = 0;
 
       // Spatial tracking: marginal lesions vs central spots
       let marginLesionCount = 0;
@@ -505,6 +506,17 @@ export async function analyzeImageWithVision(
 
           const [h, s, v] = rgbToHsv(r8, g8, b8);
 
+          // Human skin tone detection (Kovac standard)
+          const isSkin = (
+            r8 > 95 && g8 > 40 && b8 > 20 &&
+            r8 > g8 && r8 > b8 &&
+            (r8 - g8) > 15 &&
+            (Math.max(r8, g8, b8) - Math.min(r8, g8, b8)) > 15 &&
+            ((h >= 0 && h <= 32) || (h >= 335 && h <= 360)) &&
+            s >= 0.15 && s <= 0.75
+          );
+          if (isSkin) skinPixels++;
+
           // Track artificial / neon cartoon colors (extreme saturation with high brightness)
           if (s > 0.88 && v > 0.85) {
             saturatedFlatCount++;
@@ -581,6 +593,9 @@ export async function analyzeImageWithVision(
         (saturatedFlatCount / totalPixels > 0.18 && uniqueColorCount < 350);
 
       const totalBotanicalPixels = foliarCount + yellowTissueCount + brownLesionCount + ashCoreCount + pureFoliageCount + chloroticCount;
+      const totalFoliarChlorophyll = pureFoliageCount + chloroticCount;
+      const skinRatio = skinPixels / totalPixels;
+      const foliarRatio = totalFoliarChlorophyll / totalPixels;
 
       if (isCartoonOrClipart) {
         return resolve({
@@ -597,14 +612,30 @@ export async function analyzeImageWithVision(
         });
       }
 
-      // Guard 2: Reject scenes with virtually no botanical leaf tissue
-      if (totalBotanicalPixels < 250) {
+      // Guard 2: Human Face & Skin Detection Rejection
+      if (skinRatio > 0.10) {
         return resolve({
           source: "model",
           outcome: "unknown",
-          confidence: 0.25,
+          confidence: 0.10,
           diagnostics: {
-            plantPixels: totalBotanicalPixels,
+            plantPixels: 0,
+            lesionPixels: 0,
+            affectedPercent: 0,
+            isCropValid: false,
+            pattern: "rejected_human_face_or_skin",
+          },
+        });
+      }
+
+      // Guard 3: Reject scenes with virtually no botanical leaf foliage (faces, furniture, rooms, random objects)
+      if (foliarRatio < 0.12 || totalFoliarChlorophyll < 600 || totalBotanicalPixels < 800) {
+        return resolve({
+          source: "model",
+          outcome: "unknown",
+          confidence: 0.15,
+          diagnostics: {
+            plantPixels: totalFoliarChlorophyll,
             lesionPixels: 0,
             affectedPercent: 0,
             isCropValid: false,
@@ -697,6 +728,20 @@ export async function analyzeImageWithVision(
                 candidates: srvData.candidates || [],
               };
               break;
+            } else if (srvData && srvData.outcome === "unknown") {
+              // Server explicitly rejected as human face, cartoon, or non-plant OOD
+              return resolve({
+                source: "model",
+                outcome: "unknown",
+                confidence: srvData.confidence || 0.12,
+                diagnostics: {
+                  plantPixels: 0,
+                  lesionPixels: 0,
+                  affectedPercent: 0,
+                  isCropValid: false,
+                  pattern: srvData.diagnostics?.rejectionReason || "rejected_non_plant_object",
+                },
+              });
             }
           }
         } catch {

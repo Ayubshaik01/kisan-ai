@@ -138,7 +138,7 @@ chilli_model.eval()
 
 
 def is_valid_plant_leaf(img: Image.Image) -> tuple[bool, str]:
-    """Check if the image is a genuine plant leaf and not a cartoon, drawing, or non-plant object."""
+    """Check if the image is a genuine plant leaf and not a face, cartoon, drawing, or non-plant object."""
     rgb = img.convert("RGB").resize((128, 128))
     pixels = list(rgb.getdata())
     total = len(pixels)
@@ -157,27 +157,44 @@ def is_valid_plant_leaf(img: Image.Image) -> tuple[bool, str]:
         if (num_colors < 80 and top_share > 0.45) or top_share > 0.75:
             return False, "rejected_solid_graphic_fill"
 
-    # 2. Check for real botanical foliage pixels (chlorophyll or foliar lesion tissue)
-    foliage_count = 0
+    # 2. Check for real botanical foliage pixels vs human skin and random objects
+    foliage_green_chlorotic = 0
+    foliage_lesions = 0
     neon_cartoon_count = 0
+    skin_count = 0
+
     for r, g, b in pixels:
         # Extreme neon / artificial colors common in cartoons
         if (r > 230 and g > 230 and b < 30) or (g > 230 and r < 30 and b > 230) or (r < 30 and g > 240 and b < 30):
             neon_cartoon_count += 1
 
-        # Real leaf green or chlorotic / necrotic plant tissue
-        is_green_foliage = (g > r * 1.05) and (g > b * 1.05) and (g > 35)
-        is_yellow_chlorosis = (r > 90) and (g > 85) and (b < 75) and (r > b * 1.2)
-        is_brown_lesion = (r > 60) and (g < r * 0.95) and (b < 60) and (r > b * 1.2)
+        # Human skin detection (Kovac standard: R>95, G>40, B>20, R>G>B, R-G>15, max-min>15)
+        if (r > 95 and g > 40 and b > 20 and
+            r > g and r > b and
+            (r - g) > 15 and
+            (max(r, g, b) - min(r, g, b)) > 15):
+            skin_count += 1
 
-        if is_green_foliage or is_yellow_chlorosis or is_brown_lesion:
-            foliage_count += 1
+        # Genuine green leaf or chlorotic foliage
+        is_green = (g > r * 1.05) and (g > b * 1.05) and (g > 35)
+        is_yellow = (r > 90) and (g > 85) and (b < 75) and (r > b * 1.2)
+        if is_green or is_yellow:
+            foliage_green_chlorotic += 1
+
+        # Brown necrotic lesions
+        is_brown_lesion = (r > 60) and (g < r * 0.95) and (b < 60) and (r > b * 1.2)
+        if is_brown_lesion:
+            foliage_lesions += 1
 
     if neon_cartoon_count / total > 0.15:
         return False, "rejected_neon_cartoon"
 
-    # Require at least 5% genuine foliage/leaf tissue
-    if foliage_count / total < 0.05:
+    # Reject human faces and skin
+    if skin_count / total > 0.10:
+        return False, "rejected_human_face_or_skin"
+
+    # Require at least 12% genuine green or chlorotic leaf foliage
+    if foliage_green_chlorotic / total < 0.12 or (foliage_green_chlorotic + foliage_lesions) / total < 0.16:
         return False, "rejected_non_leaf_or_object"
 
     return True, "valid_leaf"
@@ -516,6 +533,30 @@ class KisanAIServerHandler(BaseHTTPRequestHandler):
             try:
                 img_bytes = base64.b64decode(data_url)
                 pil_img = Image.open(io.BytesIO(img_bytes))
+
+                # Botanical foliage & OOD non-plant validation (reject faces, cartoons, rooms)
+                is_valid, validation_reason = is_valid_plant_leaf(pil_img)
+                if not is_valid:
+                    response_payload = {
+                        "source": "model",
+                        "outcome": "unknown",
+                        "crop": crop,
+                        "topicSlug": "unknown",
+                        "confidence": 0.12,
+                        "confidence_status": "unreliable_input",
+                        "visible_evidence": ["Image does not contain recognizable agricultural crop foliage."],
+                        "candidates": [],
+                        "diagnostics": {
+                            "isCropValid": False,
+                            "rejectionReason": validation_reason,
+                        },
+                    }
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self._send_cors()
+                    self.end_headers()
+                    self.wfile.write(json.dumps(response_payload).encode("utf-8"))
+                    return
 
                 class_probs = []
                 if crop == "rice" and rice_hgb_model is not None:

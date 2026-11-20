@@ -48,7 +48,19 @@ def analyze_botanical_quality(img: Image.Image):
     total_pixels = 128 * 128
     botanical_share = botanical_pixels / total_pixels
 
-    is_non_plant = (botanical_share < 0.08) or is_flat_graphic
+    # Human skin detection (Kovac standard)
+    is_skin = (
+        (r > 0.38) & (g > 0.16) & (b > 0.08) &
+        (r > g) & (r > b) &
+        ((r - g) > 0.06) &
+        ((np.maximum(r, np.maximum(g, b)) - np.minimum(r, np.minimum(g, b))) > 0.06)
+    )
+    skin_share = float(is_skin.sum()) / total_pixels
+    green_share = float(is_green.sum()) / total_pixels
+
+    is_human_face = skin_share > 0.10
+    is_insufficient_foliage = (green_share < 0.10 and botanical_share < 0.18) or (botanical_share < 0.12)
+    is_non_plant = is_human_face or is_insufficient_foliage or is_flat_graphic
 
     return {
         "valid": not (is_blurry or is_too_dark or is_overexposed or is_non_plant),
@@ -56,6 +68,9 @@ def analyze_botanical_quality(img: Image.Image):
         "is_too_dark": is_too_dark,
         "is_overexposed": is_overexposed,
         "is_non_plant": is_non_plant,
+        "is_human_face": is_human_face,
+        "skin_share": round(skin_share, 3),
+        "green_share": round(green_share, 3),
         "botanical_share": round(botanical_share, 3),
         "sharpness_score": round(sharpness_score, 2),
         "mean_brightness": round(mean_brightness, 2),
@@ -239,7 +254,9 @@ def hierarchical_predict(img: Image.Image, crop="rice", raw_class_probs=None):
     """
     quality = analyze_botanical_quality(img)
     if not quality["valid"]:
-        if quality["is_non_plant"]:
+        if quality.get("is_human_face"):
+            reason = "rejected_human_face_or_skin"
+        elif quality["is_non_plant"]:
             reason = "unsupported_non_plant_object"
         elif quality["is_blurry"]:
             reason = "unfocused_or_blurry_photograph"

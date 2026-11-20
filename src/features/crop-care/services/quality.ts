@@ -36,6 +36,7 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
   // Real foliage vs cartoon/drawing/non-plant entropy check
   const colorMap = new Map<number, number>();
   let neonCount = 0;
+  let skinCount = 0;
   for (let i = 0; i < n; i++) {
     const r = data[i * 4]!, g = data[i * 4 + 1]!, b = data[i * 4 + 2]!;
     // 5-bit color quantization
@@ -45,6 +46,11 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
     // Artificial neon colors common in cartoons/clipart
     if ((r > 230 && g > 230 && b < 30) || (g > 230 && r < 30 && b > 230) || (r < 30 && g > 240 && b < 30)) {
       neonCount++;
+    }
+
+    // Human skin tone detection (Kovac RGB standard)
+    if (r > 95 && g > 40 && b > 20 && r > g && r > b && (r - g) > 15 && (Math.max(r, g, b) - Math.min(r, g, b)) > 15) {
+      skinCount++;
     }
   }
 
@@ -76,12 +82,25 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
     (topColorShare > 0.60 && uniqueColorCount < 500) ||
     uniqueColorCount < 100 ||
     neonCount / n > 0.10;
-  const leafOk = !isCartoonOrDrawing;
+
+  // Reject human faces and non-plant objects
+  const isSkinDetected = (skinCount / n) > 0.12;
+  const isMissingBotanicalFoliage = greenShare < 0.08 && !isCartoonOrDrawing && !isSkinDetected;
+
+  const leafOk = !isCartoonOrDrawing && !isSkinDetected && !isMissingBotanicalFoliage;
 
   const sharpOk = sharpness >= 40;
   const lightOk = brightness >= 45 && brightness <= 235;
   const subjectOk = contrast >= 18;
   const suitable = sharpOk && lightOk && subjectOk && leafOk;
+
+  const leafTip = isSkinDetected
+    ? "Human face or skin detected. Please photograph a crop leaf, not people or faces."
+    : isMissingBotanicalFoliage
+    ? "No agricultural crop leaf detected. Please photograph a rice or chilli plant leaf."
+    : isCartoonOrDrawing
+    ? "Drawing or cartoon detected. Please photograph a real crop leaf."
+    : "Real botanical foliage detected.";
 
   return {
     ok: suitable,
@@ -90,7 +109,7 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
     contrast: Math.round(contrast),
     greenShare: Math.round(greenShare * 100) / 100,
     checks: [
-      { id: "leaf", pass: leafOk, tip: leafOk ? "Real botanical foliage detected." : "Drawing or non-plant image detected. Please photograph a real crop leaf." },
+      { id: "leaf", pass: leafOk, tip: leafTip },
       { id: "blur", pass: sharpOk, tip: sharpOk ? "Sharp enough to see detail." : "The photo looks blurry. Hold the phone steady and tap the screen to focus." },
       { id: "dark", pass: lightOk, tip: lightOk ? "Lighting is good." : brightness < 45 ? "The photo is too dark. Move into daylight or turn on the flash." : "The photo is too bright. Avoid direct glare on the leaf." },
       { id: "subject", pass: subjectOk, tip: subjectOk ? "The subject stands out." : "The plant doesn't stand out. Move closer so the affected area fills the frame." },
@@ -127,10 +146,14 @@ export function compressPhoto(source: File | HTMLCanvasElement): Promise<string>
     const image = new Image();
     image.onerror = () => { URL.revokeObjectURL(url); reject(new Error("invalid-image")); };
     image.onload = () => {
+      // Center crop to square matching the viewfinder reticle
+      const square = Math.min(image.width, image.height);
+      const sx = Math.floor((image.width - square) / 2);
+      const sy = Math.floor((image.height - square) / 2);
       const canvas = document.createElement("canvas");
-      canvas.width = image.width;
-      canvas.height = image.height;
-      canvas.getContext("2d")?.drawImage(image, 0, 0);
+      canvas.width = square;
+      canvas.height = square;
+      canvas.getContext("2d")?.drawImage(image, sx, sy, square, square, 0, 0, square, square);
       URL.revokeObjectURL(url);
       resolve(resizeCanvas(canvas));
     };

@@ -95,6 +95,42 @@ class VisionInferenceService(private val context: Context) {
     fun isRiceLoaded(): Boolean = riceModule != null || hierarchicalModule != null
     fun isChilliLoaded(): Boolean = chilliModule != null || hierarchicalModule != null
 
+    private fun isBotanicalFoliage(bitmap: Bitmap): Pair<Boolean, String> {
+        val scaled = Bitmap.createScaledBitmap(bitmap, 64, 64, false)
+        val pixels = IntArray(64 * 64)
+        scaled.getPixels(pixels, 0, 64, 0, 0, 64, 64)
+        val total = pixels.size
+        var skinCount = 0
+        var foliageCount = 0
+
+        for (p in pixels) {
+            val r = (p shr 16) and 0xFF
+            val g = (p shr 8) and 0xFF
+            val b = p and 0xFF
+
+            // Skin detection
+            if (r > 95 && g > 40 && b > 20 && r > g && r > b && (r - g) > 15 &&
+                (maxOf(r, g, b) - minOf(r, g, b)) > 15) {
+                skinCount++
+            }
+
+            // Green/yellow foliar chlorophyll
+            val isGreen = (g > r * 1.05) && (g > b * 1.05) && (g > 35)
+            val isYellow = (r > 90) && (g > 85) && (b < 75) && (r > b * 1.2)
+            if (isGreen || isYellow) {
+                foliageCount++
+            }
+        }
+
+        if (skinCount.toFloat() / total > 0.10f) {
+            return Pair(false, "REJECTED_HUMAN_FACE_OR_SKIN")
+        }
+        if (foliageCount.toFloat() / total < 0.12f) {
+            return Pair(false, "REJECTED_OOD_NON_PLANT")
+        }
+        return Pair(true, "VALID_FOLIAGE")
+    }
+
     /**
      * Executes Hierarchical Vision Inference:
      * Level 1: Foliage Validity / OOD Rejection
@@ -103,6 +139,18 @@ class VisionInferenceService(private val context: Context) {
      * Level 4: Fine-Grained Specialist Diagnosis
      */
     fun classifyImage(crop: String, bitmap: Bitmap): DiagnosisInferenceResult {
+        val (isValid, reason) = isBotanicalFoliage(bitmap)
+        if (!isValid) {
+            return DiagnosisInferenceResult(
+                slug = null,
+                confidence = 0.10,
+                level = 1,
+                status = reason,
+                isOOD = true,
+                explanation = if (reason.contains("FACE")) "Human face or skin detected. Please photograph a crop leaf." else "Specimen does not contain recognized agricultural foliage."
+            )
+        }
+
         if (hierarchicalModule != null) {
             return runHierarchicalInference(crop, bitmap)
         }
@@ -111,10 +159,11 @@ class VisionInferenceService(private val context: Context) {
         val module = if (crop == "rice") riceModule else chilliModule
         if (module == null) {
             return DiagnosisInferenceResult(
-                slug = if (crop == "rice") "rice_blast_leaf" else "chilli_leaf_curl",
-                confidence = 0.94,
-                level = 4,
-                status = "DEFAULT_STANDBY"
+                slug = null,
+                confidence = 0.20,
+                level = 1,
+                status = "MODEL_NOT_LOADED",
+                explanation = "On-device model weights not loaded for $crop"
             )
         }
 

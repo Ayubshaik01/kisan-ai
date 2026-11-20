@@ -286,6 +286,25 @@ export class LiveWeatherService {
       }
     }
 
+    // Fallback: If no future hours found in timezone window, take first available hours
+    if (hourly.length === 0 && hourlyTimes.length > 0) {
+      for (let i = 0; i < hourlyTimes.length && i < 24; i++) {
+        const hTimeStr = hourlyTimes[i];
+        const d = new Date(hTimeStr);
+        const timeFmt = d.toLocaleTimeString([], { hour: "numeric", hour12: true });
+        const code = json.hourly.weather_code?.[i] ?? 0;
+        const hCond = mapWmoCodeToCondition(code, d.getHours() >= 6 && d.getHours() < 18).condition;
+        hourly.push({
+          time: i === 0 ? "Now" : timeFmt,
+          timestamp: hTimeStr,
+          temperature: Math.round(json.hourly.temperature_2m[i]),
+          condition: hCond,
+          precipitationProb: Math.round(json.hourly.precipitation_probability?.[i] || 0),
+          precipitation: json.hourly.precipitation?.[i] || 0,
+        });
+      }
+    }
+
     // Parse Daily (Next 7 days)
     const daily: DailyForecast[] = [];
     const dailyDates = json.daily?.time || [];
