@@ -36,6 +36,11 @@ ml/datasets/paddy_doctor_repo/
 .gradle/
 android/.gradle/
 android/local.properties
+android/app/build/
+android/build/
+*.apk
+*.aab
+*.ap_
 .vscode/*
 !.vscode/extensions.json
 .idea

@@ -12,14 +12,14 @@
 |---|---|---|---|---|---|---|
 | `chilli_healthy_1` | chilli | `chilli-healthy` | `chilli-healthy` | 0.94 | healthy_leaf | ✅ PASS |
 | `chilli_healthy_2` | chilli | `chilli-healthy` | `chilli-healthy` | 0.94 | healthy_leaf | ✅ PASS |
-| `chilli_thrips_1` | chilli | `thrips` | `thrips` | 0.84 | Leaf Area Damage Assessment (7.0... | ✅ PASS |
-| `chilli_thrips_2` | chilli | `thrips` | `thrips` | 0.84 | Leaf Area Damage Assessment (7.1... | ✅ PASS |
+| `chilli_thrips_1` | chilli | `thrips` | `thrips` | 0.84 | Leaf Area Damage Assessment (6.8... | ✅ PASS |
+| `chilli_thrips_2` | chilli | `thrips` | `thrips` | 0.84 | Leaf Area Damage Assessment (6.8... | ✅ PASS |
 | `chilli_leaf_curl_1` | chilli | `leaf-curl` | `leaf-curl` | 0.86 | Leaf Area Damage Assessment (37.... | ✅ PASS |
 | `chilli_leaf_curl_2` | chilli | `leaf-curl` | `leaf-curl` | 0.86 | Leaf Area Damage Assessment (37.... | ✅ PASS |
 | `chilli_co_infestation_1` | chilli | `thrips` | `thrips` | 0.88 | Leaf Area Damage Assessment (36.... | ✅ PASS |
 | `chilli_co_infestation_2` | chilli | `thrips` | `thrips` | 0.88 | Leaf Area Damage Assessment (36.... | ✅ PASS |
-| `chilli_cercospora_1` | chilli | `cercospora-leaf-spot` | `cercospora-leaf-spot` | 0.84 | Leaf Area Damage Assessment (7.5... | ✅ PASS |
-| `chilli_cercospora_2` | chilli | `cercospora-leaf-spot` | `cercospora-leaf-spot` | 0.84 | Leaf Area Damage Assessment (7.5... | ✅ PASS |
+| `chilli_cercospora_1` | chilli | `cercospora-leaf-spot` | `cercospora-leaf-spot` | 0.84 | Leaf Area Damage Assessment (7.4... | ✅ PASS |
+| `chilli_cercospora_2` | chilli | `cercospora-leaf-spot` | `cercospora-leaf-spot` | 0.84 | Leaf Area Damage Assessment (7.4... | ✅ PASS |
 | `rice_healthy_1` | rice | `rice-healthy` | `rice-healthy` | 0.51 | healthy_leaf | ✅ PASS |
 | `rice_healthy_2` | rice | `rice-healthy` | `rice-healthy` | 0.60 | healthy_leaf | ✅ PASS |
 | `rice_blast_1` | rice | `rice-blast` | `rice-blast` | 0.92 | IRRI Standard Evaluation System ... | ✅ PASS |

@@ -23,6 +23,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -38,7 +39,7 @@ android {
 
     sourceSets {
         getByName("main") {
-            assets.srcDirs("src/main/assets", "../../knowledge/database", "../../ml/export/output")
+            assets.srcDirs("src/main/assets")
         }
     }
 }

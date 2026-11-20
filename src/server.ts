@@ -47,9 +47,60 @@ function isH3SwallowedErrorBody(body: string): boolean {
 // Hosting compresses every response at the edge. Never compress a body (gzip, brotli,
 // CompressionStream) or set content-encoding here or in a server route: the body gets encoded
 // twice and renders garbled.
+function tryServeApkDownload(request: Request): Response | null {
+  try {
+    const url = new URL(request.url);
+    const downloadRoutes = [
+      "/download/app-release.apk",
+      "/download/kisanai.apk",
+      "/download/kisanai-offline.apk",
+      "/api/download-apk",
+      "/kisanai.apk",
+    ];
+    if (downloadRoutes.includes(url.pathname)) {
+      // Dynamic require ensures compatibility across server environments
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const fs = require("node:fs");
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const path = require("node:path");
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { Readable } = require("node:stream");
+
+      const candidates = [
+        path.resolve(process.cwd(), "android/app/build/outputs/apk/release/app-release.apk"),
+        path.resolve(process.cwd(), "android/app/build/outputs/apk/debug/app-debug.apk"),
+      ];
+
+      for (const candidate of candidates) {
+        if (fs.existsSync(candidate)) {
+          const stat = fs.statSync(candidate);
+          const nodeStream = fs.createReadStream(candidate);
+          const webStream = Readable.toWeb(nodeStream);
+
+          return new Response(webStream, {
+            status: 200,
+            headers: {
+              "Content-Type": "application/vnd.android.package-archive",
+              "Content-Disposition": 'attachment; filename="kisanai-offline-ai.apk"',
+              "Content-Length": stat.size.toString(),
+              "Cache-Control": "public, max-age=3600",
+            },
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("APK download streaming error:", err);
+  }
+  return null;
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const apkRes = tryServeApkDownload(request);
+      if (apkRes) return apkRes;
+
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);

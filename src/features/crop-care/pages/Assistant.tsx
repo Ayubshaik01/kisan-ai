@@ -14,6 +14,8 @@ import {
   Key,
   Leaf,
   MessageCircle,
+  Mic,
+  MicOff,
   RotateCcw,
   Send,
   Settings as SettingsIcon,
@@ -28,11 +30,12 @@ import {
   Zap,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useCropCare } from "../context";
 import type { Lang } from "../i18n";
 import { getTopic, l } from "../knowledge";
-import { voiceAgent } from "../services/voice";
+import { voiceAgent, voiceInput } from "../services/voice";
 import { MarkdownMessage } from "../ui/MarkdownMessage";
 import {
   btn,
@@ -308,6 +311,40 @@ export function AssistantPage() {
       voiceAgent.stop();
     };
   }, []);
+
+  const [isListening, setIsListening] = useState(false);
+
+  useEffect(() => {
+    const unsub = voiceInput.subscribe((st) => {
+      setIsListening(st.isListening);
+    });
+    return () => {
+      unsub();
+      voiceInput.stopListening();
+    };
+  }, []);
+
+  const handleToggleMic = () => {
+    if (isListening) {
+      voiceInput.stopListening();
+      toast.info("Microphone stopped");
+    } else {
+      const started = voiceInput.startListening(
+        lang,
+        (text, isFinal) => {
+          setInput(text);
+        },
+        (err) => {
+          toast.info(t("voiceSoon"));
+        }
+      );
+      if (started) {
+        toast.success(`Listening in ${lang.toUpperCase()}...`);
+      } else {
+        toast.info(t("voiceSoon"));
+      }
+    }
+  };
 
   const handleToggleVoice = (msgId: string, text: string) => {
     if (activePlayingId === msgId) {
@@ -823,6 +860,21 @@ export function AssistantPage() {
             rows={1}
             className="flex-1 max-h-32 min-h-10 resize-none bg-transparent px-2.5 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/70"
           />
+
+          <button
+            type="button"
+            onClick={handleToggleMic}
+            title={isListening ? "Stop voice listening" : `Speak your question in ${lang.toUpperCase()}`}
+            aria-label="Toggle voice input"
+            className={cn(
+              "grid size-10 shrink-0 place-items-center rounded-xl transition-all active:scale-95",
+              isListening
+                ? "bg-rose-500 text-white animate-pulse shadow-md"
+                : "bg-surface text-muted-foreground hover:bg-surface-elevated hover:text-foreground"
+            )}
+          >
+            {isListening ? <MicOff className="size-4" /> : <Mic className="size-4" />}
+          </button>
 
           <button
             type="submit"

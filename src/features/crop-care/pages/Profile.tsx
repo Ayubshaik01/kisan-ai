@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
 import { useCropCare } from "../context";
 import { langs, type Lang } from "../i18n";
 import { crops, l, type CropKey } from "../knowledge";
+import { DownloadAppCard } from "../ui/DownloadAppCard";
 import { regions } from "../regions";
 import {
   exportEncryptedBackupFile,
@@ -431,6 +432,9 @@ export function ProfilePage() {
           </button>
         </div>
       </div>
+
+      {/* Official Android Offline APK Download Card */}
+      <DownloadAppCard />
 
       {/* Appearance & Theme */}
       <div className={cn(card, "p-6 space-y-4")}>

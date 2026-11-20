@@ -441,6 +441,34 @@ class KisanAIServerHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
+        # APK Direct Download
+        if self.path in ("/download/app-release.apk", "/download/kisanai.apk", "/download/kisanai-offline.apk", "/api/download-apk", "/kisanai.apk"):
+            apk_path = os.path.join(REPO_ROOT, "android/app/build/outputs/apk/release/app-release.apk")
+            if not os.path.exists(apk_path):
+                apk_path = os.path.join(REPO_ROOT, "android/app/build/outputs/apk/debug/app-debug.apk")
+            if os.path.exists(apk_path):
+                size = os.path.getsize(apk_path)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/vnd.android.package-archive")
+                self.send_header("Content-Disposition", 'attachment; filename="kisanai-offline-ai.apk"')
+                self.send_header("Content-Length", str(size))
+                self.send_header("Cache-Control", "public, max-age=3600")
+                self._send_cors()
+                self.end_headers()
+                with open(apk_path, "rb") as f:
+                    while True:
+                        chunk = f.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        self.wfile.write(chunk)
+                return
+            else:
+                self.send_response(404)
+                self._send_cors()
+                self.end_headers()
+                self.wfile.write(b"APK release build not found on server.")
+                return
+
         if self.path in ("/health", "/api/health", "/api/tags"):
             self.send_response(200)
             self.send_header("Content-Type", "application/json")

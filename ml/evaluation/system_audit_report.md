@@ -87,3 +87,4 @@ To eliminate training on synthetic or mislabeled data, we have inventoried real 
    - Defines severity strictly as the percentage of visible necrotic/chlorotic lesion pixels over total segmented green-leaf mask area.
 4. **Structured Vision Contract for Chatbot**:
    - Transmits `insect_directly_visible: boolean`, `symptom_type: string`, and `measurement_scope: "visible_leaf_sample"` to prevent the LLM from overclaiming.
+

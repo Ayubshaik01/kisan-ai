@@ -3,6 +3,8 @@ package org.cropcare.ai.bridge
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.util.Base64
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
@@ -16,6 +18,7 @@ import org.cropcare.ai.safety.SafetyValidationService
 import org.cropcare.ai.severity.SeverityAnalysisService
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.Locale
 
 class CropAssistantNativeBridge(
     private val context: Context,
@@ -27,12 +30,89 @@ class CropAssistantNativeBridge(
     private val severityService = SeverityAnalysisService()
     private val safetyService = SafetyValidationService()
 
+    private var tts: TextToSpeech? = null
+    private var isTtsReady = false
+
     init {
         // Pre-warm services on startup
         scope.launch(Dispatchers.IO) {
             visionService.initialize()
             llamaService.initialize()
         }
+
+        // Initialize Native Vernacular Text-To-Speech engine
+        tts = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                isTtsReady = true
+                tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) {
+                        notifyPlaybackState(true)
+                    }
+
+                    override fun onDone(utteranceId: String?) {
+                        notifyPlaybackState(false)
+                    }
+
+                    @Deprecated("Deprecated in Java")
+                    override fun onError(utteranceId: String?) {
+                        notifyPlaybackState(false)
+                    }
+                })
+            }
+        }
+    }
+
+    private fun notifyPlaybackState(isPlaying: Boolean) {
+        scope.launch(Dispatchers.Main) {
+            webView.evaluateJavascript(
+                "if (window.onCropAssistantVoiceState) window.onCropAssistantVoiceState($isPlaying);",
+                null
+            )
+        }
+    }
+
+    @JavascriptInterface
+    fun speakText(text: String, lang: String): Boolean {
+        if (!isTtsReady || tts == null) return false
+
+        val targetLocale = when (lang.lowercase()) {
+            "te" -> Locale("te", "IN")
+            "ta" -> Locale("ta", "IN")
+            "kn" -> Locale("kn", "IN")
+            "mr" -> Locale("mr", "IN")
+            "hi" -> Locale("hi", "IN")
+            else -> Locale("en", "IN")
+        }
+
+        var result = tts?.setLanguage(targetLocale)
+        if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+            // Graceful fallback to Indian English or Hindi
+            result = tts?.setLanguage(Locale("hi", "IN"))
+            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                tts?.setLanguage(Locale("en", "IN"))
+            }
+        }
+
+        tts?.setSpeechRate(0.92f)
+        tts?.setPitch(1.0f)
+        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "CropAssistantVoiceAgent")
+        return true
+    }
+
+    @JavascriptInterface
+    fun stopSpeaking() {
+        tts?.stop()
+        notifyPlaybackState(false)
+    }
+
+    @JavascriptInterface
+    fun isSpeaking(): Boolean {
+        return tts?.isSpeaking == true
+    }
+
+    fun destroy() {
+        tts?.stop()
+        tts?.shutdown()
     }
 
     /**
@@ -72,6 +152,29 @@ class CropAssistantNativeBridge(
                                 reject(e);
                             }
                         });
+                    },
+                    speak: function(text, lang) {
+                        try {
+                            if (window.CropAssistantAndroid && window.CropAssistantAndroid.speakText) {
+                                return window.CropAssistantAndroid.speakText(text, lang || "en");
+                            }
+                        } catch (e) {}
+                        return false;
+                    },
+                    stopSpeaking: function() {
+                        try {
+                            if (window.CropAssistantAndroid && window.CropAssistantAndroid.stopSpeaking) {
+                                window.CropAssistantAndroid.stopSpeaking();
+                            }
+                        } catch (e) {}
+                    },
+                    isSpeaking: function() {
+                        try {
+                            if (window.CropAssistantAndroid && window.CropAssistantAndroid.isSpeaking) {
+                                return window.CropAssistantAndroid.isSpeaking();
+                            }
+                        } catch (e) {}
+                        return false;
                     }
                 };
             })();
@@ -196,6 +299,13 @@ class CropAssistantNativeBridge(
             put("type", "Safety")
             put("status", "Enforcing")
             put("details", "Strictly intercepts unapproved dosages, mixing, and chemical hazards.")
+        })
+
+        array.put(JSONObject().apply {
+            put("name", "Multilingual Vernacular Voice Agent")
+            put("type", "Speech / Audio")
+            put("status", if (isTtsReady) "Ready" else "Active")
+            put("details", "Native Android offline speech synthesizer supporting English, Hindi, Telugu, Tamil, Kannada, and Marathi.")
         })
 
         return array.toString()

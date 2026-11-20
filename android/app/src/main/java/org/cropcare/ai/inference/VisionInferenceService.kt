@@ -92,6 +92,8 @@ class VisionInferenceService(private val context: Context) {
     }
 
     fun isModelReady(): Boolean = hierarchicalModule != null || riceModule != null || chilliModule != null
+    fun isRiceLoaded(): Boolean = riceModule != null || hierarchicalModule != null
+    fun isChilliLoaded(): Boolean = chilliModule != null || hierarchicalModule != null
 
     /**
      * Executes Hierarchical Vision Inference:

@@ -19,6 +19,8 @@ import {
   Calculator,
   TrendingUp,
   DollarSign,
+  Download,
+  Smartphone,
   X,
   ChevronRight,
   Sparkles,
@@ -134,7 +136,16 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <Logo />
           <div className="ml-auto flex items-center gap-1.5">
-            <Link to="/profile/offline" className="hidden h-10 items-center gap-2 rounded-xl border border-line bg-card px-3 text-xs font-semibold text-muted-foreground sm:flex">
+            <a
+              href="/download/app-release.apk"
+              download="kisanai-offline-ai.apk"
+              title="Download KisanAI Offline Android APK (~367 MB)"
+              className="hidden sm:inline-flex h-10 items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3 text-xs font-bold text-primary hover:bg-primary/20 transition-all active:scale-95 shadow-xs"
+            >
+              <Download className="size-3.5" />
+              <span>{t("downloadApp")}</span>
+            </a>
+            <Link to="/profile/offline" className="hidden h-10 items-center gap-2 rounded-xl border border-line bg-card px-3 text-xs font-semibold text-muted-foreground md:flex">
               {online ? <span className="size-2 rounded-full bg-primary shadow-[0_0_0_4px] shadow-primary/20" /> : <WifiOff className="size-3.5 text-amber" />}
               {online ? t("offlineReady") : t("offlineNow").split(".")[0]}
             </Link>
@@ -224,6 +235,19 @@ export function AppShell({ children }: { children: ReactNode }) {
                   </Link>
                 ))}
               </div>
+            </div>
+
+            {/* Mobile App Download Action */}
+            <div className="pt-2">
+              <a
+                href="/download/app-release.apk"
+                download="kisanai-offline-ai.apk"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-xs font-bold text-primary-foreground shadow-md hover:bg-primary/90 transition-all active:scale-95"
+              >
+                <Download className="size-4" />
+                <span>{t("downloadApkBtn")}</span>
+              </a>
             </div>
 
             {/* Offline footer badge */}

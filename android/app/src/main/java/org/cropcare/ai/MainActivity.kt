@@ -2,6 +2,8 @@ package org.cropcare.ai
 
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.webkit.PermissionRequest
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
@@ -35,6 +37,14 @@ class MainActivity : AppCompatActivity() {
             allowFileAccess = true
             cacheMode = WebSettings.LOAD_DEFAULT
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+            mediaPlaybackRequiresUserGesture = false
+        }
+
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onPermissionRequest(request: PermissionRequest) {
+                // Grant audio capture permissions for Web Speech / Voice Agent
+                request.grant(request.resources)
+            }
         }
 
         webView.webViewClient = object : WebViewClientCompat() {
@@ -46,11 +56,16 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Expose NativeBridge to window.CropAssistantNative
+        // Expose NativeBridge to window.CropAssistantAndroid
         webView.addJavascriptInterface(nativeBridge, "CropAssistantAndroid")
 
         // Load the local offline bundle
         webView.loadUrl("https://appassets.androidplatform.net/assets/dist/index.html")
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        nativeBridge.destroy()
     }
 
     override fun onBackPressed() {

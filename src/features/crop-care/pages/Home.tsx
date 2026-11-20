@@ -22,10 +22,12 @@ import {
   Calculator,
   TrendingUp,
   Store,
+  Download,
 } from "lucide-react";
 import { useCropCare } from "../context";
 import { crops, getTopic, l, type CropKey } from "../knowledge";
 import { LiveWeatherCard } from "../ui/LiveWeatherCard";
+import { DownloadAppCard } from "../ui/DownloadAppCard";
 import {
   btnPrimary,
   btnSecondary,
@@ -113,6 +115,18 @@ export function HomePage() {
               <BookOpen className="size-5 text-muted-foreground" />
               {t("exploreLibrary")}
             </Link>
+            <a
+              href="/download/app-release.apk"
+              download="kisanai-offline-ai.apk"
+              className={cn(
+                btnSecondary,
+                "h-12 px-5 font-bold border-primary/40 text-primary hover:bg-primary/10 transition-all",
+              )}
+              title="Download KisanAI Offline Android APK (~367 MB)"
+            >
+              <Download className="size-5" />
+              Download APK
+            </a>
           </div>
         </div>
 
@@ -493,6 +507,9 @@ export function HomePage() {
           </Link>
         </div>
       </Section>
+
+      {/* Official Android Offline APK Download Card */}
+      <DownloadAppCard />
 
       {/* Truthful Offline System Capabilities info */}
       <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface/30 p-4 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
