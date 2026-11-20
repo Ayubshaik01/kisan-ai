@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   Activity,
@@ -41,8 +42,13 @@ import { cn } from "@/lib/utils";
 
 export function HomePage() {
   const { t, settings, lang, scans, online } = useCropCare();
+  const [mounted, setMounted] = useState(false);
 
-  const hour = new Date().getHours();
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const hour = mounted ? new Date().getHours() : 12;
   const greeting =
     hour < 12
       ? t("goodMorning")
@@ -59,15 +65,24 @@ export function HomePage() {
       {/* Top Banner / Farm Location & Season Status */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
         <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-muted-foreground sm:text-sm">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-primary">
+          <span
+            suppressHydrationWarning
+            className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-primary"
+          >
             <MapPin className="size-3.5" />
             {settings.district}, {settings.state}
           </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1">
+          <span
+            suppressHydrationWarning
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1"
+          >
             <Calendar className="size-3.5 text-muted-foreground" />
             {t(settings.season)} season
           </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1">
+          <span
+            suppressHydrationWarning
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1"
+          >
             {online ? (
               <span className="size-2 rounded-full bg-primary" />
             ) : (
@@ -92,7 +107,10 @@ export function HomePage() {
             <Leaf className="size-3.5" />
             {t("homeTag")}
           </p>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-4xl">
+          <h1
+            suppressHydrationWarning
+            className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-4xl"
+          >
             {greeting}
             {displayName ? `, ${displayName}` : ""}.
           </h1>

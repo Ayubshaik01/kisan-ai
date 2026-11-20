@@ -29,6 +29,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { useCropCare } from "./context";
 import { langs, type Lang } from "./i18n";
+import { getApkDownloadUrl } from "./ui/DownloadAppCard";
+import { PrivacyConsentBanner } from "./ui/PrivacyConsentBanner";
 
 export function Logo({ compact }: { compact?: boolean }) {
   const { t } = useCropCare();
@@ -137,8 +139,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Logo />
           <div className="ml-auto flex items-center gap-1.5">
             <a
-              href="/download/app-release.apk"
+              href={getApkDownloadUrl()}
               download="kisanai-offline-ai.apk"
+              target="_blank"
+              rel="noopener noreferrer"
               title="Download KisanAI Offline Android APK (~367 MB)"
               className="hidden sm:inline-flex h-10 items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3 text-xs font-bold text-primary hover:bg-primary/20 transition-all active:scale-95 shadow-xs"
             >
@@ -240,8 +244,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             {/* Mobile App Download Action */}
             <div className="pt-2">
               <a
-                href="/download/app-release.apk"
+                href={getApkDownloadUrl()}
                 download="kisanai-offline-ai.apk"
+                target="_blank"
+                rel="noopener noreferrer"
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-xs font-bold text-primary-foreground shadow-md hover:bg-primary/90 transition-all active:scale-95"
               >
@@ -282,6 +288,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           })}
         </div>
       </nav>
+
+      {/* Global Cookie & Privacy Policy Consent */}
+      <PrivacyConsentBanner />
     </div>
   );
 }

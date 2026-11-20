@@ -15,6 +15,7 @@ import {
   Droplets,
   Eye,
   Info,
+  LocateFixed,
   MapPin,
   RefreshCw,
   Search,
@@ -32,9 +33,10 @@ import {
 } from "../services/weather-service";
 import { WeatherAtmosphere } from "./WeatherAtmosphere";
 import { useCropCare } from "../context";
+import { toast } from "sonner";
 
 export function LiveWeatherCard() {
-  const { settings, t } = useCropCare();
+  const { settings, updateSettings, t } = useCropCare();
   const [data, setData] = useState<WeatherData | null>(null);
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -112,6 +114,79 @@ export function LiveWeatherCard() {
     }
     loadWeather(false);
   }, [settings.district]);
+
+  const handleUseCurrentLocation = async () => {
+    if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
+      setErrorMsg("Geolocation is not supported by your browser or device.");
+      toast.error("Geolocation not supported");
+      return;
+    }
+
+    setLoading(true);
+    setErrorMsg(null);
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+
+          let detectedDistrict = "Current Location";
+          let detectedState = settings.state || "India";
+
+          try {
+            const geoRes = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`,
+              { headers: { "User-Agent": "KisanAI-CropCare/1.0" } }
+            );
+            if (geoRes.ok) {
+              const geoData = await geoRes.json();
+              const addr = geoData.address || {};
+              detectedDistrict =
+                addr.state_district ||
+                addr.county ||
+                addr.city ||
+                addr.town ||
+                addr.village ||
+                "Current Location";
+              detectedState = addr.state || detectedState;
+            }
+          } catch {
+            detectedDistrict = `${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E`;
+          }
+
+          const fresh = await liveWeatherService.fetchLiveWeather(
+            lat,
+            lon,
+            detectedDistrict,
+            detectedDistrict,
+            detectedState
+          );
+
+          setData(fresh);
+          updateSettings({ district: detectedDistrict, state: detectedState });
+          setShowSearchModal(false);
+          toast.success(`Location set to ${detectedDistrict}, ${detectedState}`);
+        } catch (err) {
+          console.error("GPS location weather error:", err);
+          setErrorMsg("Could not fetch forecast for GPS location.");
+          toast.error("GPS location fetch failed");
+        } finally {
+          setLoading(false);
+        }
+      },
+      (err) => {
+        setLoading(false);
+        const msg =
+          err.code === 1
+            ? "Location permission was denied. Please allow location access in your browser."
+            : "Could not determine GPS position. Try searching manually.";
+        setErrorMsg(msg);
+        toast.error(msg);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  };
 
   const handleManualSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,6 +286,16 @@ export function LiveWeatherCard() {
               {data?.locationName || settings.district || "Farm Location"}
             </span>
             <Search className="size-3 text-muted-foreground group-hover:text-foreground transition-colors ml-0.5" />
+          </button>
+
+          <button
+            type="button"
+            onClick={handleUseCurrentLocation}
+            disabled={loading}
+            className="rounded-xl border border-line bg-surface/80 p-1.5 text-muted-foreground hover:bg-surface hover:text-primary active:scale-95 transition-all cursor-pointer"
+            title="Detect & Use Current GPS Location"
+          >
+            <LocateFixed className="size-3.5" />
           </button>
 
           <span
@@ -418,6 +503,16 @@ export function LiveWeatherCard() {
                 <X className="size-4" />
               </button>
             </div>
+
+            <button
+              type="button"
+              onClick={handleUseCurrentLocation}
+              disabled={loading}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary/15 border border-primary/30 p-2.5 text-xs font-bold text-primary hover:bg-primary/25 active:scale-95 transition-all cursor-pointer"
+            >
+              <LocateFixed className="size-4" />
+              <span>Use Current GPS Location</span>
+            </button>
 
             <form onSubmit={handleManualSearch} className="relative">
               <input
