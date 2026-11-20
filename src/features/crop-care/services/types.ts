@@ -4,7 +4,7 @@ import type { Lang } from "../i18n";
 export type Band = "mild" | "moderate" | "severe";
 export type SeverityScale = "irri-ses" | "area-band" | "leaf-curl-index";
 
-export type QualityCheckId = "blur" | "dark" | "subject" | "suitability";
+export type QualityCheckId = "blur" | "dark" | "subject" | "suitability" | "leaf";
 export type QualityCheck = { id: QualityCheckId; pass: boolean; tip: string };
 export type QualityReport = { ok: boolean; checks: QualityCheck[]; brightness: number; sharpness: number; contrast: number; greenShare: number };
 
@@ -38,6 +38,10 @@ export type Scan = {
   source: ResultSource;
   outcome: Outcome;
   topicSlug?: string;
+  slug?: string;
+  name?: string;
+  severityBand?: Band;
+  timestamp?: number;
   confidence?: number;
   confidenceStatus?: "calibrated" | "calibrated_uncertain" | "unreliable_input";
   visibleEvidence?: string[];
@@ -51,7 +55,7 @@ export type Scan = {
 };
 
 export type SavedKind = "topic" | "treatment" | "prevention" | "report";
-export type SavedItem = { id: string; kind: SavedKind; crop: CropKey; slug?: string; scanId?: string; savedAt: string };
+export type SavedItem = { id: string; kind: SavedKind; crop: CropKey; slug?: string; scanId?: string; savedAt: string; title?: string };
 
 export type Season = "kharif" | "rabi" | "zaid" | "early-kharif" | "post-monsoon";
 export type ThemePref = "dark" | "light" | "system";

@@ -1,5 +1,5 @@
 import React from "react";
-import type { WeatherConditionKey } from "./weather-service";
+import type { WeatherConditionKey } from "../services/weather-service";
 import { cn } from "@/lib/utils";
 
 interface WeatherAtmosphereProps {

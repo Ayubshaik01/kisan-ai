@@ -542,6 +542,7 @@ export function LiveWeatherCard() {
                     type="button"
                     onClick={async () => {
                       const c = defaultCoords[dist];
+                      if (!c) return;
                       setLoading(true);
                       setShowSearchModal(false);
                       const fresh = await liveWeatherService.fetchLiveWeather(

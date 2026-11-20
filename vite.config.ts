@@ -75,7 +75,7 @@ export default defineConfig(({ command }) => ({
     tailwindcss(),
     command === "build"
       ? nitro({
-          defaultPreset: process.env.VERCEL ? "vercel" : (process.env.NITRO_PRESET || "vercel"),
+          defaultPreset: process.env["VERCEL"] ? "vercel" : (process.env["NITRO_PRESET"] || "vercel"),
         })
       : undefined,
     viteReact(),

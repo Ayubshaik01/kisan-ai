@@ -52,7 +52,7 @@ export function MarkdownMessage({ content, className }: MarkdownMessageProps) {
 
   let i = 0;
   while (i < lines.length) {
-    const rawLine = lines[i];
+    const rawLine = lines[i] ?? "";
     const trimmed = rawLine.trim();
 
     if (!trimmed) {
@@ -110,9 +110,11 @@ export function MarkdownMessage({ content, className }: MarkdownMessageProps) {
     if (numMatch) {
       const listItems: { num: string; text: string }[] = [];
       while (i < lines.length) {
-        const curTrim = lines[i].trim();
+        const curLine = lines[i];
+        if (curLine === undefined) break;
+        const curTrim = curLine.trim();
         const m = curTrim.match(/^(\d+)\.\s+(.*)$/);
-        if (m) {
+        if (m && m[1] && m[2]) {
           listItems.push({ num: m[1], text: m[2] });
           i++;
         } else if (!curTrim) {
@@ -143,9 +145,11 @@ export function MarkdownMessage({ content, className }: MarkdownMessageProps) {
     if (bulletMatch) {
       const listItems: string[] = [];
       while (i < lines.length) {
-        const curTrim = lines[i].trim();
+        const curLine = lines[i];
+        if (curLine === undefined) break;
+        const curTrim = curLine.trim();
         const m = curTrim.match(/^([•\-\*])\s+(.*)$/);
-        if (m) {
+        if (m && m[2]) {
           listItems.push(m[2]);
           i++;
         } else if (!curTrim) {

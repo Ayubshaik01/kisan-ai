@@ -143,19 +143,15 @@ def is_valid_plant_leaf(img: Image.Image) -> tuple[bool, str]:
     pixels = list(rgb.getdata())
     total = len(pixels)
 
-    # 1. Color palette entropy: cartoons and illustrations have few distinct quantized colors
+    # 1. Color palette entropy: reject extreme flat vector drawings with very few colors
     colors = rgb.getcolors(maxcolors=1024)
-    if colors and len(colors) < 30:
-        return False, "rejected_flat_drawing_or_cartoon"
-
-    # Check top color dominance (e.g. solid background or flat cartoon fill)
     if colors:
         num_colors = len(colors)
         max_freq = max(c[0] for c in colors)
         top_share = max_freq / total
-        # Reject cartoons/flat art: low color variety with high dominance, or extreme dominance (>75%)
-        if (num_colors < 80 and top_share > 0.45) or top_share > 0.75:
-            return False, "rejected_solid_graphic_fill"
+        # Reject pure solid graphics or extreme flat vector art
+        if (num_colors < 25 and top_share > 0.75) or (num_colors < 15 and top_share > 0.60):
+            return False, "rejected_flat_drawing_or_cartoon"
 
     # 2. Check for real botanical foliage pixels vs human skin and random objects
     foliage_green_chlorotic = 0
@@ -165,7 +161,7 @@ def is_valid_plant_leaf(img: Image.Image) -> tuple[bool, str]:
 
     for r, g, b in pixels:
         # Extreme neon / artificial colors common in cartoons
-        if (r > 230 and g > 230 and b < 30) or (g > 230 and r < 30 and b > 230) or (r < 30 and g > 240 and b < 30):
+        if (r > 230 and g > 230 and b < 25) or (g > 235 and r < 30 and b > 235) or (r < 25 and g > 245 and b < 25):
             neon_cartoon_count += 1
 
         # Human skin detection (Kovac standard: R>95, G>40, B>20, R>G>B, R-G>15, max-min>15)
@@ -176,25 +172,25 @@ def is_valid_plant_leaf(img: Image.Image) -> tuple[bool, str]:
             skin_count += 1
 
         # Genuine green leaf or chlorotic foliage
-        is_green = (g > r * 1.05) and (g > b * 1.05) and (g > 35)
-        is_yellow = (r > 90) and (g > 85) and (b < 75) and (r > b * 1.2)
+        is_green = (g > r * 1.02) and (g > b * 1.05) and (g > 30)
+        is_yellow = (r > 70) and (g > 65) and (b < 65) and (r > b * 1.15)
         if is_green or is_yellow:
             foliage_green_chlorotic += 1
 
         # Brown necrotic lesions
-        is_brown_lesion = (r > 60) and (g < r * 0.95) and (b < 60) and (r > b * 1.2)
+        is_brown_lesion = (r > 40) and (g <= r * 1.15) and (b < 60) and (r > b * 1.15)
         if is_brown_lesion:
             foliage_lesions += 1
 
     if neon_cartoon_count / total > 0.15:
         return False, "rejected_neon_cartoon"
 
-    # Reject human faces and skin
-    if skin_count / total > 0.10:
+    # Reject human faces and skin when not accompanied by significant foliage
+    if skin_count / total > 0.18 and foliage_green_chlorotic / total < 0.08:
         return False, "rejected_human_face_or_skin"
 
-    # Require at least 12% genuine green or chlorotic leaf foliage
-    if foliage_green_chlorotic / total < 0.12 or (foliage_green_chlorotic + foliage_lesions) / total < 0.16:
+    # Require basic botanical presence (at least 3% plant foliage/lesion pixels)
+    if (foliage_green_chlorotic + foliage_lesions) / total < 0.03:
         return False, "rejected_non_leaf_or_object"
 
     return True, "valid_leaf"

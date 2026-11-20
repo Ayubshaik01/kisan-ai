@@ -603,11 +603,9 @@ export async function analyzeImageWithVision(
       const zeroDiffFrac = zeroDiffCount / (H * (W - 1));
 
       const isCartoonOrClipart =
-        zeroDiffFrac > 0.18 || // Large identical flat digital fills
-        (uniqueColorCount < 350 && zeroDiffFrac > 0.06) || // Quantized digital graphic
-        (topColorDominance > 0.60 && uniqueColorCount < 500) || // Dominant uniform solid block typical of clipart
-        uniqueColorCount < 100 || // Extremely low color entropy typical of cartoons/drawings
-        (saturatedFlatCount / totalPixels > 0.18 && uniqueColorCount < 350);
+        (topColorDominance > 0.75 && uniqueColorCount < 30) ||
+        (zeroDiffFrac > 0.70 && uniqueColorCount < 25) ||
+        (saturatedFlatCount / totalPixels > 0.20 && uniqueColorCount < 30);
 
       const totalBotanicalPixels = foliarCount + yellowTissueCount + brownLesionCount + ashCoreCount + pureFoliageCount + chloroticCount;
       const totalFoliarChlorophyll = pureFoliageCount + chloroticCount;
@@ -630,7 +628,7 @@ export async function analyzeImageWithVision(
       }
 
       // Guard 2: Human Face & Skin Detection Rejection
-      if (skinRatio > 0.08) {
+      if (skinRatio > 0.18 && totalBotanicalPixels / totalPixels < 0.08) {
         return resolve({
           source: "model",
           outcome: "unknown",
@@ -646,7 +644,7 @@ export async function analyzeImageWithVision(
       }
 
       // Guard 3: Reject scenes with virtually no botanical leaf foliage (faces, furniture, rooms, random objects)
-      if (pureFoliageCount / totalPixels < 0.06 || foliarRatio < 0.10 || totalFoliarChlorophyll < 600 || totalBotanicalPixels < 800) {
+      if (totalBotanicalPixels < 300 && foliarRatio < 0.02) {
         return resolve({
           source: "model",
           outcome: "unknown",

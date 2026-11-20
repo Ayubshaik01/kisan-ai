@@ -5,12 +5,24 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
   const gray = new Float32Array(width * height);
   let sum = 0;
   let green = 0;
+  let chlorotic = 0;
+  let lesion = 0;
   for (let i = 0; i < width * height; i++) {
     const r = data[i * 4]!, g = data[i * 4 + 1]!, b = data[i * 4 + 2]!;
     const y = 0.299 * r + 0.587 * g + 0.114 * b;
     gray[i] = y;
     sum += y;
-    if (g > r * 1.05 && g > b * 1.05 && g > 40) green++;
+
+    // Green foliage
+    if ((g > r * 1.02 && g > b * 1.05 && g > 30) || (g > 40 && g > b * 1.15 && r < g * 1.15)) {
+      green++;
+    } else if (r > 40 && g > 40 && b < r * 0.85 && Math.abs(r - g) < 60 && (r + g) > 2.2 * b) {
+      // Chlorotic / yellow foliage (halo, nutrient deficiency, tungro)
+      chlorotic++;
+    } else if (r > 35 && r > b * 1.15 && g >= b && g <= r * 1.30) {
+      // Necrotic / brown lesion tissue (blast, brown spot, blight)
+      lesion++;
+    }
   }
   const n = width * height;
   const brightness = sum / n;
@@ -32,6 +44,7 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
   const mean = count ? lapSum / count : 0;
   const sharpness = count ? lapSq / count - mean * mean : 0;
   const greenShare = green / n;
+  const plantTissueShare = (green + chlorotic + lesion) / n;
 
   // Real foliage vs cartoon/drawing/non-plant entropy check
   const colorMap = new Map<number, number>();
@@ -44,7 +57,7 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
     colorMap.set(key, (colorMap.get(key) || 0) + 1);
 
     // Artificial neon colors common in cartoons/clipart
-    if ((r > 230 && g > 230 && b < 30) || (g > 230 && r < 30 && b > 230) || (r < 30 && g > 240 && b < 30)) {
+    if ((r > 230 && g > 230 && b < 25) || (g > 235 && r < 30 && b > 235) || (r < 25 && g > 245 && b < 25)) {
       neonCount++;
     }
 
@@ -79,17 +92,14 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
   const zeroDiffFrac = zeroDiffCount / Math.max(1, height * (width - 1));
 
   // Reject flat vector art, drawings, cartoons, or non-botanical scenes:
-  // A cartoon/drawing has very low color entropy, large identical adjacent fills, or neon tones.
   const isCartoonOrDrawing =
-    zeroDiffFrac > 0.18 ||
-    (uniqueColorCount < 350 && zeroDiffFrac > 0.06) ||
-    (topColorShare > 0.60 && uniqueColorCount < 500) ||
-    uniqueColorCount < 100 ||
-    neonCount / n > 0.10;
+    (topColorShare > 0.75 && uniqueColorCount < 30) ||
+    (zeroDiffFrac > 0.70 && uniqueColorCount < 25) ||
+    (neonCount / n) > 0.15;
 
   // Reject human faces and non-plant objects
-  const isSkinDetected = (skinCount / n) > 0.08;
-  const isMissingBotanicalFoliage = greenShare < 0.08 && !isCartoonOrDrawing && !isSkinDetected;
+  const isSkinDetected = (skinCount / n) > 0.18 && greenShare < 0.06;
+  const isMissingBotanicalFoliage = plantTissueShare < 0.03 && !isCartoonOrDrawing && !isSkinDetected;
 
   const leafOk = !isCartoonOrDrawing && !isSkinDetected && !isMissingBotanicalFoliage;
 

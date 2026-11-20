@@ -27,6 +27,7 @@ import {
   Share2,
   ShieldAlert,
   Sparkles,
+  Sprout,
   Trash2,
   Volume2,
   VolumeX,
@@ -314,9 +315,11 @@ Note: ${note || "No specific farmer notes recorded."}
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   {t("oodSub")}
                 </p>
-                <p className="text-xs text-rose-600/90 dark:text-rose-400/90 font-medium pt-1">
-                  💡 {t("cartoonRejectSub")}
-                </p>
+                {scan.quality?.checks?.find((c) => c.id === "leaf")?.tip ? (
+                  <p className="text-xs text-rose-600/90 dark:text-rose-400/90 font-medium pt-1">
+                    💡 {scan.quality.checks.find((c) => c.id === "leaf")?.tip}
+                  </p>
+                ) : null}
               </div>
             </div>
 
@@ -326,11 +329,12 @@ Note: ${note || "No specific farmer notes recorded."}
                   <img
                     src={scan.image}
                     alt="Uploaded specimen"
-                    className="size-full object-cover filter grayscale contrast-75"
+                    className="size-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center p-4 text-center">
-                    <span className="rounded-xl bg-black/75 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur flex items-center gap-1.5">
-                      <ImageOff className="size-3.5" /> Non-Leaf Image
+                  <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between pointer-events-none">
+                    <span className="rounded-lg bg-black/80 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur flex items-center gap-1.5 shadow-sm">
+                      <ImageOff className="size-3 text-rose-400" />
+                      {scan.quality?.checks?.find((c) => c.id === "leaf")?.tip || "Retake Recommended"}
                     </span>
                   </div>
                 </div>
