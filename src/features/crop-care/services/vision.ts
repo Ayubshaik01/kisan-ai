@@ -530,28 +530,29 @@ export async function analyzeImageWithVision(
 
           const [h, s, v] = rgbToHsv(r8, g8, b8);
 
-          // Biometric human skin tone detection (strong red dominance over green, differentiating human skin from foliar lesions)
-          const isSkin = r8 > 90 && g8 > 45 && b8 > 25 && r8 > g8 && r8 > b8 && (r8 - g8) > 30 && (r8 - b8) > 45;
-          if (isSkin) skinPixels++;
-
           // Track artificial / neon cartoon colors (extreme saturation with high brightness)
           if (s > 0.88 && v > 0.85) {
             saturatedFlatCount++;
           }
 
-          // Foliar visual masks
-          const isPureGreen = (h >= 45 && h <= 175 && s >= 0.12 && v >= 0.10 && g8 > b8 * 1.05 && !isSkin);
-          const isChloroticLeaf = (h >= 35 && h <= 75 && s >= 0.18 && v >= 0.15 && g8 > b8 * 1.08 && g8 >= r8 * 0.70 && !isSkin);
-          if (isPureGreen) pureFoliageCount++;
-          if (isChloroticLeaf) chloroticCount++;
-
-          const isFoliage = isPureGreen || isChloroticLeaf;
+          // Foliar & Lesion visual masks (evaluated before skin to protect diseased spots)
           const isChloroticStreak = (h >= 35 && h <= 68 && s >= 0.20 && v >= 0.30);
-          const isBrownLesion = ((h <= 40 || h >= 320) && s >= 0.22 && v >= 0.12 && v <= 0.75 && (r8 > b8 * 1.2));
-          const isAshCore = (s <= 0.32 && v >= 0.30 && v <= 0.85 && (r8 > 60 && g8 > 60));
+          const isBrownLesion = ((h <= 40 || h >= 320) && s >= 0.20 && v >= 0.10 && v <= 0.75 && (r8 > b8 * 1.15));
+          const isAshCore = (s <= 0.32 && v >= 0.30 && v <= 0.85 && (r8 > 55 && g8 > 55));
           const isPowdery = (v >= 0.75 && s <= 0.20);
           const isOrangeDiscoloration = (h >= 20 && h <= 44 && s >= 0.36 && v >= 0.35);
           const isLesion = isChloroticStreak || isBrownLesion || isAshCore || isPowdery || isOrangeDiscoloration;
+
+          const isPureGreen = (h >= 45 && h <= 175 && s >= 0.10 && v >= 0.10 && g8 > b8 * 1.04);
+          const isChloroticLeaf = (h >= 32 && h <= 78 && s >= 0.15 && v >= 0.15 && g8 >= r8 * 0.65);
+          const isFoliage = isPureGreen || isChloroticLeaf;
+
+          if (isPureGreen) pureFoliageCount++;
+          if (isChloroticLeaf) chloroticCount++;
+
+          // Biometric human skin tone detection (evaluated ONLY on non-foliage and non-lesion pixels)
+          const isSkin = !isFoliage && !isLesion && (r8 > 100 && g8 > 45 && b8 > 25 && r8 > g8 && r8 > b8 && (r8 - g8) > 30 && (r8 - b8) > 45);
+          if (isSkin) skinPixels++;
 
           if (isFoliage) {
             plantPixels++;

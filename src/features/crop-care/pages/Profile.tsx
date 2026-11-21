@@ -59,9 +59,60 @@ export function ProfilePage() {
   const [customPassphrase, setCustomPassphrase] = useState("");
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const region = regions.find((r) => r.state === settings.state) ?? regions[0]!;
+
+  const handleDetectCurrentLocation = () => {
+    if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
+      toast.error("Geolocation is not supported on this device/browser");
+      return;
+    }
+    setIsDetectingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`,
+            { headers: { "User-Agent": "KisanAI-CropCare/1.0" } }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            const addr = data.address || {};
+            const detectedDistrict = addr.state_district || addr.county || addr.city || addr.town || addr.village || "";
+            const detectedState = addr.state || "";
+
+            const matchedRegion = regions.find((r) => r.state.toLowerCase() === detectedState.toLowerCase()) || region;
+            const matchedDistrict =
+              matchedRegion.districts.find((d) => detectedDistrict.toLowerCase().includes(d.toLowerCase())) ||
+              detectedDistrict ||
+              matchedRegion.districts[0];
+
+            updateSettings({
+              state: matchedRegion.state,
+              district: matchedDistrict,
+            });
+            toast.success(`Location set to: ${matchedDistrict}, ${matchedRegion.state}`);
+          } else {
+            toast.success("GPS coordinates detected successfully");
+          }
+        } catch {
+          toast.info("GPS coordinates retrieved");
+        } finally {
+          setIsDetectingLocation(false);
+        }
+      },
+      (err) => {
+        console.warn("Location error:", err);
+        toast.error("Could not access GPS. Please check location permissions.");
+        setIsDetectingLocation(false);
+      },
+      { timeout: 8000, enableHighAccuracy: true }
+    );
+  };
   const sizes = storageUsage();
   const totalStorageKb = Math.round(
     Object.values(sizes).reduce((a, b) => a + b, 0) / 1024
@@ -205,9 +256,20 @@ export function ProfilePage() {
 
           {/* District */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-muted-foreground">
-              {t("district")}
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-muted-foreground">
+                {t("district")}
+              </label>
+              <button
+                type="button"
+                onClick={handleDetectCurrentLocation}
+                disabled={isDetectingLocation}
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline cursor-pointer disabled:opacity-50"
+              >
+                <MapPin className="size-3" />
+                {isDetectingLocation ? "Detecting GPS..." : "Use Current Location"}
+              </button>
+            </div>
             <select
               value={settings.district}
               onChange={(e) => {

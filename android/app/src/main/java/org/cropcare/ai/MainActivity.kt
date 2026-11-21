@@ -11,6 +11,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import android.webkit.ConsoleMessage
+import android.webkit.GeolocationPermissions
 import android.webkit.PermissionRequest
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -44,7 +45,9 @@ class MainActivity : AppCompatActivity() {
 
     private val REQUIRED_PERMISSIONS = arrayOf(
         Manifest.permission.CAMERA,
-        Manifest.permission.RECORD_AUDIO
+        Manifest.permission.RECORD_AUDIO,
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION
     )
 
     private fun checkAndRequestPermissions() {
@@ -84,6 +87,7 @@ class MainActivity : AppCompatActivity() {
         nativeBridge = CropAssistantNativeBridge(this, webView)
 
         val assetLoader = WebViewAssetLoader.Builder()
+            .setDomain("appassets.androidplatform.net")
             .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
             .build()
 
@@ -95,6 +99,7 @@ class MainActivity : AppCompatActivity() {
             allowContentAccess = true
             useWideViewPort = true
             loadWithOverviewMode = true
+            setGeolocationEnabled(true)
             cacheMode = WebSettings.LOAD_DEFAULT
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             mediaPlaybackRequiresUserGesture = false
@@ -102,6 +107,13 @@ class MainActivity : AppCompatActivity() {
         }
 
         webView.webChromeClient = object : WebChromeClient() {
+            override fun onGeolocationPermissionsShowPrompt(
+                origin: String?,
+                callback: GeolocationPermissions.Callback?
+            ) {
+                callback?.invoke(origin, true, false)
+            }
+
             override fun onPermissionRequest(request: PermissionRequest) {
                 // Grant camera & audio capture permissions for WebRTC & Web Speech
                 runOnUiThread {
@@ -174,8 +186,8 @@ class MainActivity : AppCompatActivity() {
                 if (uri.host == "appassets.androidplatform.net") {
                     val path = uri.path ?: "/"
 
-                    // Any navigation route without a dot extension is an SPA route: serve dist/index.html
-                    if (path == "/" || !path.substringAfterLast("/").contains(".")) {
+                    // Any navigation route without a dot extension, root "/", or index.html is an SPA route: serve dist/index.html
+                    if (path == "/" || path.isEmpty() || path == "/index.html" || !path.substringAfterLast("/").contains(".")) {
                         return try {
                             val stream = assets.open("dist/index.html")
                             WebResourceResponse("text/html", "UTF-8", stream)
@@ -270,6 +282,19 @@ class MainActivity : AppCompatActivity() {
                     view.post {
                         view.loadUrl("https://appassets.androidplatform.net/assets/dist/index.html")
                     }
+                }
+            }
+
+            @Deprecated("Deprecated in Java")
+            override fun onReceivedError(
+                view: WebView,
+                errorCode: Int,
+                description: String?,
+                failingUrl: String?
+            ) {
+                Log.w("MainActivity", "Legacy navigation error ($errorCode: $description), recovering with local SPA entry")
+                view.post {
+                    view.loadUrl("https://appassets.androidplatform.net/assets/dist/index.html")
                 }
             }
 

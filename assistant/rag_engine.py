@@ -9,6 +9,7 @@ import sys
 from typing import Any, Dict, List, Optional
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from assistant.multilingual_knowledge import LABELS, MULTILINGUAL_CONDITIONS, get_condition_data
 from assistant.safety.safety_checker import SafetyValidator
 from knowledge.query_service import KnowledgeQueryService
 
@@ -76,17 +77,26 @@ class OfflineAssistantRAG:
         # Multi-lingual keyword fallback for Indian regional queries
         if not target_problem:
             q_low = query.lower()
-            if "thrips" in q_low or "తామర" in q_low:
+            # Thrips
+            if any(k in q_low for k in ["thrips", "తామర", "थ्रिप्स", "இலைப்பேன்", "தாம்பிர பூச்சி", "ನುಸಿ", "फुलकिडे"]):
                 target_problem = self.query_service.get_problem("thrips")
-            elif "leaf curl" in q_low or "ముడత" in q_low or "चुरडा" in q_low or "मुरडा" in q_low:
+            # Leaf Curl
+            elif any(k in q_low for k in ["leaf curl", "ముడత", "चुरडा", "मुरडा", "बोकड्या", "இலை சுருட்டை", "இலைச்சுருள்", "ಎಲೆ ಮುರುಟು", "ಮುರುಟು"]):
                 target_problem = self.query_service.get_problem("leaf-curl")
-            elif "blast" in q_low or "అగ్గి తెగులు" in q_low or "ब्लास्ट" in q_low:
+            # Blast
+            elif any(k in q_low for k in ["blast", "అగ్గి తెగులు", "అగ్గి", "ब्लास्ट", "झुलसा", "குலை நோய்", "குலை", "பிளாஸ்ட்", "ಬೆಂಕಿ ರೋಗ", "ಬೆಂಕಿ", "ಬ್ಲಾಸ್ಟ್", "करपा", "तांदूळ करपा"]):
                 target_problem = self.query_service.get_problem("rice-blast")
-            elif "brown spot" in q_low or "మచ్చ" in q_low or "भूरा धब्बा" in q_low:
+            # Brown Spot
+            elif any(k in q_low for k in ["brown spot", "మచ్చ", "ఆకు మచ్చ", "भूरा धब्बा", "धब्बा", "பழுப்பு புள்ளி", "புள்ளி", "ಕಂದು ಚುಕ್ಕೆ", "ಚುಕ್ಕೆ", "तपकिरी ठिपके", "ठिपके"]):
                 target_problem = self.query_service.get_problem("brown-spot")
-            elif "blight" in q_low or "ఎండ తెగులు" in q_low or "झुलसा" in q_low:
+            # Bacterial Leaf Blight
+            elif any(k in q_low for k in ["blight", "bacterial leaf blight", "ఎండ తెగులు", "జీవాణు తెగులు", "जीवाणु झुलसा", "झुलसा", "இலைக்கருகல்", "பாக்டீரியா இலைக்கருகல்", "ಅಂಗಮಾರಿ", "ದುಂಡಾಣು ಅಂಗಮಾರಿ", "जीवाणूजन्य करपा"]):
                 target_problem = self.query_service.get_problem("bacterial-leaf-blight")
-            elif "potash" in q_low or "urea" in q_low or "यूरिया" in q_low or "యూరియా" in q_low or "fertilizer" in q_low:
+            # Stem Borer
+            elif any(k in q_low for k in ["stem borer", "yellow stem borer", "కాండం తొలుచు", "పురుగు", "तना छेदक", "தண்டு துளைப்பான்", "ಕಾಂಡ ಕೊರೆಯುವ ಹುಳು", "खोडकीड"]):
+                target_problem = self.query_service.get_problem("yellow-stem-borer")
+            # Fertilizer references
+            elif any(k in q_low for k in ["potash", "urea", "यूरिया", "యూరియా", "யூரியா", "ಯೂರಿಯಾ", "युरिया", "fertilizer", "खाद", "ఎరువు", "உரம்", "ಗೊಬ್ಬರ"]):
                 target_problem = self.query_service.get_problem("brown-spot") if crop == "rice" else self.query_service.get_problem("rice-blast")
 
         if not target_problem:
@@ -94,6 +104,12 @@ class OfflineAssistantRAG:
                 fallback_msg = "मुझे गाइड में धान या मिर्च की इस समस्या का विवरण नहीं मिला। कृपया पत्ती पर दिख रहे लक्षण बताएं जैसे 'पत्ती पर भूरे धब्बे' या 'मिर्च की मुड़ती पत्तियां'।"
             elif lang == "te":
                 fallback_msg = "ఈ ప్రశ్నకు సంబంధించిన వరి లేదా మిరప సమస్య గైడ్‌లో లభించలేదు. దయచేసి 'వరి ఆకులపై మచ్చలు' లేదా 'మిరప ఆకు ముడత' వంటి లక్షణాలను పేర్కొనండి."
+            elif lang == "ta":
+                fallback_msg = "வழிகாட்டியில் நெல் அல்லது மிளகாய் பயிரின் இந்த பிரச்சனை கிடைக்கவில்லை. தயவுசெய்து 'இலைகளில் பழுப்பு புள்ளிகள்' அல்லது 'இலை சுருட்டை' போன்ற அறிகுறிகளை விவரிக்கவும்."
+            elif lang == "kn":
+                fallback_msg = "ಮಾರ್ಗದರ್ಶಿಯಲ್ಲಿ ಭತ್ತ ಅಥವಾ ಮೆಣಸಿನಕಾಯಿಯ ಈ ಸಮಸ್ಯೆ ಕಂಡುಬಂದಿಲ್ಲ. ದಯವಿಟ್ಟು 'ಎಲೆಗಳ ಮೇಲೆ ಕಂದು ಚುಕ್ಕೆಗಳು' ಅಥವಾ 'ಎಲೆ ಮುರುಟು' ನಂತಹ ಲಕ್ಷಣಗಳನ್ನು ವಿವರಿಸಿ."
+            elif lang == "mr":
+                fallback_msg = "मार्गदर्शकामध्ये भात किंवा मिरचीच्या या समस्येचा तपशील आढळला नाही. कृपया 'पानावरील तपकिरी ठिपके' किंवा 'पाने चुरडणे' यासारखी लक्षणे सांगा."
             else:
                 fallback_msg = "I couldn't match that to a rice or chilli problem in the verified offline guide. Try describing what you see on the leaves, panicle or fruit."
             return {
@@ -109,64 +125,31 @@ class OfflineAssistantRAG:
         treatments = self.query_service.get_treatments(prob_id)
         sources = self.query_service.get_sources(prob_id)
 
-        # Step 4: Compose Answer
+        # Step 4: Compose 100% Native Vernacular Answer
         parts = []
-        name = target_problem["problem_name"]
-        sci = target_problem.get("scientific_name", "")
+        cond_data = get_condition_data(prob_id, lang=lang)
 
-        # Regional vernacular localized names
-        telugu_names = {
-            "Rice Blast": "వరి అగ్గి తెగులు",
-            "Brown Spot": "వరి ఆకుమచ్చ తెగులు",
-            "Bacterial Leaf Blight": "వరి బ్యాక్టీరియా ఎండ తెగులు",
-            "Chilli Thrips": "మిరప తామర పురుగులు",
-            "Chilli Leaf Curl Virus": "మిరప ఆకు ముడత వైరస్",
-        }
-        hindi_names = {
-            "Rice Blast": "धान का झुलसा (ब्लास्ट) रोग",
-            "Brown Spot": "धान का भूरा धब्बा रोग",
-            "Bacterial Leaf Blight": "धान का जीवाणु झुलसा रोग",
-            "Chilli Thrips": "मिर्च का थ्रिप्स कीट",
-            "Chilli Leaf Curl Virus": "मिर्च का पर्ण कुंचन (मुरड़ा) रोग",
-        }
-
-        if lang == "hi":
-            h_name = hindi_names.get(name, name)
-            parts.append(f"सत्यापित कृषि गाइड — {h_name} ({sci}):\n")
-            parts.append(f"• मुख्य लक्षण: {target_problem['symptoms']}")
-            parts.append(f"• प्रभावित भाग: {target_problem['affected_parts']}")
-            if advisory:
-                parts.append(f"• तत्काल कदम: {advisory['immediate_actions']}")
-                parts.append(f"• रोकथाम के उपाय: {advisory['preventive_actions']}")
-                parts.append(f"• निगरानी: {advisory['monitoring_guidance']}")
-        elif lang == "te":
-            t_name = telugu_names.get(name, name)
-            parts.append(f"ధృవీకరించిన వ్యవసాయ గైడ్ — {t_name} ({sci}):\n")
-            parts.append(f"• ప్రధాన లక్షణాలు: {target_problem['symptoms']}")
-            parts.append(f"• ప్రభావిత భాగాలు: {target_problem['affected_parts']}")
-            if advisory:
-                parts.append(f"• తక్షణ చర్యలు: {advisory['immediate_actions']}")
-                parts.append(f"• నివారణ చర్యలు: {advisory['preventive_actions']}")
-                parts.append(f"• క్షేత్ర పరిశీలన: {advisory['monitoring_guidance']}")
+        if cond_data:
+            parts.append(cond_data["header"])
+            parts.append(cond_data["symptoms"])
+            parts.append(cond_data["parts"])
+            parts.append(cond_data["immediate"])
+            parts.append(cond_data["prevention"])
+            parts.append(cond_data["monitoring"])
+            parts.append(cond_data["biological"])
+            parts.append(cond_data["cultural"])
         else:
-            parts.append(f"From the verified agricultural guide on {name} ({sci}):\n")
-            parts.append(f"• Symptoms: {target_problem['symptoms']}")
-            parts.append(f"• Affected parts: {target_problem['affected_parts']}")
+            # Fallback for unmapped conditions
+            name = target_problem["problem_name"]
+            sci = target_problem.get("scientific_name", "")
+            lbl = LABELS.get(lang, LABELS["en"])
+            parts.append(lbl["header"].format(name=name, scientific=sci))
+            parts.append(f"{lbl['symptoms']}{target_problem.get('symptoms', '')}")
+            parts.append(f"{lbl['parts']}{target_problem.get('affected_parts', '')}")
             if advisory:
-                parts.append(f"• What to do immediately: {advisory['immediate_actions']}")
-                parts.append(f"• Preventive practices: {advisory['preventive_actions']}")
-                parts.append(f"• Monitoring: {advisory['monitoring_guidance']}")
-
-        # Cultural, mechanical, and biological practices (omit raw numeric kg/ha dosages)
-        for t in treatments:
-            ttype = t.get("treatment_type", "management").capitalize()
-            meth = t.get("product_or_method", "")
-            parts.append(f"• {ttype} management: {meth}")
-
-        if prob_id == "thrips":
-            parts.append("• Mechanical & Biological management: Install blue or yellow sticky traps (15–20/acre); spray Neem oil 1500 ppm or NSKE 5%.")
-        elif prob_id == "leaf-curl":
-            parts.append("• Vector & Biological management: Set up yellow sticky traps for whiteflies; spray Neem extract or Beauveria bassiana.")
+                parts.append(f"{lbl['immediate']}{advisory.get('immediate_actions', '')}")
+                parts.append(f"{lbl['prevention']}{advisory.get('preventive_actions', '')}")
+                parts.append(f"{lbl['monitoring']}{advisory.get('monitoring_guidance', '')}")
 
         answer = "\n".join(parts)
 

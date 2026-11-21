@@ -216,6 +216,7 @@ export class AIEngineRouter {
         body: JSON.stringify({
           model: this.selectedOfflineModelId,
           messages: options.messages,
+          lang: options.lang,
         }),
         signal: options.signal || AbortSignal.timeout(6000),
       });

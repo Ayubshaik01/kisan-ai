@@ -772,7 +772,29 @@ export function getCrop(key: string): Crop | undefined {
 }
 
 export function getTopic(crop: string, slug: string): Topic | undefined {
-  return topics.find((topic) => topic.crop === crop && topic.slug === slug);
+  if (!slug) return undefined;
+  const cleanSlug = slug.toLowerCase().trim();
+  // 1. Exact match with crop
+  const exact = topics.find((topic) => topic.crop === crop && topic.slug === cleanSlug);
+  if (exact) return exact;
+
+  // 2. Normalize prefixes within the same crop (e.g. rice-blast vs blast, chilli-thrips vs thrips)
+  const normSlug = cleanSlug.replace(/^(rice|chilli)-/, "");
+  return topics.find((topic) => 
+    topic.crop === crop && (topic.slug === normSlug || topic.slug === `${crop}-${normSlug}`)
+  );
+}
+
+export function findTopicGlobal(slug: string): Topic | undefined {
+  if (!slug) return undefined;
+  const cleanSlug = slug.toLowerCase().trim();
+  const normSlug = cleanSlug.replace(/^(rice|chilli)-/, "");
+  return topics.find((topic) => 
+    topic.slug === cleanSlug || 
+    topic.slug === normSlug || 
+    topic.slug === `rice-${normSlug}` || 
+    topic.slug === `chilli-${normSlug}`
+  );
 }
 
 export function topicsFor(crop: CropKey, kind?: Mode): Topic[] {

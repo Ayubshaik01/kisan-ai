@@ -87,6 +87,64 @@ describe("Out-Of-Distribution (OOD) Non-Plant & Face Rejection", () => {
     expect(leafCheck?.pass).toBe(true);
     expect(report.greenShare).toBeGreaterThan(0.70);
   });
+
+  it("accepts diseased rice leaves with brown spots & necrotic lesions without misclassifying as human skin", () => {
+    const W = 64;
+    const H = 64;
+    const pixels = new Uint8ClampedArray(W * H * 4);
+
+    // Simulate rice leaf with pale leaf blade and dark brown spot lesions
+    for (let i = 0; i < W * H; i++) {
+      const idx = i * 4;
+      const isSpot = (i % 7 === 0 || i % 13 === 0);
+      if (isSpot) {
+        // Brown necrotic lesion: R~110, G~65, B~30
+        pixels[idx] = 110 + (i % 8);
+        pixels[idx + 1] = 65 + (i % 6);
+        pixels[idx + 2] = 30 + (i % 4);
+      } else {
+        // Pale chlorotic/green rice blade: R~90, G~125, B~45
+        pixels[idx] = 90 + (i % 10);
+        pixels[idx + 1] = 125 + (i % 12);
+        pixels[idx + 2] = 45 + (i % 8);
+      }
+      pixels[idx + 3] = 255;
+    }
+
+    const report = assessPixels(pixels, W, H);
+    const leafCheck = report.checks.find((c) => c.id === "leaf");
+    expect(leafCheck?.pass).toBe(true);
+    expect(leafCheck?.tip).not.toContain("Human face");
+    expect(leafCheck?.tip).not.toContain("Drawing or cartoon");
+  });
+
+  it("accepts crop leaves held by a farmer's fingers in the field", () => {
+    const W = 64;
+    const H = 64;
+    const pixels = new Uint8ClampedArray(W * H * 4);
+
+    // 25% farmer's fingers holding leaf, 75% green/chlorotic crop leaf
+    for (let i = 0; i < W * H; i++) {
+      const idx = i * 4;
+      if (i < W * H * 0.25) {
+        // Human finger/hand tone
+        pixels[idx] = 175 + (i % 5);
+        pixels[idx + 1] = 120 + (i % 4);
+        pixels[idx + 2] = 80 + (i % 3);
+      } else {
+        // Crop leaf
+        pixels[idx] = 45 + (i % 15);
+        pixels[idx + 1] = 135 + (i % 20);
+        pixels[idx + 2] = 35 + (i % 10);
+      }
+      pixels[idx + 3] = 255;
+    }
+
+    const report = assessPixels(pixels, W, H);
+    const leafCheck = report.checks.find((c) => c.id === "leaf");
+    expect(leafCheck?.pass).toBe(true);
+    expect(leafCheck?.tip).not.toContain("Human face");
+  });
 });
 
 describe("Square Viewfinder Reticle Cropping Geometry", () => {

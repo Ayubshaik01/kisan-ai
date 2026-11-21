@@ -158,7 +158,11 @@ export function scanTitle(scan: Scan, lang: Parameters<typeof l>[0], t: (k: Key)
     return isNonLeaf ? t("oodTitle") : "Inconclusive Scan";
   }
   const topic = scan.topicSlug ? getTopic(scan.crop, scan.topicSlug) : undefined;
-  return topic ? l(lang, topic.name) : t("noResults");
+  if (topic) return l(lang, topic.name);
+  if (scan.topicSlug) {
+    return scan.topicSlug.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  return "Diagnosed Crop Scan";
 }
 
 export function fmtDate(iso: string, lang: string) {

@@ -31,25 +31,10 @@ export function getApkDownloadUrl(): string {
 }
 
 export function triggerApkDownload(e?: React.MouseEvent) {
-  if (e) {
-    e.preventDefault();
-    e.stopPropagation();
-  }
   const url = getApkDownloadUrl();
   if (typeof window !== "undefined") {
     try {
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "kisanai-offline-ai.apk";
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      document.body.appendChild(link);
-      link.click();
-      setTimeout(() => {
-        try {
-          document.body.removeChild(link);
-        } catch {}
-      }, 300);
+      window.open(url, "_blank", "noopener,noreferrer");
     } catch {
       window.location.href = url;
     }
@@ -155,9 +140,9 @@ export function DownloadAppCard({ className }: { className?: string }) {
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <a
             href={getApkDownloadUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
             download="kisanai-offline-ai.apk"
-            rel="external"
-            onClick={triggerApkDownload}
             className="inline-flex items-center justify-center gap-2.5 rounded-2xl bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90 active:scale-95 transition-all cursor-pointer"
           >
             <Download className="size-5" />

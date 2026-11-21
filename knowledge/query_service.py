@@ -91,6 +91,17 @@ class KnowledgeQueryService:
                 res["fallback_level"] = "state_level_fallback"
                 return res
 
+            # 3.5 Any regional record matching the requested language
+            row = conn.execute(
+                """SELECT * FROM advisory_records 
+                   WHERE problem_id = ? AND language = ?""",
+                (problem_id, language),
+            ).fetchone()
+            if row:
+                res = dict(row)
+                res["fallback_level"] = "language_match_fallback"
+                return res
+
             # 4. English fallback
             row = conn.execute(
                 """SELECT * FROM advisory_records 

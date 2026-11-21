@@ -64,7 +64,7 @@ export default defineConfig(({ command }) => ({
     host: "::",
     port: 3000,
     watch: {
-      ignored: ["**/.vercel/**", "**/.output/**", "**/android/**"],
+      ignored: ["**/.vercel/**", "**/.output/**", "**/android/**", "**/*.apk", "**/public/download/**"],
     },
   },
   plugins: [

@@ -347,9 +347,9 @@ export function DiagnosePage() {
       setAnalysisStep(5);
 
       setTimeout(() => {
-        // Enforce strict leaf validation: reject human faces, skin, cartoons, drawings, non-leaf scenes
-        const isLeafValid = report ? report.checks.find((c) => c.id === "leaf")?.pass !== false : true;
-        const outcome = isLeafValid && result.outcome === "identified" ? "identified" : "unknown";
+        // Enforce strict leaf validation: reject human faces and skin
+        const isHumanFace = report?.checks?.find((c) => c.id === "leaf")?.tip?.includes("Human face");
+        const outcome = !isHumanFace && (result.outcome === "identified" || Boolean(result.topicSlug && result.topicSlug !== "unknown")) ? "identified" : "unknown";
 
         const scan: Scan = {
           id: newId(),
@@ -407,8 +407,8 @@ export function DiagnosePage() {
             image: capturedImage,
           });
 
-          const isLeafValid = qualityReport ? qualityReport.checks.find((c) => c.id === "leaf")?.pass !== false : true;
-          const outcome = isLeafValid && result.outcome === "identified" ? "identified" : "unknown";
+          const isHumanFace = qualityReport?.checks?.find((c) => c.id === "leaf")?.tip?.includes("Human face");
+          const outcome = !isHumanFace && (result.outcome === "identified" || Boolean(result.topicSlug && result.topicSlug !== "unknown")) ? "identified" : "unknown";
 
           const scan: Scan = {
             id: newId(),

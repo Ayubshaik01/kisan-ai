@@ -36,34 +36,34 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
 
     if (isSkinPixel) {
       skinCount++;
-    } else {
-      // Multi-spectral botanical foliage classification
-      // 1. Green foliage: dark green, bright green, or shaded foliage
-      const isGreen =
-        (g >= r * 0.92 && g > b * 1.05 && g > 25) ||
-        (g > 35 && g > r * 0.88 && g > b * 1.08);
+    }
 
-      // 2. Chlorotic, lime, & yellow foliage (requires distinct yellow saturation; b significantly lower than green and red)
-      const isChlorotic =
-        (r > 60 && g > 55 && g >= r * 0.78 && b < Math.min(r, g) * 0.75 && (r + g) > 2.2 * b);
+    // Multi-spectral botanical foliage classification
+    // 1. Green foliage: dark green, bright green, or shaded foliage
+    const isGreen =
+      (g >= r * 0.92 && g > b * 1.08 && g > 25) ||
+      (g > 35 && g > r * 0.88 && g > b * 1.12 && (r - g) < 20);
 
-      // 3. Brown, necrotic, & fungal lesion tissue (requires distinct brown pigment, not grey walls or furniture)
-      const isLesion =
-        (r > 40 && g > 20 && r >= g * 1.02 && b < Math.min(r, g) * 0.75 && (r - g) < 55 && (r + g) > 2.0 * b);
+    // 2. Chlorotic, lime, & yellow foliage
+    const isChlorotic =
+      (r > 50 && g > 45 && g >= r * 0.72 && b < Math.min(r, g) * 0.80 && (r + g) > 1.9 * b);
 
-      // 4. Straw, tan, & desiccated leaf blade/sheath tissue
-      const isStraw =
-        (r > 65 && g > 55 && g >= r * 0.75 && b < Math.min(r, g) * 0.75 && Math.abs(r - g) < 40 && (r + g) > 2.2 * b);
+    // 3. Brown, necrotic, & fungal lesion tissue (requires natural plant pigment absorption)
+    const isLesion =
+      (r > 38 && g > 20 && r >= g * 1.02 && b < Math.min(r, g) * 0.78 && (r - g) < 55 && (r + g) > 2.0 * b);
 
-      if (isGreen) {
-        green++;
-      } else if (isChlorotic) {
-        chlorotic++;
-      } else if (isLesion) {
-        lesion++;
-      } else if (isStraw) {
-        straw++;
-      }
+    // 4. Straw, tan, & desiccated leaf blade/sheath tissue
+    const isStraw =
+      (r > 55 && g > 45 && g >= r * 0.75 && b < Math.min(r, g) * 0.78 && Math.abs(r - g) < 45 && (r + g) > 2.1 * b);
+
+    if (isGreen) {
+      green++;
+    } else if (isChlorotic) {
+      chlorotic++;
+    } else if (isLesion) {
+      lesion++;
+    } else if (isStraw) {
+      straw++;
     }
   }
   const n = width * height;
@@ -97,12 +97,12 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
 
   // Reject flat vector art, drawings, cartoons:
   const isCartoonOrDrawing =
-    (uniqueColorCount < 20 && topColorShare > 0.85 && plantTissueShare < 0.05) ||
-    ((neonCount / n) > 0.20 && plantTissueShare < 0.05);
+    (uniqueColorCount < 15 && topColorShare > 0.88 && plantTissueShare < 0.04) ||
+    ((neonCount / n) > 0.20 && plantTissueShare < 0.04);
 
-  // Reject human faces (only when human skin dominates and virtually no botanical plant tissue is present)
-  const isHumanFace = (skinCount / n) > 0.25 && greenShare < 0.08;
-  const isMissingBotanicalFoliage = plantTissueShare < 0.04 && !isHumanFace && !isCartoonOrDrawing;
+  // Reject human faces (only when human skin dominates > 50% and virtually no green crop foliage is present)
+  const isHumanFace = (skinCount / n) > 0.50 && greenShare < 0.05;
+  const isMissingBotanicalFoliage = plantTissueShare < 0.03 && !isHumanFace && !isCartoonOrDrawing;
 
   const leafOk = !isCartoonOrDrawing && !isHumanFace && !isMissingBotanicalFoliage;
 
