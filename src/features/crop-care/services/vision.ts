@@ -176,13 +176,18 @@ async function runOnnxInference(
           "unknown",
         ];
 
-    const mappedCandidates: { slug: string; confidence: number }[] = [];
+    const candidateMap = new Map<string, number>();
     for (let k = 0; k < classes.length; k++) {
-      if (classes[k] !== "unknown") {
-        mappedCandidates.push({ slug: classes[k], confidence: Math.round(probs[k] * 100) / 100 });
+      const slug = classes[k];
+      if (slug && slug !== "unknown") {
+        const conf = Math.round(probs[k] * 100) / 100;
+        candidateMap.set(slug, Math.max(candidateMap.get(slug) || 0, conf));
       }
     }
-    mappedCandidates.sort((a, b) => b.confidence - a.confidence);
+    const mappedCandidates = Array.from(candidateMap.entries())
+      .map(([slug, confidence]) => ({ slug, confidence }))
+      .sort((a, b) => b.confidence - a.confidence);
+
     const top = mappedCandidates[0];
     if (top && top.confidence >= 0.20) {
       return {
@@ -662,9 +667,9 @@ export async function analyzeImageWithVision(
       const totalLesionPixels = chloroticStreakPixels + brownSpotPixels + blastAshCorePixels + whitePowderyPixels + orangeTungroPixels;
       const affectedPercent = Math.min(100, Math.round((totalLesionPixels / Math.max(1, plantPixels)) * 100));
 
-      // Healthy condition check (require true clean green foliage)
+      // Healthy condition check (require clean green foliage without significant lesion load)
       const healthyRatio = healthyGreenPixels / Math.max(1, plantPixels);
-      if (affectedPercent <= 1 && healthyRatio >= 0.88) {
+      if (affectedPercent <= 3 && healthyRatio >= 0.70) {
         return resolve({
           source: "model",
           outcome: "identified",
@@ -710,7 +715,7 @@ export async function analyzeImageWithVision(
         meanDiffRG
       ];
 
-      // 1. Query Local PyTorch Deep Learning Server / Ollama Vision Endpoint if running
+      // 1. Query Local PyTorch Deep Learning Server if running locally (e.g. desktop/dev environment)
       let deepModelResult: {
         slug: string;
         confidence: number;
@@ -720,15 +725,16 @@ export async function analyzeImageWithVision(
         severityMethod?: string;
         candidates: { slug: string; confidence: number }[];
       } | null = null;
-      const compactDataUrl = canvas.toDataURL("image/jpeg", 0.85);
-      const serverUrls = ["http://127.0.0.1:8000/api/predict", "http://localhost:8000/api/predict"];
-      for (const srvUrl of serverUrls) {
+
+      const isLocalHost = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+      if (isLocalHost) {
+        const compactDataUrl = canvas.toDataURL("image/jpeg", 0.85);
         try {
-          const localServerRes = await fetch(srvUrl, {
+          const localServerRes = await fetch("http://127.0.0.1:8000/api/predict", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ image: compactDataUrl, crop }),
-            signal: AbortSignal.timeout(5000),
+            signal: AbortSignal.timeout(1500),
           });
           if (localServerRes.ok) {
             const srvData = await localServerRes.json();
@@ -742,31 +748,29 @@ export async function analyzeImageWithVision(
                 severityMethod: srvData.severity?.method,
                 candidates: srvData.candidates || [],
               };
-              break;
-            } else if (srvData && srvData.outcome === "unknown") {
-              // Server explicitly rejected as human face, cartoon, or non-plant OOD
-              return resolve({
-                source: "model",
-                outcome: "unknown",
-                confidence: srvData.confidence || 0.12,
-                diagnostics: {
-                  plantPixels: 0,
-                  lesionPixels: 0,
-                  affectedPercent: 0,
-                  isCropValid: false,
-                  pattern: srvData.diagnostics?.rejectionReason || "rejected_non_plant_object",
-                },
-              });
             }
           }
         } catch {
-          // Try next endpoint or fall through to client model
+          // Fall through to in-browser offline model
         }
       }
 
       // 2. Query In-Browser trained HistGradientBoosting model (77.4% accuracy on 2,700 real photos, 100% Offline client-side)
       const hgbModel = await loadHgbModel(crop);
       const hgbRes = hgbModel ? evaluateHgb(hgbModel, featVector) : null;
+
+      // Mode matching validator
+      const RICE_DISEASES = new Set(["rice-blast", "brown-spot", "bacterial-leaf-blight", "bacterial-leaf-streak", "tungro", "downy-mildew", "rice-healthy"]);
+      const RICE_PESTS = new Set(["brown-planthopper", "yellow-stem-borer", "leaf-folder", "gall-midge", "hispa"]);
+      const CHILLI_DISEASES = new Set(["leaf-curl", "cercospora-leaf-spot", "bacterial-leaf-spot", "powdery-mildew", "anthracnose", "chilli-healthy"]);
+      const CHILLI_PESTS = new Set(["thrips", "mites", "whitefly", "aphids"]);
+
+      const matchesMode = (slug: string) => {
+        if (crop === "rice") {
+          return mode === "pest" ? RICE_PESTS.has(slug) : RICE_DISEASES.has(slug);
+        }
+        return mode === "pest" ? CHILLI_PESTS.has(slug) : CHILLI_DISEASES.has(slug);
+      };
 
       // Hierarchy:
       // Priority 1: Local server with trained model (if local Python backend is running)
@@ -778,30 +782,32 @@ export async function analyzeImageWithVision(
       }
       // Priority 2: Client-side In-Browser Real-Field Gradient Boosted Trees (100% offline browser execution)
       else if (hgbRes && hgbRes.confidence >= 0.20 && hgbRes.slug !== "unknown") {
-        detectedSlug = hgbRes.slug;
-        confidence = Math.min(0.96, Math.max(0.68, hgbRes.confidence));
+        const modeCandidate = hgbRes.candidates.find((c: any) => matchesMode(c.slug));
+        detectedSlug = modeCandidate ? modeCandidate.slug : hgbRes.slug;
+        confidence = modeCandidate ? Math.min(0.96, Math.max(0.68, modeCandidate.confidence)) : Math.min(0.96, Math.max(0.68, hgbRes.confidence));
         patternName = detectedSlug.replace("-", "_");
         candidates = hgbRes.candidates;
       }
       // Priority 3: In-Browser ONNX WebAssembly Deep Neural Network
       else {
         const onnxRes = await runOnnxInference(crop, canvas);
-        if (onnxRes && onnxRes.confidence >= 0.35 && onnxRes.slug !== "unknown") {
-          detectedSlug = onnxRes.slug;
-          confidence = Math.min(0.95, onnxRes.confidence);
+        if (onnxRes && onnxRes.confidence >= 0.30 && onnxRes.slug !== "unknown") {
+          const modeCandidate = onnxRes.candidates.find((c: any) => matchesMode(c.slug));
+          detectedSlug = modeCandidate ? modeCandidate.slug : onnxRes.slug;
+          confidence = modeCandidate ? Math.min(0.95, modeCandidate.confidence) : Math.min(0.95, onnxRes.confidence);
           patternName = detectedSlug.replace("-", "_");
           candidates = onnxRes.candidates;
         } else if (crop === "rice") {
         if (mode === "disease") {
           // Multi-class fine-grained foliar scoring incorporating real Paddy Doctor & Mendeley benchmarks
           const scores: Record<string, number> = {
-            "rice-blast": blastAshCorePixels * 2.6 + brownSpotPixels * 1.1 + 5,
-            "brown-spot": brownSpotPixels * 2.3 + centerLesionCount * 0.9 + 5,
-            "bacterial-leaf-blight": chloroticStreakPixels * 2.1 + marginLesionCount * 1.9 + 4,
-            "bacterial-leaf-streak": chloroticStreakPixels * 2.2 + centerLesionCount * 1.1 + 4,
-            "tungro": orangeTungroPixels * 3.2 + chloroticCount * 0.6 + 3,
-            "downy-mildew": chloroticCount * 1.4 + (totalFoliage - healthyGreenPixels) * 0.3 + 2,
-            "hispa": whitePowderyPixels * 1.6 + chloroticStreakPixels * 1.2 + 2,
+            "rice-blast": blastAshCorePixels * 3.5 + brownSpotPixels * 0.9,
+            "brown-spot": brownSpotPixels * 3.0 + centerLesionCount * 1.2,
+            "bacterial-leaf-blight": chloroticStreakPixels * 2.8 + marginLesionCount * 2.2,
+            "bacterial-leaf-streak": chloroticStreakPixels * 2.5 + centerLesionCount * 1.4,
+            "tungro": orangeTungroPixels * 4.0 + chloroticCount * 0.8,
+            "downy-mildew": chloroticCount * 1.8 + (totalFoliage - healthyGreenPixels) * 0.5,
+            "hispa": whitePowderyPixels * 2.0 + chloroticStreakPixels * 1.5,
           };
 
           const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
@@ -819,10 +825,10 @@ export async function analyzeImageWithVision(
         } else {
           // Rice Pest Signs
           const pestScores: Record<string, number> = {
-            "brown-planthopper": (affectedPercent > 25 ? affectedPercent * 2 : 10) + chloroticCount * 0.1,
-            "leaf-folder": marginLesionCount * 1.8 + centerLesionCount * 0.5 + 8,
-            "yellow-stem-borer": centerLesionCount * 1.5 + chloroticStreakPixels * 0.8 + 8,
-            "gall-midge": chloroticStreakPixels * 1.1 + whitePowderyPixels * 0.9 + 6,
+            "brown-planthopper": (affectedPercent > 20 ? affectedPercent * 2 : 5) + chloroticCount * 0.2,
+            "leaf-folder": marginLesionCount * 2.0 + centerLesionCount * 0.6,
+            "yellow-stem-borer": centerLesionCount * 1.8 + chloroticStreakPixels * 0.9,
+            "gall-midge": chloroticStreakPixels * 1.2 + whitePowderyPixels * 1.0,
           };
 
           const sorted = Object.entries(pestScores).sort((a, b) => b[1] - a[1]);
@@ -842,11 +848,11 @@ export async function analyzeImageWithVision(
         // Chilli Crop
         if (mode === "disease") {
           const scores: Record<string, number> = {
-            "powdery-mildew": whitePowderyPixels * 3.2 + 5,
-            "cercospora-leaf-spot": brownSpotPixels * 1.9 + blastAshCorePixels * 2.0 + 5,
-            "anthracnose": brownSpotPixels * 2.6 + marginLesionCount * 1.2 + 4,
-            "leaf-curl": chloroticStreakPixels * 1.6 + (totalPixels - healthyGreenPixels) * 0.08 + 4,
-            "bacterial-leaf-spot": brownSpotPixels * 1.5 + chloroticStreakPixels * 1.2 + 3,
+            "powdery-mildew": whitePowderyPixels * 3.5,
+            "cercospora-leaf-spot": brownSpotPixels * 2.2 + blastAshCorePixels * 2.0,
+            "anthracnose": brownSpotPixels * 2.8 + marginLesionCount * 1.4,
+            "leaf-curl": chloroticStreakPixels * 1.8 + (totalPixels - healthyGreenPixels) * 0.1,
+            "bacterial-leaf-spot": brownSpotPixels * 1.8 + chloroticStreakPixels * 1.4,
           };
 
           const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
@@ -864,10 +870,10 @@ export async function analyzeImageWithVision(
         } else {
           // Chilli Pest Signs
           const pestScores: Record<string, number> = {
-            "thrips": chloroticStreakPixels * 2.0 + marginLesionCount * 1.1 + 8,
-            "whitefly": whitePowderyPixels * 2.5 + chloroticCount * 0.4 + 6,
-            "mites": brownSpotPixels * 1.4 + centerLesionCount * 1.2 + 6,
-            "aphids": chloroticStreakPixels * 1.2 + (totalFoliage - healthyGreenPixels) * 0.2 + 5,
+            "thrips": chloroticStreakPixels * 2.2 + marginLesionCount * 1.2,
+            "whitefly": whitePowderyPixels * 2.8 + chloroticCount * 0.5,
+            "mites": brownSpotPixels * 1.6 + centerLesionCount * 1.4,
+            "aphids": chloroticStreakPixels * 1.4 + (totalFoliage - healthyGreenPixels) * 0.3,
           };
 
           const sorted = Object.entries(pestScores).sort((a, b) => b[1] - a[1]);

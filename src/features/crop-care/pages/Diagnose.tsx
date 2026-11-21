@@ -135,9 +135,15 @@ export function DiagnosePage() {
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.setAttribute("playsinline", "true");
+        videoRef.current.setAttribute("autoplay", "true");
+        videoRef.current.setAttribute("muted", "true");
         videoRef.current.onloadedmetadata = () => {
           videoRef.current?.play().catch((err) => console.warn("Video play error:", err));
         };
+        if (videoRef.current.readyState >= 2) {
+          videoRef.current.play().catch(() => {});
+        }
       }
       setCameraActive(true);
     } catch (err: unknown) {

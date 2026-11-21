@@ -34,16 +34,17 @@ def analyze_botanical_quality(img: Image.Image):
     is_too_dark = mean_brightness < 0.12
     is_overexposed = mean_brightness > 0.88
 
-    # Cartoon / Digital graphic detection: low color palette entropy or neon saturation
+    # Cartoon / Digital graphic detection: low color palette entropy or extreme neon saturation
     colors = rgb.getcolors(maxcolors=2048)
     num_colors = len(colors) if colors else 2000
-    is_neon_art = ((g > 0.82) & (r < 0.15) & (b < 0.15)).sum() > (128 * 128 * 0.08)
-    is_flat_graphic = num_colors < 75 or is_neon_art
+    top_share = (max(c[0] for c in colors) / total_pixels) if colors else 0
+    is_neon_art = ((g > 0.88) & (r < 0.12) & (b < 0.12)).sum() > (128 * 128 * 0.15)
+    is_flat_graphic = (num_colors < 25 and top_share > 0.75) or is_neon_art
 
     # Botanical tissue segmentation (real chlorophyll requires organic tonal balance)
-    is_green = (g > r * 1.05) & (g > b * 1.05) & (g > 0.15) & (~is_neon_art if isinstance(is_neon_art, np.ndarray) else True)
-    is_yellow = (r > 0.35) & (g > 0.35) & (b < 0.28) & (r > b * 1.2)
-    is_brown = (r > 0.22) & (g < r * 0.95) & (b < 0.22) & (r > b * 1.2)
+    is_green = (g > r * 1.02) & (g > b * 1.05) & (g > 0.12)
+    is_yellow = (r > 0.30) & (g > 0.28) & (b < 0.28) & (r > b * 1.15)
+    is_brown = (r > 0.18) & (g <= r * 1.20) & (b < 0.24) & (r > b * 1.10)
     botanical_pixels = int((is_green | is_yellow | is_brown).sum())
     total_pixels = 128 * 128
     botanical_share = botanical_pixels / total_pixels
@@ -58,12 +59,12 @@ def analyze_botanical_quality(img: Image.Image):
     skin_share = float(is_skin.sum()) / total_pixels
     green_share = float(is_green.sum()) / total_pixels
 
-    is_human_face = skin_share > 0.10
-    is_insufficient_foliage = (green_share < 0.10 and botanical_share < 0.18) or (botanical_share < 0.12)
+    is_human_face = skin_share > 0.18 and green_share < 0.06
+    is_insufficient_foliage = botanical_share < 0.02
     is_non_plant = is_human_face or is_insufficient_foliage or is_flat_graphic
 
     return {
-        "valid": not (is_blurry or is_too_dark or is_overexposed or is_non_plant),
+        "valid": not is_non_plant,
         "is_blurry": is_blurry,
         "is_too_dark": is_too_dark,
         "is_overexposed": is_overexposed,

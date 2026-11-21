@@ -28,7 +28,7 @@ import {
 import { useCropCare } from "../context";
 import { crops, getTopic, l, type CropKey } from "../knowledge";
 import { LiveWeatherCard } from "../ui/LiveWeatherCard";
-import { DownloadAppCard } from "../ui/DownloadAppCard";
+import { DownloadAppCard, getApkDownloadUrl } from "../ui/DownloadAppCard";
 import {
   btnPrimary,
   btnSecondary,
@@ -134,8 +134,10 @@ export function HomePage() {
               {t("exploreLibrary")}
             </Link>
             <a
-              href="/download/app-release.apk"
+              href={getApkDownloadUrl()}
               download="kisanai-offline-ai.apk"
+              target="_blank"
+              rel="noopener noreferrer"
               className={cn(
                 btnSecondary,
                 "h-12 px-5 font-bold border-primary/40 text-primary hover:bg-primary/10 transition-all",

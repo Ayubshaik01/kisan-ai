@@ -2,12 +2,29 @@ import json
 import os
 import sys
 import ssl
+import subprocess
 import urllib.request
 import urllib.error
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
-TOKEN = os.environ.get("GITHUB_TOKEN", "")
+def get_token():
+    t = os.environ.get("GITHUB_TOKEN", "")
+    if not t:
+        try:
+            out = subprocess.check_output(
+                ["git", "credential", "fill"],
+                input=b"protocol=https\nhost=github.com\n",
+                stderr=subprocess.PIPE
+            ).decode()
+            for line in out.splitlines():
+                if line.startswith("password="):
+                    t = line.split("=", 1)[1].strip()
+        except Exception:
+            pass
+    return t
+
+TOKEN = get_token()
 REPO = "Ayubshaik01/remix-of-remix-of-make-it-great"
 APK_PATH = r"android/app/build/outputs/apk/release/app-release.apk"
 
@@ -46,13 +63,25 @@ def create_release():
             return res
     except urllib.error.HTTPError as e:
         body = e.read().decode()
-        print(f"Release create HTTP error {e.code}: {body}")
-        # If release already exists, fetch it
+        print(f"Release lookup (status {e.code}): {body}")
         req_get = urllib.request.Request(f"https://api.github.com/repos/{REPO}/releases/tags/v1.0.0", headers=headers)
         with urllib.request.urlopen(req_get) as resp:
             return json.loads(resp.read().decode())
 
 def upload_apk(release):
+    assets = release.get("assets", [])
+    for asset in assets:
+        if asset.get("name") == "kisanai-offline-ai.apk":
+            asset_id = asset.get("id")
+            print(f"Deleting previous asset {asset_id} to upload fresh binary...")
+            del_url = f"https://api.github.com/repos/{REPO}/releases/assets/{asset_id}"
+            del_req = urllib.request.Request(del_url, headers=headers, method="DELETE")
+            try:
+                with urllib.request.urlopen(del_req) as del_resp:
+                    print(f"Previous asset deleted successfully ({del_resp.status})")
+            except Exception as e:
+                print(f"Error deleting asset: {e}")
+
     upload_url_template = release.get("upload_url", "")
     upload_url = upload_url_template.split("{")[0] + "?name=kisanai-offline-ai.apk"
     print(f"Uploading APK to: {upload_url}")
