@@ -7,21 +7,27 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
   let green = 0;
   let chlorotic = 0;
   let lesion = 0;
+  let straw = 0;
   for (let i = 0; i < width * height; i++) {
     const r = data[i * 4]!, g = data[i * 4 + 1]!, b = data[i * 4 + 2]!;
     const y = 0.299 * r + 0.587 * g + 0.114 * b;
     gray[i] = y;
     sum += y;
 
-    // Green foliage
-    if ((g > r * 1.02 && g > b * 1.05 && g > 30) || (g > 40 && g > b * 1.15 && r < g * 1.15)) {
+    // Multi-spectral botanical foliage classification
+    const isGreen = (g > r * 0.95 && g > b * 1.05 && g > 25);
+    const isChlorotic = (r > 65 && g > 65 && g >= r * 0.82 && Math.abs(r - g) <= 25 && b < Math.min(r, g) * 0.85);
+    const isLesion = (r > 35 && r < 180 && g > 25 && g < r * 0.95 && b < Math.min(r, g) * 0.85 && (r - g) < 28);
+    const isStraw = (r > 60 && g > 50 && g > r * 0.80 && Math.abs(r - g) <= 25 && b < Math.min(r, g) * 0.85);
+
+    if (isGreen) {
       green++;
-    } else if (r > 40 && g > 40 && b < r * 0.85 && Math.abs(r - g) < 60 && (r + g) > 2.2 * b) {
-      // Chlorotic / yellow foliage (halo, nutrient deficiency, tungro)
+    } else if (isChlorotic) {
       chlorotic++;
-    } else if (r > 35 && r > b * 1.15 && g >= b && g <= r * 1.30) {
-      // Necrotic / brown lesion tissue (blast, brown spot, blight)
+    } else if (isLesion) {
       lesion++;
+    } else if (isStraw) {
+      straw++;
     }
   }
   const n = width * height;
@@ -44,7 +50,7 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
   const mean = count ? lapSum / count : 0;
   const sharpness = count ? lapSq / count - mean * mean : 0;
   const greenShare = green / n;
-  const plantTissueShare = (green + chlorotic + lesion) / n;
+  const plantTissueShare = (green + chlorotic + lesion + straw) / n;
 
   // Real foliage vs cartoon/drawing/non-plant entropy check
   const colorMap = new Map<number, number>();
@@ -61,11 +67,11 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
       neonCount++;
     }
 
-    // Biometric human skin tone detection (Kovac RGB + YCbCr chromatic space)
+    // Biometric human skin tone detection (YCbCr + Kovac chromatic domain)
     const yCb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
     const yCr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
     const isYcbcrSkin = yCr >= 133 && yCr <= 173 && yCb >= 77 && yCb <= 127;
-    const isKovacSkin = r > 80 && g > 35 && b > 20 && r > g && r > b && (r - g) > 10 && (Math.max(r, g, b) - Math.min(r, g, b)) > 12;
+    const isKovacSkin = r > 80 && g > 35 && b > 20 && r > g && r > b && (r - g) > 25 && (r - b) > 35;
     if (isYcbcrSkin || isKovacSkin) {
       skinCount++;
     }
@@ -78,37 +84,23 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
   const topColorShare = maxColorOccurrences / n;
   const uniqueColorCount = colorMap.size;
 
-  // Local spatial flat-fill analysis
-  let zeroDiffCount = 0;
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width - 1; x++) {
-      const i1 = (y * width + x) * 4;
-      const i2 = (y * width + x + 1) * 4;
-      if (data[i1] === data[i2] && data[i1 + 1] === data[i2 + 1] && data[i1 + 2] === data[i2 + 2]) {
-        zeroDiffCount++;
-      }
-    }
-  }
-  const zeroDiffFrac = zeroDiffCount / Math.max(1, height * (width - 1));
-
-  // Reject flat vector art, drawings, cartoons, or non-botanical scenes:
+  // Reject flat vector art, drawings, cartoons:
   const isCartoonOrDrawing =
-    (topColorShare > 0.75 && uniqueColorCount < 30) ||
-    (zeroDiffFrac > 0.70 && uniqueColorCount < 25) ||
-    (neonCount / n) > 0.15;
+    (uniqueColorCount < 20 && topColorShare > 0.85 && plantTissueShare < 0.05) ||
+    (neonCount / n) > 0.20;
 
-  // Reject human faces and non-plant objects
-  const isSkinDetected = (skinCount / n) > 0.18 && greenShare < 0.06;
-  const isMissingBotanicalFoliage = plantTissueShare < 0.03 && !isCartoonOrDrawing && !isSkinDetected;
+  // Reject human faces (only when human skin dominates and virtually no botanical plant tissue is present)
+  const isHumanFace = (skinCount / n) > 0.35 && greenShare < 0.05 && plantTissueShare < 0.15;
+  const isMissingBotanicalFoliage = plantTissueShare < 0.04 && !isHumanFace && !isCartoonOrDrawing;
 
-  const leafOk = !isCartoonOrDrawing && !isSkinDetected && !isMissingBotanicalFoliage;
+  const leafOk = !isCartoonOrDrawing && !isHumanFace && !isMissingBotanicalFoliage;
 
   const sharpOk = sharpness >= 40;
   const lightOk = brightness >= 45 && brightness <= 235;
   const subjectOk = contrast >= 18;
   const suitable = sharpOk && lightOk && subjectOk && leafOk;
 
-  const leafTip = isSkinDetected
+  const leafTip = isHumanFace
     ? "Human face or skin detected. Please photograph a crop leaf, not people or faces."
     : isMissingBotanicalFoliage
     ? "No agricultural crop leaf detected. Please photograph a rice or chilli plant leaf."

@@ -1,4 +1,4 @@
-const CACHE_NAME = "kisanai-offline-v2";
+const CACHE_NAME = "kisanai-offline-v4";
 
 const OFFLINE_ROUTES = [
   "/",
@@ -47,7 +47,7 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET" || !request.url.startsWith(self.location.origin)) return;
 
-  // Navigations: try the network, fall back to the cached shell when offline.
+  // Navigations: network-first, fall back to cached shell when offline
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request)
@@ -61,10 +61,10 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Static assets: cache-first, then network (and store a copy).
-  event.respondWith(
-    caches.match(request).then(
-      (cached) =>
+  // Model weights and heavy binary assets: cache-first with network fallback
+  if (request.url.includes("/models/") || request.url.includes("/fonts/")) {
+    event.respondWith(
+      caches.match(request).then((cached) =>
         cached ||
         fetch(request).then((response) => {
           if (response.ok) {
@@ -72,7 +72,22 @@ self.addEventListener("fetch", (event) => {
             caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           }
           return response;
-        }),
-    ),
+        })
+      )
+    );
+    return;
+  }
+
+  // Application code (JS, CSS, SVGs): network-first so new releases appear immediately, cache fallback for offline
+  event.respondWith(
+    fetch(request)
+      .then((response) => {
+        if (response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+        }
+        return response;
+      })
+      .catch(() => caches.match(request).then((cached) => cached || Response.error())),
   );
 });

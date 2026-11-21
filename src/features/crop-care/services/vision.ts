@@ -530,13 +530,8 @@ export async function analyzeImageWithVision(
 
           const [h, s, v] = rgbToHsv(r8, g8, b8);
 
-          // Human skin tone detection (Kovac standard + YCbCr chromatic range)
-          const yCb = 128 - 0.168736 * r8 - 0.331264 * g8 + 0.5 * b8;
-          const yCr = 128 + 0.5 * r8 - 0.418688 * g8 - 0.081312 * b8;
-          const isYcbcrSkin = yCr >= 133 && yCr <= 173 && yCb >= 77 && yCb <= 127;
-          const isKovacSkin = r8 > 80 && g8 > 35 && b8 > 20 && r8 > g8 && r8 > b8 && (r8 - g8) > 10;
-          const isHsvSkin = ((h >= 0 && h <= 50) || (h >= 335 && h <= 360)) && s >= 0.12 && s <= 0.75 && v >= 0.15 && r8 > b8;
-          const isSkin = isYcbcrSkin || isKovacSkin || isHsvSkin;
+          // Biometric human skin tone detection (strong red dominance over green, differentiating human skin from foliar lesions)
+          const isSkin = r8 > 90 && g8 > 45 && b8 > 25 && r8 > g8 && r8 > b8 && (r8 - g8) > 30 && (r8 - b8) > 45;
           if (isSkin) skinPixels++;
 
           // Track artificial / neon cartoon colors (extreme saturation with high brightness)
@@ -544,9 +539,9 @@ export async function analyzeImageWithVision(
             saturatedFlatCount++;
           }
 
-          // Legacy visual masks
-          const isPureGreen = (h >= 45 && h <= 165 && s >= 0.15 && v >= 0.12 && g8 > b8 * 1.08 && !isSkin);
-          const isChloroticLeaf = (h >= 42 && h <= 70 && s >= 0.20 && v >= 0.18 && g8 > b8 * 1.12 && g8 >= r8 * 0.70 && !isSkin);
+          // Foliar visual masks
+          const isPureGreen = (h >= 45 && h <= 175 && s >= 0.12 && v >= 0.10 && g8 > b8 * 1.05 && !isSkin);
+          const isChloroticLeaf = (h >= 35 && h <= 75 && s >= 0.18 && v >= 0.15 && g8 > b8 * 1.08 && g8 >= r8 * 0.70 && !isSkin);
           if (isPureGreen) pureFoliageCount++;
           if (isChloroticLeaf) chloroticCount++;
 
@@ -583,9 +578,6 @@ export async function analyzeImageWithVision(
       // -------------------------------------------------------------
       // CARTOON / CLIPART / ILLUSTRATION DISCRIMINATOR
       // -------------------------------------------------------------
-      // Real leaves exhibit continuous organic texture gradients (hundreds of distinct tonal shades).
-      // Vector art, clip-art, diagrams and cartoons have few distinct quantized colors, large identical flat fills,
-      // or unnaturally high neon saturation with zero cellular noise.
       let maxColorFrequency = 0;
       for (const count of colorHistogram.values()) {
         if (count > maxColorFrequency) {
@@ -594,28 +586,15 @@ export async function analyzeImageWithVision(
       }
       const topColorDominance = maxColorFrequency / totalPixels;
       const uniqueColorCount = colorHistogram.size;
-      // Local spatial flat-fill analysis:
-      let zeroDiffCount = 0;
-      for (let y = 0; y < H; y++) {
-        for (let x = 0; x < W - 1; x++) {
-          const i1 = (y * W + x) * 4;
-          const i2 = (y * W + x + 1) * 4;
-          if (data[i1] === data[i2] && data[i1 + 1] === data[i2 + 1] && data[i1 + 2] === data[i2 + 2]) {
-            zeroDiffCount++;
-          }
-        }
-      }
-      const zeroDiffFrac = zeroDiffCount / (H * (W - 1));
-
-      const isCartoonOrClipart =
-        (topColorDominance > 0.75 && uniqueColorCount < 30) ||
-        (zeroDiffFrac > 0.70 && uniqueColorCount < 25) ||
-        (saturatedFlatCount / totalPixels > 0.20 && uniqueColorCount < 30);
-
       const totalBotanicalPixels = foliarCount + yellowTissueCount + brownLesionCount + ashCoreCount + pureFoliageCount + chloroticCount;
       const totalFoliarChlorophyll = pureFoliageCount + chloroticCount;
       const skinRatio = skinPixels / totalPixels;
       const foliarRatio = totalFoliarChlorophyll / totalPixels;
+
+      // Guard 1: Digital flat graphic / vector art rejection (requires very low color variety AND virtually zero botanical foliage)
+      const isCartoonOrClipart =
+        (uniqueColorCount < 20 && topColorDominance > 0.85 && totalBotanicalPixels / totalPixels < 0.05) ||
+        (saturatedFlatCount / totalPixels > 0.20 && totalBotanicalPixels / totalPixels < 0.05);
 
       if (isCartoonOrClipart) {
         return resolve({
@@ -632,8 +611,8 @@ export async function analyzeImageWithVision(
         });
       }
 
-      // Guard 2: Human Face & Skin Detection Rejection
-      if (skinRatio > 0.18 && totalBotanicalPixels / totalPixels < 0.08) {
+      // Guard 2: Human Face & Skin Detection Rejection (reject only when human skin dominates and no real botanical foliage is present)
+      if (skinRatio > 0.45 && totalBotanicalPixels / totalPixels < 0.08) {
         return resolve({
           source: "model",
           outcome: "unknown",
@@ -649,7 +628,7 @@ export async function analyzeImageWithVision(
       }
 
       // Guard 3: Reject scenes with virtually no botanical leaf foliage (faces, furniture, rooms, random objects)
-      if (totalBotanicalPixels < 300 && foliarRatio < 0.02) {
+      if (totalBotanicalPixels < 200 && foliarRatio < 0.02) {
         return resolve({
           source: "model",
           outcome: "unknown",

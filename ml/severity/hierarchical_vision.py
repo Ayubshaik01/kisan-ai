@@ -23,6 +23,8 @@ def analyze_botanical_quality(img: Image.Image):
     arr = np.array(rgb, dtype=np.float32) / 255.0
     r, g, b = arr[:, :, 0], arr[:, :, 1], arr[:, :, 2]
 
+    total_pixels = 128 * 128
+
     # Blur estimation via high-frequency neighbor variance
     diff_h = np.abs(arr[:, 1:, :] - arr[:, :-1, :]).mean()
     diff_v = np.abs(arr[1:, :, :] - arr[:-1, :, :]).mean()
@@ -34,37 +36,38 @@ def analyze_botanical_quality(img: Image.Image):
     is_too_dark = mean_brightness < 0.12
     is_overexposed = mean_brightness > 0.88
 
-    # Cartoon / Digital graphic detection: low color palette entropy or extreme neon saturation
+    # Botanical tissue segmentation (real chlorophyll, carotenoids, lesions, or dried foliar tissue)
+    is_green = (g > r * 0.98) & (g > b * 1.02) & (g > 0.10)
+    is_yellow = (r > 0.25) & (g > 0.22) & (b < np.maximum(r, g) * 0.90)
+    is_brown = (r > 0.15) & (g > 0.10) & (b < np.maximum(r, g) * 0.90) & ((r + g) > 2.0 * b)
+    is_straw = (r > 0.25) & (g > 0.20) & (b < r * 0.95) & (np.abs(r - g) < 0.20)
+    botanical_pixels = int((is_green | is_yellow | is_brown | is_straw).sum())
+    botanical_share = botanical_pixels / total_pixels
+
+    # Cartoon / Digital graphic detection: extremely few colors with flat fill AND no organic foliage
     colors = rgb.getcolors(maxcolors=2048)
     num_colors = len(colors) if colors else 2000
     top_share = (max(c[0] for c in colors) / total_pixels) if colors else 0
-    is_neon_art = ((g > 0.88) & (r < 0.12) & (b < 0.12)).sum() > (128 * 128 * 0.15)
-    is_flat_graphic = (num_colors < 25 and top_share > 0.75) or is_neon_art
-
-    # Botanical tissue segmentation (real chlorophyll requires organic tonal balance)
-    is_green = (g > r * 1.02) & (g > b * 1.05) & (g > 0.12)
-    is_yellow = (r > 0.30) & (g > 0.28) & (b < 0.28) & (r > b * 1.15)
-    is_brown = (r > 0.18) & (g <= r * 1.20) & (b < 0.24) & (r > b * 1.10)
-    botanical_pixels = int((is_green | is_yellow | is_brown).sum())
-    total_pixels = 128 * 128
-    botanical_share = botanical_pixels / total_pixels
+    is_neon_art = ((g > 0.88) & (r < 0.12) & (b < 0.12)).sum() > (total_pixels * 0.15)
+    is_flat_graphic = (num_colors < 20 and top_share > 0.85 and botanical_share < 0.05) or is_neon_art
 
     # Human skin detection (Kovac standard)
     is_skin = (
         (r > 0.38) & (g > 0.16) & (b > 0.08) &
         (r > g) & (r > b) &
-        ((r - g) > 0.06) &
-        ((np.maximum(r, np.maximum(g, b)) - np.minimum(r, np.minimum(g, b))) > 0.06)
+        ((r - g) > 0.10) &
+        ((np.maximum(r, np.maximum(g, b)) - np.minimum(r, np.minimum(g, b))) > 0.10)
     )
     skin_share = float(is_skin.sum()) / total_pixels
     green_share = float(is_green.sum()) / total_pixels
 
-    is_human_face = skin_share > 0.18 and green_share < 0.06
+    # Only flag as human face if skin dominates and no real botanical foliage is present
+    is_human_face = (skin_share > 0.45) and (green_share < 0.04) and (botanical_share < 0.08)
     is_insufficient_foliage = botanical_share < 0.02
     is_non_plant = is_human_face or is_insufficient_foliage or is_flat_graphic
 
     return {
-        "valid": not is_non_plant,
+        "valid": not (is_non_plant or is_blurry or is_too_dark or is_overexposed),
         "is_blurry": is_blurry,
         "is_too_dark": is_too_dark,
         "is_overexposed": is_overexposed,

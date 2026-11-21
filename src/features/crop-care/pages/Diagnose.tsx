@@ -117,39 +117,52 @@ export function DiagnosePage() {
     try {
       if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
         setCameraError(
-          "Web live stream requires HTTPS or localhost. Tap 'Take Photo with Camera' below to open your phone's native camera."
+          "Camera access requires HTTPS or localhost. Tap 'Take Photo' below to use your native device camera."
         );
         setCameraActive(false);
         return;
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: facing },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      });
+      // Try environment-facing camera first with flexible resolution constraints
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: facing },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        });
+      } catch {
+        // Fallback with minimal constraints for devices that reject specific resolution queries
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: facing },
+          audio: false,
+        });
+      }
 
       streamRef.current = stream;
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.setAttribute("playsinline", "true");
-        videoRef.current.setAttribute("autoplay", "true");
-        videoRef.current.setAttribute("muted", "true");
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play().catch((err) => console.warn("Video play error:", err));
+        const video = videoRef.current;
+        video.srcObject = stream;
+        video.setAttribute("playsinline", "true");
+        video.setAttribute("autoplay", "true");
+        video.setAttribute("muted", "true");
+        video.muted = true;
+        video.defaultMuted = true;
+        video.onloadedmetadata = () => {
+          video.play().catch((err) => console.warn("Video play error:", err));
         };
-        if (videoRef.current.readyState >= 2) {
-          videoRef.current.play().catch(() => {});
+        if (video.readyState >= 2) {
+          video.play().catch(() => {});
         }
       }
       setCameraActive(true);
     } catch (err: unknown) {
       console.warn("Camera start failed:", err);
       setCameraError(
-        "Camera stream not active. Tap 'Take Photo with Camera' to capture directly with your device camera."
+        "Camera stream not active. Tap 'Take Photo' to capture directly with your camera app."
       );
       setCameraActive(false);
     }
@@ -185,26 +198,47 @@ export function DiagnosePage() {
       const vRect = videoEl.getBoundingClientRect();
       const rRect = reticleEl.getBoundingClientRect();
 
-      // Video element uses CSS object-cover:
-      // scale factor maps screen container pixels to video source buffer pixels
-      const scale = Math.min(vw / Math.max(1, vRect.width), vh / Math.max(1, vRect.height));
+      // CSS object-cover projection:
+      // Map screen container coordinates to raw camera stream pixels
+      const videoRatio = vw / vh;
+      const containerRatio = vRect.width / Math.max(1, vRect.height);
 
-      // Reticle center relative to video container top-left
-      const rcx = (rRect.left + rRect.width / 2) - vRect.left;
-      const rcy = (rRect.top + rRect.height / 2) - vRect.top;
+      let displayedW: number;
+      let displayedH: number;
+      let offsetX: number;
+      let offsetY: number;
+      let screenToVideoScale: number;
 
-      // Map reticle center to video frame coordinate system
-      const vidCx = (vw / 2) + (rcx - vRect.width / 2) * scale;
-      const vidCy = (vh / 2) + (rcy - vRect.height / 2) * scale;
+      if (videoRatio > containerRatio) {
+        // Video is wider than container; horizontal sides overflow and are cropped
+        displayedH = vRect.height;
+        displayedW = vRect.height * videoRatio;
+        offsetX = (vRect.width - displayedW) / 2;
+        offsetY = 0;
+        screenToVideoScale = vh / Math.max(1, vRect.height);
+      } else {
+        // Video is taller than container; vertical top/bottom overflow and are cropped
+        displayedW = vRect.width;
+        displayedH = vRect.width / videoRatio;
+        offsetX = 0;
+        offsetY = (vRect.height - displayedH) / 2;
+        screenToVideoScale = vw / Math.max(1, vRect.width);
+      }
 
-      // Strictly square dimension matching reticle box
-      const rawCropSize = Math.min(rRect.width, rRect.height) * scale;
-      sSize = Math.max(128, Math.min(rawCropSize, vw, vh));
+      // Reticle center mapped into the video coordinate frame
+      const reticleCenterScreenX = (rRect.left + rRect.width / 2) - (vRect.left + offsetX);
+      const reticleCenterScreenY = (rRect.top + rRect.height / 2) - (vRect.top + offsetY);
+
+      const vidCx = reticleCenterScreenX * screenToVideoScale;
+      const vidCy = reticleCenterScreenY * screenToVideoScale;
+
+      const rawCropSize = Math.min(rRect.width, rRect.height) * screenToVideoScale;
+      sSize = Math.max(64, Math.min(rawCropSize, vw, vh));
 
       sx = Math.max(0, Math.min(vw - sSize, Math.floor(vidCx - sSize / 2)));
       sy = Math.max(0, Math.min(vh - sSize, Math.floor(vidCy - sSize / 2)));
     } else {
-      // Reticle proportion: 70% of the shortest video dimension centered
+      // Fallback: 70% of the shortest video dimension centered
       sSize = Math.round(Math.min(vw, vh) * 0.70);
       sx = Math.floor((vw - sSize) / 2);
       sy = Math.floor((vh - sSize) / 2);
