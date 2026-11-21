@@ -153,7 +153,10 @@ export function TopicRow({ topic }: { topic: Topic }) {
 
 export function scanTitle(scan: Scan, lang: Parameters<typeof l>[0], t: (k: Key) => string): string {
   if (scan.outcome === "unanalysed") return t("unanalysedTitle");
-  if (scan.outcome === "unknown") return t("noResults");
+  if (scan.outcome === "unknown") {
+    const isNonLeaf = scan.quality ? scan.quality.checks.find((c) => c.id === "leaf")?.pass === false : false;
+    return isNonLeaf ? t("oodTitle") : "Inconclusive Scan";
+  }
   const topic = scan.topicSlug ? getTopic(scan.crop, scan.topicSlug) : undefined;
   return topic ? l(lang, topic.name) : t("noResults");
 }

@@ -119,9 +119,20 @@ export function CropCareProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addScan = useCallback((scan: Scan) => {
-    const n = [scan, ...historyService.list()];
-    if (!historyService.save(n)) return false;
-    setScans(n.slice(0, 40));
+    // 1. Immediately cache in sessionStorage so result page always finds it even if localStorage limits are reached
+    if (typeof window !== "undefined") {
+      try {
+        window.sessionStorage.setItem("kisanai.last_scan", JSON.stringify(scan));
+        window.sessionStorage.setItem(`kisanai.scan.${scan.id}`, JSON.stringify(scan));
+      } catch {}
+    }
+
+    // 2. Always update in-memory React state so the UI never drops the active scan
+    setScans((prev) => [scan, ...prev.filter((s) => s.id !== scan.id)].slice(0, 40));
+
+    // 3. Persist to device storage
+    const n = [scan, ...historyService.list().filter((s) => s.id !== scan.id)];
+    historyService.save(n);
     pushEvent({ kind: "scan-saved", label: "Scan saved on this device", link: `/scans/${scan.id}` });
     return true;
   }, [pushEvent]);

@@ -8,26 +8,62 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
   let chlorotic = 0;
   let lesion = 0;
   let straw = 0;
+  let neonCount = 0;
+  let skinCount = 0;
+  const colorMap = new Map<number, number>();
+
   for (let i = 0; i < width * height; i++) {
     const r = data[i * 4]!, g = data[i * 4 + 1]!, b = data[i * 4 + 2]!;
     const y = 0.299 * r + 0.587 * g + 0.114 * b;
     gray[i] = y;
     sum += y;
 
-    // Multi-spectral botanical foliage classification
-    const isGreen = (g > r * 0.95 && g > b * 1.05 && g > 25);
-    const isChlorotic = (r > 65 && g > 65 && g >= r * 0.82 && Math.abs(r - g) <= 25 && b < Math.min(r, g) * 0.85);
-    const isLesion = (r > 35 && r < 180 && g > 25 && g < r * 0.95 && b < Math.min(r, g) * 0.85 && (r - g) < 28);
-    const isStraw = (r > 60 && g > 50 && g > r * 0.80 && Math.abs(r - g) <= 25 && b < Math.min(r, g) * 0.85);
+    // 5-bit color quantization
+    const key = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
+    colorMap.set(key, (colorMap.get(key) || 0) + 1);
 
-    if (isGreen) {
-      green++;
-    } else if (isChlorotic) {
-      chlorotic++;
-    } else if (isLesion) {
-      lesion++;
-    } else if (isStraw) {
-      straw++;
+    // Artificial neon colors common in cartoons/clipart
+    if ((r > 230 && g > 230 && b < 25) || (g > 235 && r < 30 && b > 235) || (r < 25 && g > 245 && b < 25)) {
+      neonCount++;
+    }
+
+    // Biometric human skin tone detection (YCbCr + Kovac chromatic space)
+    const yCb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
+    const yCr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
+    const isYcbcrSkin = yCr >= 133 && yCr <= 173 && yCb >= 77 && yCb <= 127;
+    const isKovacSkin = r > 80 && g > 35 && b > 20 && r > g && r > b && (r - g) > 15 && (r - b) > 25;
+    const isSkinPixel = isYcbcrSkin || isKovacSkin;
+
+    if (isSkinPixel) {
+      skinCount++;
+    } else {
+      // Multi-spectral botanical foliage classification
+      // 1. Green foliage: dark green, bright green, or shaded foliage
+      const isGreen =
+        (g >= r * 0.92 && g > b * 1.05 && g > 25) ||
+        (g > 35 && g > r * 0.88 && g > b * 1.08);
+
+      // 2. Chlorotic, lime, & yellow foliage (requires distinct yellow saturation; b significantly lower than green and red)
+      const isChlorotic =
+        (r > 60 && g > 55 && g >= r * 0.78 && b < Math.min(r, g) * 0.75 && (r + g) > 2.2 * b);
+
+      // 3. Brown, necrotic, & fungal lesion tissue (requires distinct brown pigment, not grey walls or furniture)
+      const isLesion =
+        (r > 40 && g > 20 && r >= g * 1.02 && b < Math.min(r, g) * 0.75 && (r - g) < 55 && (r + g) > 2.0 * b);
+
+      // 4. Straw, tan, & desiccated leaf blade/sheath tissue
+      const isStraw =
+        (r > 65 && g > 55 && g >= r * 0.75 && b < Math.min(r, g) * 0.75 && Math.abs(r - g) < 40 && (r + g) > 2.2 * b);
+
+      if (isGreen) {
+        green++;
+      } else if (isChlorotic) {
+        chlorotic++;
+      } else if (isLesion) {
+        lesion++;
+      } else if (isStraw) {
+        straw++;
+      }
     }
   }
   const n = width * height;
@@ -52,31 +88,6 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
   const greenShare = green / n;
   const plantTissueShare = (green + chlorotic + lesion + straw) / n;
 
-  // Real foliage vs cartoon/drawing/non-plant entropy check
-  const colorMap = new Map<number, number>();
-  let neonCount = 0;
-  let skinCount = 0;
-  for (let i = 0; i < n; i++) {
-    const r = data[i * 4]!, g = data[i * 4 + 1]!, b = data[i * 4 + 2]!;
-    // 5-bit color quantization
-    const key = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
-    colorMap.set(key, (colorMap.get(key) || 0) + 1);
-
-    // Artificial neon colors common in cartoons/clipart
-    if ((r > 230 && g > 230 && b < 25) || (g > 235 && r < 30 && b > 235) || (r < 25 && g > 245 && b < 25)) {
-      neonCount++;
-    }
-
-    // Biometric human skin tone detection (YCbCr + Kovac chromatic domain)
-    const yCb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
-    const yCr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
-    const isYcbcrSkin = yCr >= 133 && yCr <= 173 && yCb >= 77 && yCb <= 127;
-    const isKovacSkin = r > 80 && g > 35 && b > 20 && r > g && r > b && (r - g) > 25 && (r - b) > 35;
-    if (isYcbcrSkin || isKovacSkin) {
-      skinCount++;
-    }
-  }
-
   let maxColorOccurrences = 0;
   for (const occ of colorMap.values()) {
     if (occ > maxColorOccurrences) maxColorOccurrences = occ;
@@ -87,10 +98,10 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
   // Reject flat vector art, drawings, cartoons:
   const isCartoonOrDrawing =
     (uniqueColorCount < 20 && topColorShare > 0.85 && plantTissueShare < 0.05) ||
-    (neonCount / n) > 0.20;
+    ((neonCount / n) > 0.20 && plantTissueShare < 0.05);
 
   // Reject human faces (only when human skin dominates and virtually no botanical plant tissue is present)
-  const isHumanFace = (skinCount / n) > 0.35 && greenShare < 0.05 && plantTissueShare < 0.15;
+  const isHumanFace = (skinCount / n) > 0.25 && greenShare < 0.08;
   const isMissingBotanicalFoliage = plantTissueShare < 0.04 && !isHumanFace && !isCartoonOrDrawing;
 
   const leafOk = !isCartoonOrDrawing && !isHumanFace && !isMissingBotanicalFoliage;

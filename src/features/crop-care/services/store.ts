@@ -47,18 +47,58 @@ function read<T>(key: StoreKey, fallback: T): T {
 }
 
 function write(key: StoreKey, value: unknown): boolean {
+  if (typeof window === "undefined") return true;
   try {
     window.localStorage.setItem(KEYS[key], JSON.stringify(value));
     return true;
-  } catch {
-    return false;
+  } catch (err) {
+    console.warn(`localStorage write failed for key ${key}, attempting quota cleanup:`, err);
+    try {
+      // If scans exceeded quota, evict oldest scans and keep only top 15
+      if (key === "scans" && Array.isArray(value)) {
+        const reduced = (value as Scan[]).slice(0, 15);
+        window.localStorage.setItem(KEYS[key], JSON.stringify(reduced));
+        return true;
+      }
+      // Or try clearing non-critical event and recent logs
+      window.localStorage.removeItem(KEYS.events);
+      window.localStorage.removeItem(KEYS.recent);
+      window.localStorage.setItem(KEYS[key], JSON.stringify(value));
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 
 export const historyService = {
-  list: (): Scan[] => read<Scan[]>("scans", []),
-  save: (scans: Scan[]) => write("scans", scans.slice(0, 50)),
-  clear: () => write("scans", []),
+  list: (): Scan[] => {
+    const stored = read<Scan[]>("scans", []);
+    if (typeof window !== "undefined") {
+      try {
+        const last = window.sessionStorage.getItem("kisanai.last_scan");
+        if (last) {
+          const parsed = JSON.parse(last) as Scan;
+          if (parsed?.id && !stored.some((s) => s.id === parsed.id)) {
+            return [parsed, ...stored];
+          }
+        }
+      } catch {}
+    }
+    return stored;
+  },
+  save: (scans: Scan[]) => {
+    // Keep top 30 scans to protect against quota limits
+    return write("scans", scans.slice(0, 30));
+  },
+  clear: () => {
+    if (typeof window !== "undefined") {
+      try {
+        window.sessionStorage.removeItem("kisanai.last_scan");
+      } catch {}
+    }
+    return write("scans", []);
+  },
 };
 
 export const savedService = {

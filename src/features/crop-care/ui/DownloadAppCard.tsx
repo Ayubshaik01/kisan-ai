@@ -16,13 +16,44 @@ import { cn } from "@/lib/utils";
 import { useCropCare } from "../context";
 
 export const APK_FILE_SIZE = "367.6 MB";
-export const APK_SHA256 = "c3ae0475eb6421602e4b27073afce940322b9f61a3a684c0436fb6c784bbc538";
+export const APK_SHA256 = "d8a21dcb62360fdf5132ccc0b48a825b0f1293446fac10cfd3f5bf7e282db8e5";
 export const CLOUD_APK_DOWNLOAD_URL =
   "https://github.com/Ayubshaik01/remix-of-remix-of-make-it-great/releases/download/v1.0.0/kisanai-offline-ai.apk";
 
 export function getApkDownloadUrl(): string {
-  // Always use local redirect endpoint which redirects directly to the latest cloud release asset
-  return "/download/app-release.apk";
+  if (
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+  ) {
+    return "/download/app-release.apk";
+  }
+  return CLOUD_APK_DOWNLOAD_URL;
+}
+
+export function triggerApkDownload(e?: React.MouseEvent) {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  const url = getApkDownloadUrl();
+  if (typeof window !== "undefined") {
+    try {
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "kisanai-offline-ai.apk";
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        try {
+          document.body.removeChild(link);
+        } catch {}
+      }, 300);
+    } catch {
+      window.location.href = url;
+    }
+  }
 }
 
 export const APK_DOWNLOAD_URL = CLOUD_APK_DOWNLOAD_URL;
@@ -125,7 +156,9 @@ export function DownloadAppCard({ className }: { className?: string }) {
           <a
             href={getApkDownloadUrl()}
             download="kisanai-offline-ai.apk"
-            className="inline-flex items-center justify-center gap-2.5 rounded-2xl bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90 active:scale-95 transition-all"
+            rel="external"
+            onClick={triggerApkDownload}
+            className="inline-flex items-center justify-center gap-2.5 rounded-2xl bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90 active:scale-95 transition-all cursor-pointer"
           >
             <Download className="size-5" />
             {t("downloadApkBtn")}

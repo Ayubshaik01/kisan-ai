@@ -33,9 +33,10 @@ import {
   VolumeX,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { historyService } from "../services/store";
 import {
   Dialog,
   DialogContent,
@@ -85,7 +86,32 @@ export function ScanResultPage() {
   const { t, lang, settings, scans, removeScan, updateScan, updateScanNote } = useCropCare();
   const navigate = useNavigate();
 
-  const scan = scans.find((s) => s.id === scanId);
+  // Multi-tier scan lookup: React state -> Persistent History -> Session storage fallback
+  const scan = useMemo(() => {
+    if (!scanId) return undefined;
+    const cleanId = decodeURIComponent(scanId).trim();
+    const found = scans.find((s) => s.id === scanId || s.id === cleanId);
+    if (found) return found;
+    const fromHistory = historyService.list().find((s) => s.id === scanId || s.id === cleanId);
+    if (fromHistory) return fromHistory;
+    if (typeof window !== "undefined") {
+      try {
+        const byId =
+          window.sessionStorage.getItem(`kisanai.scan.${cleanId}`) ||
+          window.sessionStorage.getItem(`kisanai.scan.${scanId}`);
+        if (byId) {
+          const parsed = JSON.parse(byId) as Scan;
+          if (parsed) return parsed;
+        }
+        const raw = window.sessionStorage.getItem("kisanai.last_scan");
+        if (raw) {
+          const parsed = JSON.parse(raw) as Scan;
+          if (parsed && (parsed.id === scanId || parsed.id === cleanId || !scanId)) return parsed;
+        }
+      } catch {}
+    }
+    return undefined;
+  }, [scans, scanId]);
   const [note, setNote] = useState(scan?.note || "");
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [showShareReport, setShowShareReport] = useState(false);

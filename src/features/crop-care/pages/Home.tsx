@@ -28,7 +28,7 @@ import {
 import { useCropCare } from "../context";
 import { crops, getTopic, l, type CropKey } from "../knowledge";
 import { LiveWeatherCard } from "../ui/LiveWeatherCard";
-import { DownloadAppCard, getApkDownloadUrl } from "../ui/DownloadAppCard";
+import { DownloadAppCard, getApkDownloadUrl, triggerApkDownload } from "../ui/DownloadAppCard";
 import {
   btnPrimary,
   btnSecondary,
@@ -136,9 +136,11 @@ export function HomePage() {
             <a
               href={getApkDownloadUrl()}
               download="kisanai-offline-ai.apk"
+              rel="external"
+              onClick={triggerApkDownload}
               className={cn(
                 btnSecondary,
-                "h-12 px-5 font-bold border-primary/40 text-primary hover:bg-primary/10 transition-all",
+                "h-12 px-5 font-bold border-primary/40 text-primary hover:bg-primary/10 transition-all cursor-pointer",
               )}
               title="Download KisanAI Offline Android APK (~367 MB)"
             >

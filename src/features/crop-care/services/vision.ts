@@ -760,12 +760,33 @@ export async function analyzeImageWithVision(
         candidates = deepModelResult.candidates;
       }
       // Priority 2: Client-side In-Browser Real-Field Gradient Boosted Trees (100% offline browser execution)
-      else if (hgbRes && hgbRes.confidence >= 0.20 && hgbRes.slug !== "unknown") {
+      else if (hgbRes && hgbRes.confidence >= 0.35 && hgbRes.slug !== "unknown") {
         const modeCandidate = hgbRes.candidates.find((c: any) => matchesMode(c.slug));
-        detectedSlug = modeCandidate ? modeCandidate.slug : hgbRes.slug;
-        confidence = modeCandidate ? Math.min(0.96, Math.max(0.68, modeCandidate.confidence)) : Math.min(0.96, Math.max(0.68, hgbRes.confidence));
-        patternName = detectedSlug.replace("-", "_");
-        candidates = hgbRes.candidates;
+        if (modeCandidate && modeCandidate.confidence >= 0.28) {
+          detectedSlug = modeCandidate.slug;
+          confidence = modeCandidate.confidence;
+          patternName = detectedSlug.replace("-", "_");
+          candidates = hgbRes.candidates;
+        } else if (hgbRes.confidence >= 0.38) {
+          detectedSlug = hgbRes.slug;
+          confidence = hgbRes.confidence;
+          patternName = detectedSlug.replace("-", "_");
+          candidates = hgbRes.candidates;
+        } else {
+          return resolve({
+            source: "model",
+            outcome: "unknown",
+            confidence: hgbRes.confidence,
+            candidates: hgbRes.candidates,
+            diagnostics: {
+              plantPixels,
+              lesionPixels: totalLesionPixels,
+              affectedPercent,
+              isCropValid: false,
+              pattern: "inconclusive_low_confidence",
+            },
+          });
+        }
       }
       // Priority 3: In-Browser ONNX WebAssembly Deep Neural Network
       else {

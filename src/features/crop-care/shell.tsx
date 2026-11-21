@@ -29,8 +29,9 @@ import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { useCropCare } from "./context";
 import { langs, type Lang } from "./i18n";
-import { getApkDownloadUrl } from "./ui/DownloadAppCard";
+import { getApkDownloadUrl, triggerApkDownload } from "./ui/DownloadAppCard";
 import { PrivacyConsentBanner } from "./ui/PrivacyConsentBanner";
+import { StartupSplash } from "./ui/StartupSplash";
 
 export function Logo({ compact }: { compact?: boolean }) {
   const { t } = useCropCare();
@@ -123,6 +124,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-dvh bg-canvas text-foreground">
+      <StartupSplash />
       <a href="#main" className="visually-hidden focus:not-sr-only">Skip to content</a>
       <header className="sticky top-0 z-30 border-b border-line bg-canvas/85 backdrop-blur-lg">
         <div className="mx-auto flex h-16 max-w-[1440px] items-center gap-2 px-4 sm:px-6">
@@ -141,8 +143,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             <a
               href={getApkDownloadUrl()}
               download="kisanai-offline-ai.apk"
+              rel="external"
+              onClick={triggerApkDownload}
               title="Download KisanAI Offline Android APK (~367 MB)"
-              className="hidden sm:inline-flex h-10 items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3 text-xs font-bold text-primary hover:bg-primary/20 transition-all active:scale-95 shadow-xs"
+              className="hidden sm:inline-flex h-10 items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3 text-xs font-bold text-primary hover:bg-primary/20 transition-all active:scale-95 shadow-xs cursor-pointer"
             >
               <Download className="size-3.5" />
               <span>{t("downloadApp")}</span>
@@ -244,8 +248,12 @@ export function AppShell({ children }: { children: ReactNode }) {
               <a
                 href={getApkDownloadUrl()}
                 download="kisanai-offline-ai.apk"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-xs font-bold text-primary-foreground shadow-md hover:bg-primary/90 transition-all active:scale-95"
+                rel="external"
+                onClick={(e) => {
+                  setMobileMenuOpen(false);
+                  triggerApkDownload(e);
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-xs font-bold text-primary-foreground shadow-md hover:bg-primary/90 transition-all active:scale-95 cursor-pointer"
               >
                 <Download className="size-4" />
                 <span>{t("downloadApkBtn")}</span>
