@@ -60,6 +60,8 @@ export type DiagnosisDraft = Pick<
   | "severityMethod"
   | "candidates"
   | "severity"
+  | "pestAnalysis"
+  | "nutritionAnalysis"
 >;
 
 export interface DiagnosisService {
@@ -134,6 +136,8 @@ export const diagnosisService: DiagnosisService = {
       ...(visionRes.severityMethod ? { severityMethod: visionRes.severityMethod } : {}),
       ...(visionRes.candidates ? { candidates: visionRes.candidates } : {}),
       ...(visionRes.severity ? { severity: visionRes.severity } : {}),
+      ...(visionRes.pestAnalysis ? { pestAnalysis: visionRes.pestAnalysis } : {}),
+      ...(visionRes.nutritionAnalysis ? { nutritionAnalysis: visionRes.nutritionAnalysis } : {}),
     };
   },
   sample: ({ crop, mode, image }) => sampleDiagnosis(crop, mode, image),

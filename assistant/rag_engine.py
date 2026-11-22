@@ -77,26 +77,17 @@ class OfflineAssistantRAG:
         # Multi-lingual keyword fallback for Indian regional queries
         if not target_problem:
             q_low = query.lower()
-            # Thrips
-            if any(k in q_low for k in ["thrips", "తామర", "थ्रिप्स", "இலைப்பேன்", "தாம்பிர பூச்சி", "ನುಸಿ", "फुलकिडे"]):
+            if "thrips" in q_low or "తామర" in q_low:
                 target_problem = self.query_service.get_problem("thrips")
-            # Leaf Curl
-            elif any(k in q_low for k in ["leaf curl", "ముడత", "चुरडा", "मुरडा", "बोकड्या", "இலை சுருட்டை", "இலைச்சுருள்", "ಎಲೆ ಮುರುಟು", "ಮುರುಟು"]):
+            elif "leaf curl" in q_low or "ముడత" in q_low or "चुरडा" in q_low or "मुरडा" in q_low:
                 target_problem = self.query_service.get_problem("leaf-curl")
-            # Blast
-            elif any(k in q_low for k in ["blast", "అగ్గి తెగులు", "అగ్గి", "ब्लास्ट", "झुलसा", "குலை நோய்", "குலை", "பிளாஸ்ட்", "ಬೆಂಕಿ ರೋಗ", "ಬೆಂಕಿ", "ಬ್ಲಾಸ್ಟ್", "करपा", "तांदूळ करपा"]):
+            elif "blast" in q_low or "అగ్గి తెగులు" in q_low or "ब्लास्ट" in q_low:
                 target_problem = self.query_service.get_problem("rice-blast")
-            # Brown Spot
-            elif any(k in q_low for k in ["brown spot", "మచ్చ", "ఆకు మచ్చ", "भूरा धब्बा", "धब्बा", "பழுப்பு புள்ளி", "புள்ளி", "ಕಂದು ಚುಕ್ಕೆ", "ಚುಕ್ಕೆ", "तपकिरी ठिपके", "ठिपके"]):
+            elif "brown spot" in q_low or "మచ్చ" in q_low or "भूरा धब्बा" in q_low:
                 target_problem = self.query_service.get_problem("brown-spot")
-            # Bacterial Leaf Blight
-            elif any(k in q_low for k in ["blight", "bacterial leaf blight", "ఎండ తెగులు", "జీవాణు తెగులు", "जीवाणु झुलसा", "झुलसा", "இலைக்கருகல்", "பாக்டீரியா இலைக்கருகல்", "ಅಂಗಮಾರಿ", "ದುಂಡಾಣು ಅಂಗಮಾರಿ", "जीवाणूजन्य करपा"]):
+            elif "blight" in q_low or "ఎండ తెగులు" in q_low or "झुलसा" in q_low:
                 target_problem = self.query_service.get_problem("bacterial-leaf-blight")
-            # Stem Borer
-            elif any(k in q_low for k in ["stem borer", "yellow stem borer", "కాండం తొలుచు", "పురుగు", "तना छेदक", "தண்டு துளைப்பான்", "ಕಾಂಡ ಕೊರೆಯುವ ಹುಳು", "खोडकीड"]):
-                target_problem = self.query_service.get_problem("yellow-stem-borer")
-            # Fertilizer references
-            elif any(k in q_low for k in ["potash", "urea", "यूरिया", "యూరియా", "யூரியா", "ಯೂರಿಯಾ", "युरिया", "fertilizer", "खाद", "ఎరువు", "உரம்", "ಗೊಬ್ಬರ"]):
+            elif "potash" in q_low or "urea" in q_low or "यूरिया" in q_low or "యూరియా" in q_low or "fertilizer" in q_low:
                 target_problem = self.query_service.get_problem("brown-spot") if crop == "rice" else self.query_service.get_problem("rice-blast")
 
         if not target_problem:
@@ -104,12 +95,6 @@ class OfflineAssistantRAG:
                 fallback_msg = "मुझे गाइड में धान या मिर्च की इस समस्या का विवरण नहीं मिला। कृपया पत्ती पर दिख रहे लक्षण बताएं जैसे 'पत्ती पर भूरे धब्बे' या 'मिर्च की मुड़ती पत्तियां'।"
             elif lang == "te":
                 fallback_msg = "ఈ ప్రశ్నకు సంబంధించిన వరి లేదా మిరప సమస్య గైడ్‌లో లభించలేదు. దయచేసి 'వరి ఆకులపై మచ్చలు' లేదా 'మిరప ఆకు ముడత' వంటి లక్షణాలను పేర్కొనండి."
-            elif lang == "ta":
-                fallback_msg = "வழிகாட்டியில் நெல் அல்லது மிளகாய் பயிரின் இந்த பிரச்சனை கிடைக்கவில்லை. தயவுசெய்து 'இலைகளில் பழுப்பு புள்ளிகள்' அல்லது 'இலை சுருட்டை' போன்ற அறிகுறிகளை விவரிக்கவும்."
-            elif lang == "kn":
-                fallback_msg = "ಮಾರ್ಗದರ್ಶಿಯಲ್ಲಿ ಭತ್ತ ಅಥವಾ ಮೆಣಸಿನಕಾಯಿಯ ಈ ಸಮಸ್ಯೆ ಕಂಡುಬಂದಿಲ್ಲ. ದಯವಿಟ್ಟು 'ಎಲೆಗಳ ಮೇಲೆ ಕಂದು ಚುಕ್ಕೆಗಳು' ಅಥವಾ 'ಎಲೆ ಮುರುಟು' ನಂತಹ ಲಕ್ಷಣಗಳನ್ನು ವಿವರಿಸಿ."
-            elif lang == "mr":
-                fallback_msg = "मार्गदर्शकामध्ये भात किंवा मिरचीच्या या समस्येचा तपशील आढळला नाही. कृपया 'पानावरील तपकिरी ठिपके' किंवा 'पाने चुरडणे' यासारखी लक्षणे सांगा."
             else:
                 fallback_msg = "I couldn't match that to a rice or chilli problem in the verified offline guide. Try describing what you see on the leaves, panicle or fruit."
             return {

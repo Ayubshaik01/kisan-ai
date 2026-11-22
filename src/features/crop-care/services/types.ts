@@ -29,6 +29,20 @@ export type DynamicCurePlan = {
   markdownNarrative?: string;
 };
 
+export type PestAnalysis = {
+  detectedPest?: string;
+  pestConfidence?: number;
+  visibleDamage?: string;
+  countRange?: string;
+};
+
+export type NutritionAnalysis = {
+  suspectedDeficiency?: string;
+  deficiencyConfidence?: number;
+  guidance?: string;
+  isConfirmed?: boolean;
+};
+
 export type Scan = {
   id: string;
   crop: CropKey;
@@ -49,6 +63,8 @@ export type Scan = {
   severityMethod?: string;
   candidates?: { slug: string; confidence: number }[];
   severity?: SeverityResult;
+  pestAnalysis?: PestAnalysis;
+  nutritionAnalysis?: NutritionAnalysis;
   quality?: QualityReport;
   curePlan?: DynamicCurePlan;
   note?: string;

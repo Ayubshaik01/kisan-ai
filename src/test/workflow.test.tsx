@@ -144,10 +144,10 @@ describe("Knowledge Library Search", () => {
     const scientific = searchTopics("Pyricularia");
     expect(scientific.some((t) => t.slug === "rice-blast")).toBe(true);
 
-    // Filter by crop
+    // Filter by crop (6 foliar diseases + 4 sucking pests + 4 nutrient deficiencies = 14)
     const chilliOnly = searchTopics("", { crop: "chilli" });
     expect(chilliOnly.every((t) => t.crop === "chilli")).toBe(true);
-    expect(chilliOnly.length).toBe(10);
+    expect(chilliOnly.length).toBe(14);
 
     // Filter by mode
     const pestsOnly = searchTopics("", { kind: "pest" });

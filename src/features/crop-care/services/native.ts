@@ -96,3 +96,12 @@ export function getNativeBridge(): NativeBridge {
   win.CropAssistantNative = activeBridge;
   return activeBridge;
 }
+
+export function isNativeApp(): boolean {
+  if (typeof window === "undefined") return false;
+  const win = window as any;
+  return Boolean(
+    win.CropAssistantAndroid ||
+    (typeof navigator !== "undefined" && navigator.userAgent && navigator.userAgent.includes("KisanAI"))
+  );
+}

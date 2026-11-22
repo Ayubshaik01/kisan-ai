@@ -2,13 +2,20 @@ import { useEffect, useState } from "react";
 import { Leaf, Sparkles, ShieldCheck, Cpu } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+let hasShownSplash = false;
+
 export function StartupSplash() {
   const [mounted, setMounted] = useState(false);
-  const [visible, setVisible] = useState(true);
+  const [visible, setVisible] = useState(!hasShownSplash);
   const [fading, setFading] = useState(false);
   const [progress, setProgress] = useState(15);
 
   useEffect(() => {
+    if (hasShownSplash) {
+      setVisible(false);
+      return;
+    }
+    hasShownSplash = true;
     setMounted(true);
 
     // Fast progressive progress animation
@@ -99,3 +106,4 @@ export function StartupSplash() {
     </div>
   );
 }
+

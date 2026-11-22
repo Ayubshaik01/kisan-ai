@@ -24,6 +24,18 @@ export interface VisionAnalysisResult {
   severityMethod?: string;
   candidates?: { slug: string; confidence: number }[];
   severity?: SeverityResult;
+  pestAnalysis?: {
+    detectedPest?: string;
+    pestConfidence?: number;
+    visibleDamage?: string;
+    countRange?: string;
+  };
+  nutritionAnalysis?: {
+    suspectedDeficiency?: string;
+    deficiencyConfidence?: number;
+    guidance?: string;
+    isConfirmed?: boolean;
+  };
   diagnostics: {
     plantPixels: number;
     lesionPixels: number;
@@ -65,6 +77,8 @@ function rgbToHsv(r: number, g: number, b: number): [number, number, number] {
 // Cached in-memory gradient boosted field models
 let riceHgbModelCache: any = null;
 let chilliHgbModelCache: any = null;
+let chilliPestModelCache: any = null;
+let chilliNutrModelCache: any = null;
 
 async function loadHgbModel(crop: CropKey): Promise<any> {
   try {
@@ -85,6 +99,34 @@ async function loadHgbModel(crop: CropKey): Promise<any> {
     }
   } catch (err) {
     console.warn(`Could not load HGB model for ${crop}, using embedded evaluator:`, err);
+  }
+  return null;
+}
+
+async function loadChilliPestModel(): Promise<any> {
+  if (chilliPestModelCache) return chilliPestModelCache;
+  try {
+    const res = await fetch("/models/chilli_pest_hgb.json");
+    if (res.ok) {
+      chilliPestModelCache = await res.json();
+      return chilliPestModelCache;
+    }
+  } catch (e) {
+    console.warn("Could not load chilli pest model:", e);
+  }
+  return null;
+}
+
+async function loadChilliNutrModel(): Promise<any> {
+  if (chilliNutrModelCache) return chilliNutrModelCache;
+  try {
+    const res = await fetch("/models/chilli_nutrition_hgb.json");
+    if (res.ok) {
+      chilliNutrModelCache = await res.json();
+      return chilliNutrModelCache;
+    }
+  } catch (e) {
+    console.warn("Could not load chilli nutrition model:", e);
   }
   return null;
 }
@@ -170,8 +212,9 @@ async function runOnnxInference(
       : [
           "leaf-curl",
           "cercospora-leaf-spot",
+          "bacterial-leaf-spot",
           "powdery-mildew",
-          "thrips",
+          "anthracnose",
           "chilli-healthy",
           "unknown",
         ];
@@ -735,9 +778,50 @@ export async function analyzeImageWithVision(
         }
       }
 
-      // 2. Query In-Browser trained HistGradientBoosting model (77.4% accuracy on 2,700 real photos, 100% Offline client-side)
+      // 2. Query In-Browser trained HistGradientBoosting model (82.2% accuracy on real chilli photos, 100% Offline client-side)
       const hgbModel = await loadHgbModel(crop);
       const hgbRes = hgbModel ? evaluateHgb(hgbModel, featVector) : null;
+
+      let pestAnalysis: VisionAnalysisResult["pestAnalysis"] = undefined;
+      let nutritionAnalysis: VisionAnalysisResult["nutritionAnalysis"] = undefined;
+
+      if (crop === "chilli") {
+        try {
+          const pestModel = await loadChilliPestModel();
+          if (pestModel) {
+            const pestRes = evaluateHgb(pestModel, featVector);
+            if (pestRes && pestRes.slug !== "none" && pestRes.confidence >= 0.30) {
+              const pestLabels: Record<string, string> = {
+                thrips: "Upward boat-shaped leaf cupping with silvery/bronze feeding scars",
+                mites: "Downward leaf curling, inverted boat puckering and leathery texture",
+                whiteflies: "Chlorotic speckling, honeydew secretion with leaf curl vector risk",
+                aphids: "Leaf crinkling and colony clusters on tender growing tips",
+              };
+              pestAnalysis = {
+                detectedPest: pestRes.slug,
+                pestConfidence: pestRes.confidence,
+                visibleDamage: pestLabels[pestRes.slug] || "Visible foliar feeding marks",
+                countRange: pestRes.confidence > 0.70 ? "Established infestation" : "Early signs / trace presence",
+              };
+            }
+          }
+        } catch {}
+
+        try {
+          const nutrModel = await loadChilliNutrModel();
+          if (nutrModel) {
+            const nutrRes = evaluateHgb(nutrModel, featVector);
+            if (nutrRes && nutrRes.slug !== "none" && nutrRes.confidence >= 0.30) {
+              nutritionAnalysis = {
+                suspectedDeficiency: nutrRes.slug,
+                deficiencyConfidence: nutrRes.confidence,
+                guidance: "Possible nutritional stress — further inspection or expert confirmation recommended.",
+                isConfirmed: nutrRes.confidence >= 0.75,
+              };
+            }
+          }
+        } catch {}
+      }
 
       // Mode matching validator
       const RICE_DISEASES = new Set(["rice-blast", "brown-spot", "bacterial-leaf-blight", "bacterial-leaf-streak", "tungro", "downy-mildew", "rice-healthy"]);
@@ -761,14 +845,14 @@ export async function analyzeImageWithVision(
         candidates = deepModelResult.candidates;
       }
       // Priority 2: Client-side In-Browser Real-Field Gradient Boosted Trees (100% offline browser execution)
-      else if (hgbRes && hgbRes.confidence >= 0.35 && hgbRes.slug !== "unknown") {
+      else if (hgbRes && hgbRes.confidence >= 0.42 && hgbRes.slug !== "unknown") {
         const modeCandidate = hgbRes.candidates.find((c: any) => matchesMode(c.slug));
-        if (modeCandidate && modeCandidate.confidence >= 0.28) {
+        if (modeCandidate && modeCandidate.confidence >= 0.40) {
           detectedSlug = modeCandidate.slug;
           confidence = modeCandidate.confidence;
           patternName = detectedSlug.replace("-", "_");
           candidates = hgbRes.candidates;
-        } else if (hgbRes.confidence >= 0.38) {
+        } else if (hgbRes.confidence >= 0.45) {
           detectedSlug = hgbRes.slug;
           confidence = hgbRes.confidence;
           patternName = detectedSlug.replace("-", "_");
@@ -792,7 +876,7 @@ export async function analyzeImageWithVision(
       // Priority 3: In-Browser ONNX WebAssembly Deep Neural Network
       else {
         const onnxRes = await runOnnxInference(crop, canvas);
-        if (onnxRes && onnxRes.confidence >= 0.30 && onnxRes.slug !== "unknown") {
+        if (onnxRes && onnxRes.confidence >= 0.35 && onnxRes.slug !== "unknown") {
           const modeCandidate = onnxRes.candidates.find((c: any) => matchesMode(c.slug));
           detectedSlug = modeCandidate ? modeCandidate.slug : onnxRes.slug;
           confidence = modeCandidate ? Math.min(0.95, modeCandidate.confidence) : Math.min(0.95, onnxRes.confidence);
@@ -812,6 +896,22 @@ export async function analyzeImageWithVision(
           };
 
           const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+          const maxSc = sorted[0]?.[1] ?? 0;
+          if (maxSc < 15 && totalLesionPixels < 20) {
+            return resolve({
+              source: "model",
+              outcome: "unknown",
+              confidence: 0.18,
+              diagnostics: {
+                plantPixels,
+                lesionPixels: totalLesionPixels,
+                affectedPercent,
+                isCropValid: false,
+                pattern: "inconclusive_non_plant_or_clean",
+              },
+            });
+          }
+
           detectedSlug = sorted[0]![0];
           patternName = detectedSlug.replace("-", "_");
 
@@ -985,6 +1085,8 @@ export async function analyzeImageWithVision(
         severityMethod,
         candidates,
         severity,
+        pestAnalysis,
+        nutritionAnalysis,
         diagnostics: {
           plantPixels,
           lesionPixels: totalLesionPixels,

@@ -60,7 +60,7 @@ const HAZARDOUS_PATTERNS = [
   /(?:औषध|कीटकनाशक|बुरशीनाशक|फवारणी|प्रमाण|डोस|मिसळून|दुप्पट)/,
 ];
 
-const REFUSALS: Record<Lang, string> = {
+export const REFUSALS: Record<Lang, string> = {
   en: "Specific chemical dosages, pesticide brand names, or chemical tank-mixing instructions cannot be recommended directly by this AI. Under CIB&RC statutory regulations, chemical crop-protection products must strictly adhere to officially approved regional registrations. Please follow the cultural and biological controls provided, or consult your local Agricultural Officer or Krishi Vigyan Kendra (KVK) for officially approved chemical schedules.",
   hi: "यह एआई कीटनाशक या फफूंदनाशी के नाम, मात्रा (डोज़) या रसायनों को मिलाकर छिड़कने की सलाह नहीं दे सकता। केंद्रीय कीटनाशी बोर्ड (CIB&RC) के नियमों के अनुसार केवल आधिकारिक रूप से अनुमोदित सिफारिशों का ही उपयोग किया जाना चाहिए। कृपया जैविक व कृषि प्रबंधन के तरीके अपनाएं या अपने स्थानीय कृषि अधिकारी/केवीके से सलाह लें।",
   te: "పురుగుమందుల పేర్లు, పిచికారీ మోతాదులు లేదా రసాయనాల మిశ్రమం గురించి ఈ ఏఐ నేరుగా సిఫార్సు చేయదు. CIB&RC నిబంధనల ప్రకారం ధృవీకరించిన ప్రాంతీయ రికార్డుల నుండి మాత్రమే రసాయన సిఫార్సులు రావాలి. దయచేసి అందించిన సమగ్ర సస్యరక్షణ చర్యలను పాటించండి లేదా మీ సమీప కృషి విజ్ఞాన కేంద్రం (KVK) లేదా వ్యవసాయ అధికారిని సంప్రదించండి.",
@@ -79,7 +79,7 @@ type AgronomicDetail = {
   actions: Record<Lang, string[]>;
 };
 
-const DETAILED_PROFILES: Record<string, AgronomicDetail> = {
+export const DETAILED_PROFILES: Record<string, AgronomicDetail> = {
   "bacterial-leaf-blight": {
     visual: {
       en: (pct, band) => `Visual inspection indicates long, wavy water-soaked yellow-to-white streaks running along leaf margins and veins, progressing downward from tips across ${pct}% of visible leaf tissue (${band} intensity). Straw-colored dried bacterial crusts are visible on leaf margins.`,

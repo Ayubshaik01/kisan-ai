@@ -233,7 +233,7 @@ export function DiagnosePage() {
       const vidCy = reticleCenterScreenY * screenToVideoScale;
 
       const rawCropSize = Math.min(rRect.width, rRect.height) * screenToVideoScale;
-      sSize = Math.max(64, Math.min(rawCropSize, vw, vh));
+      sSize = Math.max(64, Math.min(Math.floor(rawCropSize), vw, vh));
 
       sx = Math.max(0, Math.min(vw - sSize, Math.floor(vidCx - sSize / 2)));
       sy = Math.max(0, Math.min(vh - sSize, Math.floor(vidCy - sSize / 2)));
@@ -363,6 +363,8 @@ export function DiagnosePage() {
           ...(outcome === "identified" && result.confidence !== undefined ? { confidence: result.confidence } : { confidence: 0.12 }),
           ...(outcome === "identified" && result.candidates ? { candidates: result.candidates } : {}),
           ...(outcome === "identified" && result.severity ? { severity: result.severity } : {}),
+          ...(result.pestAnalysis ? { pestAnalysis: result.pestAnalysis } : {}),
+          ...(result.nutritionAnalysis ? { nutritionAnalysis: result.nutritionAnalysis } : {}),
           ...(report ? { quality: report } : {}),
         };
 
@@ -426,6 +428,8 @@ export function DiagnosePage() {
             ...(result.severityMethod ? { severityMethod: result.severityMethod } : {}),
             ...(outcome === "identified" && result.candidates ? { candidates: result.candidates } : {}),
             ...(outcome === "identified" && result.severity ? { severity: result.severity } : {}),
+            ...(result.pestAnalysis ? { pestAnalysis: result.pestAnalysis } : {}),
+            ...(result.nutritionAnalysis ? { nutritionAnalysis: result.nutritionAnalysis } : {}),
             ...(qualityReport ? { quality: qualityReport } : {}),
           };
 
@@ -711,7 +715,10 @@ export function DiagnosePage() {
               playsInline
               autoPlay
               muted
-              className={cn("size-full object-cover", !cameraActive && "hidden")}
+              className={cn(
+                "absolute inset-0 size-full object-cover transition-opacity duration-300",
+                cameraActive ? "opacity-100 z-10" : "opacity-0 pointer-events-none -z-10"
+              )}
             />
 
             {!cameraActive && (

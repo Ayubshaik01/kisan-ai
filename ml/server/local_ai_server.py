@@ -335,27 +335,6 @@ def generate_conversational_response(user_text: str, messages: list, lang: Optio
                 f"{f'आपकी फोटो में **{prob_hi}** के लक्षण दिख रहे हैं। ' if condition else ''}"
                 "मैं आपकी क्या मदद कर सकता हूँ? आप तत्काल रोकथाम के उपाय, खाद-पानी या आसान भाषा में सारांश पूछ सकते हैं!"
             )
-        elif lang == "ta":
-            prob_ta = "நெல் குலை நோய்" if condition == "Rice Blast" else (condition or "பயிர் பிரச்சனை")
-            return (
-                f"வணக்கம்! நான் உங்கள் கிசான் ஏஐ (KisanAI) பயிர் பாதுகாப்பு உதவியாளர். 🌾\n\n"
-                f"{f'உங்கள் புகைப்படத்தில் **{prob_ta}** அறிகுறிகள் உள்ளன. ' if condition else ''}"
-                "நான் உங்களுக்கு எவ்வாறு உதவ முடியும்? உடனடி தீர்வுகள், உர மேலாண்மை அல்லது இயற்கை பூச்சி கட்டுப்பாடு பற்றி கேட்கலாம்!"
-            )
-        elif lang == "kn":
-            prob_kn = "ಭತ್ತದ ಬೆಂಕಿ ರೋಗ" if condition == "Rice Blast" else (condition or "ಬೆಳೆ ಸಮಸ್ಯೆ")
-            return (
-                f"ನಮಸ್ಕಾರ! ನಾನು ನಿಮ್ಮ ಕಿಸಾನ್ ಎಐ (KisanAI) ಬೆಳೆ ಸಂರಕ್ಷಣಾ ಸಹಾಯಕ. 🌾\n\n"
-                f"{f'ನಿಮ್ಮ ಫೋಟೋದಲ್ಲಿ **{prob_kn}** ಲಕ್ಷಣಗಳು ಕಂಡುಬಂದಿವೆ. ' if condition else ''}"
-                "ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ? ತಕ್ಷಣದ ನಿಯಂತ್ರಣ ಕ್ರಮಗಳು, ರಸಗೊಬ್ಬರ ನಿಯಮಗಳು ಅಥವಾ ಜೈವಿಕ ನಿರ್ವಹಣೆ ಬಗ್ಗೆ ಕೇಳಬಹುದು!"
-            )
-        elif lang == "mr":
-            prob_mr = "भातावरील करपा रोग" if condition == "Rice Blast" else (condition or "पीक समस्या")
-            return (
-                f"नमस्कार! मी तुमचा किसान एआय (KisanAI) पीक सल्लागार आहे. 🌾\n\n"
-                f"{f'तुमच्या फोटोमध्ये **{prob_mr}** लक्षणे दिसत आहेत. ' if condition else ''}"
-                "मी तुम्हाला कशी मदत करू शकतो? त्वरित उपाय, खत व्यवस्थापन किंवा जैविक फवारणीबद्दल विचारा!"
-            )
         else:
             return (
                 f"Hey bro! How's it going? I'm your KisanAI crop care assistant. 🌾\n\n"
@@ -368,7 +347,7 @@ def generate_conversational_response(user_text: str, messages: list, lang: Optio
             )
 
     # 3. Check for dedicated fertilizer inquiries
-    if any(k in text_clean for k in ["potash", "urea", "fertilizer", "dap", "zinc", "mop", "యూరియా", "ఎరువు", "పొటాష్", "यूरिया", "खाद", "पोटाश", "உரம்", "யூரியா", "ಗೊಬ್ಬರ", "ಯೂರಿಯಾ", "खत", "युरिया"]):
+    if any(k in text_clean for k in ["potash", "urea", "fertilizer", "dap", "zinc", "mop", "యూరియా", "ఎరువు", "పొటాష్", "यूरिया", "खाद", "पोटाश"]):
         if lang == "hi":
             return (
                 "🧪 **उर्वरक एवं पोषण सलाह (ICAR एवं ANGRAU दिशानिर्देश)**:\n\n"
@@ -383,27 +362,6 @@ def generate_conversational_response(user_text: str, messages: list, lang: Optio
                 "• **యూరియా నివారణ**: వరిలో అగ్గి తెగులు లేదా ఎండ తెగులు ఉన్నప్పుడు **యూరియా వేయడం వెంటనే ఆపండి**! అధిక నత్రజని తెగులును మరింత ఉధృతం చేస్తుంది.\n"
                 "• **పొటాష్ (MOP)**: ఎకరానికి 15–20 కిలోల పొటాష్ ఎరువు వేయండి. ఇది ఆకుల కణజాలాన్ని గట్టిపరిచి రోగ నిరోధక శక్తిని పెంచుతుంది.\n"
                 "• **నీటి యాజమాన్యం**: పొలంలో నిలిచిన మురుగు నీరు తీసివేసి, 2-3 సెం.మీ తేలికపాటి నీరు ఉండేలా చూడండి."
-            )
-        elif lang == "ta":
-            return (
-                "🧪 **உர மேலாண்மை மற்றும் ஊட்டச்சத்து வழிகாட்டுதல் (ICAR / TNAU)**:\n\n"
-                "• **யூரியா எச்சரிக்கை**: குலை நோய் அல்லது இலைக்கருகல் இருந்தால், **யூரியா இடுவதை உடனடியாக நிறுத்தவும்**! அதிக தழைச்சத்து நோய் பரவலை அதிகரிக்கும்.\n"
-                "• **பொட்டாஷ் (MOP)**: ஏக்கருக்கு 15–20 கிலோ பொட்டாஷ் இடவும். இது இலை திசுக்களை வலுப்படுத்தி நோய் எதிர்ப்பாற்றலை அதிகரிக்கும்.\n"
-                "• **நீர் மேலாண்மை**: வயலில் தேங்கிய பழைய நீரை வடித்துவிட்டு 2-3 செ.மீ நல்ல நீர் இருக்குமாறு பார்த்துக் கொள்ளவும்."
-            )
-        elif lang == "kn":
-            return (
-                "🧪 **ಗೊಬ್ಬರ ಮತ್ತು ಪೋಷಕಾಂಶಗಳ ನಿರ್ವಹಣೆ (ICAR / UAS)**:\n\n"
-                "• **ಯೂರಿಯಾ ಮುನ್ನೆಚ್ಚರಿಕೆ**: ಬೆಂಕಿ ರೋಗ ಅಥವಾ ಅಂಗಮಾರಿ ರೋಗವಿದ್ದರೆ, **ಯೂರಿಯಾ ಗೊಬ್ಬರ ನೀಡುವುದನ್ನು ತಕ್ಷಣ ನಿಲ್ಲಿಸಿ**! ಹೆಚ್ಚು ಸಾರಜನಕ ರೋಗವನ್ನು ತೀವ್ರಗೊಳಿಸುತ್ತದೆ.\n"
-                "• **ಪೊಟ್ಯಾಶ್ (MOP)**: ಎಕರೆಗೆ 15–20 ಕೆಜಿ ಪೊಟ್ಯಾಶ್ ಹಾಕಿ. ಇದು ಎಲೆಯ ಜೀವಕೋಶಗಳನ್ನು ಗಟ್ಟಿಗೊಳಿಸಿ ರೋಗ ನಿರೋಧಕ ಶಕ್ತಿಯನ್ನು ಹೆಚ್ಚಿಸುತ್ತದೆ.\n"
-                "• **ನೀರಿನ ನಿರ್ವಹಣೆ**: ಹೊಲದಲ್ಲಿ ನಿಂತ ಹಳೆಯ ನೀರನ್ನು ಹೊರಹಾಕಿ 2-3 ಸೆಂ.ಮೀ ತಿಳಿ ನೀರನ್ನು ಕಾಪಾಡಿಕೊಳ್ಳಿ."
-            )
-        elif lang == "mr":
-            return (
-                "🧪 **खत व पोषण व्यवस्थापन (ICAR मार्गदर्शक तत्त्वे)**:\n\n"
-                "• **युरिया वापर टाळा**: करपा किंवा जीवाणूजन्य रोग असताना **युरिया खत देणे त्वरित थांबवा**! जास्त नत्रामुळे पाने कोवळी होऊन रोगाचा प्रसार वेगाने होतो.\n"
-                "• **पोटॅश (MOP)**: एकरी 15–20 किलो पोटॅश द्या. यामुळे पेशींच्या भिंती मजबूत होतात व रोगप्रतिकारशक्ती वाढते.\n"
-                "• **पाणी व्यवस्थापन**: शेतात साचलेले पाणी काढून टाका व 2-3 सें.मी. हलके पाणी ठेवा."
             )
         else:
             return (
@@ -437,60 +395,14 @@ def generate_conversational_response(user_text: str, messages: list, lang: Optio
         )
 
     # General conversational fallback with real ag advice
-    if lang == "te":
-        raw_reply = (
-            f"*{user_text.strip()}* గురించి:\n\n"
-            "ICAR / ANGRAU మార్గదర్శకాల ప్రకారం ముఖ్యమైన సూచనలు:\n\n"
-            "1. **క్షేత్ర పరిశీలన**: ఆకులపై మచ్చల ఆకారాన్ని గమనించండి (అగ్గి తెగులు, ఎండ తెగులు లేదా ఆకు మచ్చ).\n"
-            "2. **తేమ & గాలి వెలుతురు**: పొలంలో 2-3 సెం.మీ తేలికపాటి నీరు ఉండేలా చూడండి, మురుగునీటిని తొలగించండి.\n"
-            "3. **సేంద్రీయ రక్షణ**: సూడోమోనాస్ ఫ్లోరోసెన్స్ (5–10 గ్రా/లీ) లేదా వేప గింజల కషాయం (5%) పిచికారీ చేయండి.\n\n"
-            "ఏదైనా నిర్దిష్ట నివారణ చర్యలు లేదా ఎరువుల మోతాదుల గురించి నిరభ్యంతరంగా అడగండి!"
-        )
-    elif lang == "hi":
-        raw_reply = (
-            f"*{user_text.strip()}* के संबंध में:\n\n"
-            "ICAR / ANGRAU दिशानिर्देशों के अनुसार प्रमुख सिफारिशें:\n\n"
-            "1. **खेत का निरीक्षण**: पत्तियों पर धब्बों का आकार देखें (नाव के आकार के धब्बे - ब्लास्ट, गोल धब्बे - भूरा धब्बा, किनारों पर लहरदार - जीवाणु झुलसा)।\n"
-            "2. **नमी व जल प्रबंधन**: खेत में 2-3 सेमी उथला पानी रखें और जल निकासी की व्यवस्था करें।\n"
-            "3. **जैविक सुरक्षा**: स्यूडोमोनास फ्लोरोसेंस (5–10 ग्राम/लीटर) या नीम का काढ़ा (5%) का छिड़काव करें।\n\n"
-            "किसी भी विशिष्ट रोग रोकथाम या खाद के बारे में निःसंकोच पूछें!"
-        )
-    elif lang == "ta":
-        raw_reply = (
-            f"*{user_text.strip()}* பற்றி:\n\n"
-            "ICAR / TNAU வழிகாட்டுதல்களின்படி நேரடி பரிந்துரைகள்:\n\n"
-            "1. **கள ஆய்வு**: இலைகளில் புள்ளிகளின் வடிவத்தைக் கவனிக்கவும் (குலை நோய், பழுப்பு புள்ளி அல்லது இலைக்கருகல்).\n"
-            "2. **நீர் மேலாண்மை**: வயலில் 2-3 செ.மீ நீர் இருக்குமாறு பராமரிக்கவும், வடிகால் வசதி செய்யவும்.\n"
-            "3. **உயிரியல் பாதுகாப்பு**: சூடோமோனாஸ் ஃப்ளோரசன்ஸ் அல்லது வேப்பெண்ணெய் கரைசல் (5%) தெளிக்கவும்.\n\n"
-            "குறிப்பிட்ட தீர்வுகள் அல்லது உர மேலாண்மை பற்றி நீங்கள் தாராளமாகக் கேட்கலாம்!"
-        )
-    elif lang == "kn":
-        raw_reply = (
-            f"*{user_text.strip()}* ಕುರಿತು:\n\n"
-            "ICAR / UAS ಮಾರ್ಗಸೂಚಿಗಳ ಪ್ರಕಾರ ಶಿಫಾರಸುಗಳು:\n\n"
-            "1. **ಕ್ಷೇತ್ರ ಪರಿಶೀಲನೆ**: ಎಲೆಗಳ ಮೇಲಿನ ಮಚ್ಚೆಗಳ ಆಕಾರವನ್ನು ಗಮನಿಸಿ (ಬೆಂಕಿ ರೋಗ, ಕಂದು ಚುಕ್ಕೆ ಅಥವಾ ಅಂಗಮಾರಿ).\n"
-            "2. **ನೀರಿನ ನಿರ್ವಹಣೆ**: ಹೊಲದಲ್ಲಿ 2-3 ಸೆಂ.ಮೀ ಆಳದ ನೀರನ್ನು ನಿರ್ವಹಿಸಿ, ಬಸಿಗಾಲುವೆ ಸರಿಪಡಿಸಿ.\n"
-            "3. **ಜೈವಿಕ ರಕ್ಷಣೆ**: ಸ್ಯೂಡೋಮೊನಾಸ್ ಫ್ಲೋರೊಸೆನ್ಸ್ ಅಥವಾ ಬೇವಿನ ಕಷಾಯ (5%) ಸಿಂಪಡಿಸಿ.\n\n"
-            "ನಿರ್ದಿಷ್ಟ ರೋಗ ತಡೆಗಟ್ಟುವಿಕೆ ಅಥವಾ ಗೊಬ್ಬರದ ಬಗ್ಗೆ ನಿರಾತಂಕವಾಗಿ ಕೇಳಿ!"
-        )
-    elif lang == "mr":
-        raw_reply = (
-            f"*{user_text.strip()}* बद्दल:\n\n"
-            "ICAR मार्गदर्शक तत्त्वांनुसार महत्त्वाच्या शिफारशी:\n\n"
-            "1. **शेताची पाहणी**: पानांवरील ठिपक्यांचा आकार तपासा (करपा, तपकिरी ठिपके किंवा जीवाणूजन्य करपा).\n"
-            "2. **पाणी व्यवस्थापन**: शेतात 2-3 सें.मी. उथळ पाणी ठेवा, निचरा चांगला ठेवा.\n"
-            "3. **जैविक संरक्षण**: स्यूडोमोनास फ्लोरोसेन्स किंवा निंबोळी अर्क (5%) फवारा.\n\n"
-            "विशिष्ट उपाय किंवा खतांबद्दल आपण नक्की विचारू शकता!"
-        )
-    else:
-        raw_reply = (
-            f"Regarding *\"{user_text.strip()}\"*:\n\n"
-            "Here are direct recommendations based on ICAR/ANGRAU guidelines:\n\n"
-            "1. **Field Inspection**: Observe whether spots are spindle-shaped (blast), circular with yellow halo (brown spot), or wavy along leaf edges (bacterial leaf blight).\n"
-            "2. **Moisture & Aeration**: Ensure shallow water management (2–3 cm) and avoid walking through wet foliage early in the morning.\n"
-            "3. **Safe Bio-Protection**: Spray *Pseudomonas fluorescens* (@ 5–10 g/L) or Neem Seed Kernel Extract (5%) as an organic protective shield.\n\n"
-            "Feel free to ask about specific cures, fertilizer dosage, or what action to take next!"
-        )
+    raw_reply = (
+        f"Regarding *\"{user_text.strip()}\"*:\n\n"
+        "Here are direct recommendations based on ICAR/ANGRAU guidelines:\n\n"
+        "1. **Field Inspection**: Observe whether spots are spindle-shaped (blast), circular with yellow halo (brown spot), or wavy along leaf edges (bacterial leaf blight).\n"
+        "2. **Moisture & Aeration**: Ensure shallow water management (2–3 cm) and avoid walking through wet foliage early in the morning.\n"
+        "3. **Safe Bio-Protection**: Spray *Pseudomonas fluorescens* (@ 5–10 g/L) or Neem Seed Kernel Extract (5%) as an organic protective shield.\n\n"
+        "Feel free to ask about specific cures, fertilizer dosage, or what action to take next!"
+    )
     _, safe_reply = server_safety.validate_response(raw_reply, lang=lang)
     return safe_reply
 

@@ -38,23 +38,33 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
       skinCount++;
     }
 
+    // Achromatic / neutral grey check (for background walls, furniture, paper)
+    // Individual leaf pixels with lesion centres are accepted if organic absorption is present
+    const chromaRange = Math.max(r, g, b) - Math.min(r, g, b);
+    const isStrictNeutralGrey = chromaRange < 18 && b > Math.min(r, g) * 0.85;
+
     // Multi-spectral botanical foliage classification
     // 1. Green foliage: dark green, bright green, or shaded foliage
     const isGreen =
-      (g >= r * 0.92 && g > b * 1.08 && g > 25) ||
-      (g > 35 && g > r * 0.88 && g > b * 1.12 && (r - g) < 20);
+      !isSkinPixel && !isStrictNeutralGrey &&
+      ((g >= 20 && g >= r * 0.88 && g > b * 1.04) ||
+       (g > 32 && (g - r) >= -10 && (g - b) >= 6) ||
+       (g > 30 && g > r * 0.80 && (g + r) > b * 1.5));
 
-    // 2. Chlorotic, lime, & yellow foliage
+    // 2. Chlorotic, lime, & yellow foliage (natural senescence, nutritional chlorosis, or viral yellowing)
     const isChlorotic =
-      (r > 50 && g > 45 && g >= r * 0.72 && b < Math.min(r, g) * 0.80 && (r + g) > 1.9 * b);
+      !isSkinPixel && !isStrictNeutralGrey &&
+      (r > 35 && g > 35 && (r + g) > b * 1.5 && Math.abs(r - g) < 55 && b < Math.min(r, g) * 0.85);
 
-    // 3. Brown, necrotic, & fungal lesion tissue (requires natural plant pigment absorption)
+    // 3. Brown, necrotic, & fungal lesion tissue (blast spots, brown spot, cercospora lesions, anthracnose)
     const isLesion =
-      (r > 38 && g > 20 && r >= g * 1.02 && b < Math.min(r, g) * 0.78 && (r - g) < 55 && (r + g) > 2.0 * b);
+      !isSkinPixel && !isStrictNeutralGrey &&
+      (r > 30 && g > 15 && r >= g * 0.90 && (r + g) > b * 1.3 && (r - g) < 70 && (r - b) > 10 && b < Math.min(r, g) * 0.88);
 
     // 4. Straw, tan, & desiccated leaf blade/sheath tissue
     const isStraw =
-      (r > 55 && g > 45 && g >= r * 0.75 && b < Math.min(r, g) * 0.78 && Math.abs(r - g) < 45 && (r + g) > 2.1 * b);
+      !isSkinPixel && !isStrictNeutralGrey &&
+      (r > 42 && g > 35 && (r + g) > b * 1.35 && Math.abs(r - g) < 48 && (r - b) > 10 && b < Math.min(r, g) * 0.88);
 
     if (isGreen) {
       green++;
@@ -97,12 +107,12 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
 
   // Reject flat vector art, drawings, cartoons:
   const isCartoonOrDrawing =
-    (uniqueColorCount < 15 && topColorShare > 0.88 && plantTissueShare < 0.04) ||
-    ((neonCount / n) > 0.20 && plantTissueShare < 0.04);
+    (uniqueColorCount < 20 && topColorShare > 0.88 && plantTissueShare < 0.03) ||
+    ((neonCount / n) > 0.22 && plantTissueShare < 0.03);
 
-  // Reject human faces (only when human skin dominates > 50% and virtually no green crop foliage is present)
-  const isHumanFace = (skinCount / n) > 0.50 && greenShare < 0.05;
-  const isMissingBotanicalFoliage = plantTissueShare < 0.03 && !isHumanFace && !isCartoonOrDrawing;
+  // Reject human faces (only when human skin dominates > 45% and virtually no crop foliage is present)
+  const isHumanFace = (skinCount / n) > 0.45 && greenShare < 0.05;
+  const isMissingBotanicalFoliage = plantTissueShare < 0.025 && !isHumanFace && !isCartoonOrDrawing;
 
   const leafOk = !isCartoonOrDrawing && !isHumanFace && !isMissingBotanicalFoliage;
 

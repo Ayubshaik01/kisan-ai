@@ -11,7 +11,6 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import android.webkit.ConsoleMessage
-import android.webkit.GeolocationPermissions
 import android.webkit.PermissionRequest
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -45,9 +44,7 @@ class MainActivity : AppCompatActivity() {
 
     private val REQUIRED_PERMISSIONS = arrayOf(
         Manifest.permission.CAMERA,
-        Manifest.permission.RECORD_AUDIO,
-        Manifest.permission.ACCESS_FINE_LOCATION,
-        Manifest.permission.ACCESS_COARSE_LOCATION
+        Manifest.permission.RECORD_AUDIO
     )
 
     private fun checkAndRequestPermissions() {
@@ -89,6 +86,7 @@ class MainActivity : AppCompatActivity() {
         val assetLoader = WebViewAssetLoader.Builder()
             .setDomain("appassets.androidplatform.net")
             .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
+            .addPathHandler("/dist/", WebViewAssetLoader.AssetsPathHandler(this))
             .build()
 
         webView.settings.apply {
@@ -99,7 +97,6 @@ class MainActivity : AppCompatActivity() {
             allowContentAccess = true
             useWideViewPort = true
             loadWithOverviewMode = true
-            setGeolocationEnabled(true)
             cacheMode = WebSettings.LOAD_DEFAULT
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             mediaPlaybackRequiresUserGesture = false
@@ -107,13 +104,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         webView.webChromeClient = object : WebChromeClient() {
-            override fun onGeolocationPermissionsShowPrompt(
-                origin: String?,
-                callback: GeolocationPermissions.Callback?
-            ) {
-                callback?.invoke(origin, true, false)
-            }
-
             override fun onPermissionRequest(request: PermissionRequest) {
                 // Grant camera & audio capture permissions for WebRTC & Web Speech
                 runOnUiThread {
@@ -170,65 +160,90 @@ class MainActivity : AppCompatActivity() {
         }
 
         webView.webViewClient = object : WebViewClientCompat() {
+            private fun handleVirtualAssetRequest(uri: Uri): WebResourceResponse {
+                val path = uri.path ?: "/"
+
+                // 1. Any navigation route without a file extension, root "/", or index.html is an SPA route: serve dist/index.html
+                val lastSegment = path.substringAfterLast("/")
+                if (path == "/" || path.isEmpty() || path == "/index.html" || !lastSegment.contains(".")) {
+                    return try {
+                        val stream = assets.open("dist/index.html")
+                        WebResourceResponse("text/html", "UTF-8", stream)
+                    } catch (e: Exception) {
+                        Log.e("MainActivity", "Error serving SPA index.html for path: $path", e)
+                        WebResourceResponse("text/plain", "UTF-8", java.io.ByteArrayInputStream("KisanAI Local Bundle Error".toByteArray()))
+                    }
+                }
+
+                // 2. Candidate asset paths within assets/ directory
+                val cleanPath = when {
+                    path.startsWith("/assets/dist/") -> path.removePrefix("/assets/")
+                    path.startsWith("/assets/") -> {
+                        val sub = path.removePrefix("/assets/")
+                        if (sub.startsWith("dist/")) sub else "dist/assets/" + sub.removePrefix("assets/")
+                    }
+                    path.startsWith("/dist/") -> path.removePrefix("/")
+                    else -> "dist" + (if (path.startsWith("/")) path else "/$path")
+                }
+
+                val directAssetPath = path.removePrefix("/")
+
+                val candidates = listOf(
+                    cleanPath,
+                    directAssetPath,
+                    "dist/$directAssetPath",
+                    "dist/assets/$lastSegment",
+                    "dist/models/$lastSegment",
+                    "dist/database/$lastSegment"
+                )
+
+                for (cand in candidates) {
+                    try {
+                        val stream = assets.open(cand)
+                        val mimeType = when {
+                            cand.endsWith(".html") -> "text/html"
+                            cand.endsWith(".js") || cand.endsWith(".mjs") -> "application/javascript"
+                            cand.endsWith(".css") -> "text/css"
+                            cand.endsWith(".json") -> "application/json"
+                            cand.endsWith(".png") -> "image/png"
+                            cand.endsWith(".jpg") || cand.endsWith(".jpeg") -> "image/jpeg"
+                            cand.endsWith(".svg") -> "image/svg+xml"
+                            cand.endsWith(".wasm") -> "application/wasm"
+                            cand.endsWith(".onnx") -> "application/octet-stream"
+                            cand.endsWith(".pt") || cand.endsWith(".bin") -> "application/octet-stream"
+                            else -> "application/octet-stream"
+                        }
+                        return WebResourceResponse(mimeType, "UTF-8", stream)
+                    } catch (_: Exception) {
+                        // continue trying candidates
+                    }
+                }
+
+                // 3. Fallback: if asset not found on virtual domain, return SPA index.html so navigation never breaks
+                Log.w("MainActivity", "Virtual asset not found: $path, serving dist/index.html")
+                return try {
+                    val stream = assets.open("dist/index.html")
+                    WebResourceResponse("text/html", "UTF-8", stream)
+                } catch (fallbackEx: Exception) {
+                    WebResourceResponse("text/plain", "UTF-8", java.io.ByteArrayInputStream("KisanAI Offline".toByteArray()))
+                }
+            }
+
             override fun shouldInterceptRequest(
                 view: WebView,
                 request: WebResourceRequest
             ): WebResourceResponse? {
                 val uri = request.url
+                val host = uri.host?.lowercase() ?: ""
 
-                // 1. First delegate to WebViewAssetLoader
-                val loaderResponse = assetLoader.shouldInterceptRequest(uri)
-                if (loaderResponse != null) {
-                    return loaderResponse
-                }
-
-                // 2. Handle virtual domain and SPA routing for offline single-page-app
-                if (uri.host == "appassets.androidplatform.net") {
-                    val path = uri.path ?: "/"
-
-                    // Any navigation route without a dot extension, root "/", or index.html is an SPA route: serve dist/index.html
-                    if (path == "/" || path.isEmpty() || path == "/index.html" || !path.substringAfterLast("/").contains(".")) {
-                        return try {
-                            val stream = assets.open("dist/index.html")
-                            WebResourceResponse("text/html", "UTF-8", stream)
-                        } catch (e: Exception) {
-                            Log.e("MainActivity", "Error serving SPA index.html for path: $path", e)
-                            null
-                        }
+                // Always intercept our local virtual domain and local schemes - NEVER let them fall through to real DNS
+                if (host == "appassets.androidplatform.net" || host == "localhost" || uri.scheme == "file") {
+                    // Try assetLoader first if path starts with /assets/
+                    if (uri.path?.startsWith("/assets/") == true) {
+                        val loaderResponse = assetLoader.shouldInterceptRequest(uri)
+                        if (loaderResponse != null) return loaderResponse
                     }
-
-                    // Otherwise attempt to serve the requested asset directly from dist or assets
-                    val cleanPath = when {
-                        path.startsWith("/assets/dist/") -> path.removePrefix("/assets/")
-                        path.startsWith("/assets/") -> path.removePrefix("/assets/")
-                        path.startsWith("/dist/") -> path.removePrefix("/")
-                        else -> "dist" + (if (path.startsWith("/")) path else "/$path")
-                    }
-
-                    return try {
-                        val stream = assets.open(cleanPath)
-                        val mimeType = when {
-                            cleanPath.endsWith(".html") -> "text/html"
-                            cleanPath.endsWith(".js") || cleanPath.endsWith(".mjs") -> "application/javascript"
-                            cleanPath.endsWith(".css") -> "text/css"
-                            cleanPath.endsWith(".json") -> "application/json"
-                            cleanPath.endsWith(".png") -> "image/png"
-                            cleanPath.endsWith(".jpg") || cleanPath.endsWith(".jpeg") -> "image/jpeg"
-                            cleanPath.endsWith(".svg") -> "image/svg+xml"
-                            cleanPath.endsWith(".wasm") -> "application/wasm"
-                            cleanPath.endsWith(".onnx") -> "application/octet-stream"
-                            else -> "application/octet-stream"
-                        }
-                        WebResourceResponse(mimeType, "UTF-8", stream)
-                    } catch (e: Exception) {
-                        Log.w("MainActivity", "Asset not found: $cleanPath, falling back to index.html for SPA", e)
-                        try {
-                            val stream = assets.open("dist/index.html")
-                            WebResourceResponse("text/html", "UTF-8", stream)
-                        } catch (fallbackEx: Exception) {
-                            null
-                        }
-                    }
+                    return handleVirtualAssetRequest(uri)
                 }
 
                 return null
@@ -237,26 +252,22 @@ class MainActivity : AppCompatActivity() {
             @Deprecated("Deprecated in Java")
             override fun shouldInterceptRequest(view: WebView, url: String): WebResourceResponse? {
                 val uri = Uri.parse(url)
-                val loaderResponse = assetLoader.shouldInterceptRequest(uri)
-                if (loaderResponse != null) return loaderResponse
-                if (uri.host == "appassets.androidplatform.net") {
-                    val path = uri.path ?: "/"
-                    if (path == "/" || !path.substringAfterLast("/").contains(".")) {
-                        return try {
-                            val stream = assets.open("dist/index.html")
-                            WebResourceResponse("text/html", "UTF-8", stream)
-                        } catch (e: Exception) {
-                            null
-                        }
+                val host = uri.host?.lowercase() ?: ""
+                if (host == "appassets.androidplatform.net" || host == "localhost" || uri.scheme == "file") {
+                    if (uri.path?.startsWith("/assets/") == true) {
+                        val loaderResponse = assetLoader.shouldInterceptRequest(uri)
+                        if (loaderResponse != null) return loaderResponse
                     }
+                    return handleVirtualAssetRequest(uri)
                 }
                 return null
             }
 
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val uri = request.url
+                val host = uri.host?.lowercase() ?: ""
                 // Let internal virtual assets remain within WebView
-                if (uri.host == "appassets.androidplatform.net" || uri.scheme == "file") {
+                if (host == "appassets.androidplatform.net" || host == "localhost" || uri.scheme == "file") {
                     return false
                 }
                 // Handle external links (e.g. github, downloads) in external browser
@@ -275,14 +286,16 @@ class MainActivity : AppCompatActivity() {
                 request: WebResourceRequest,
                 error: WebResourceErrorCompat
             ) {
-                super.onReceivedError(view, request, error)
-                // If main frame failed to resolve, gracefully recover by loading local bundle
-                if (request.isForMainFrame) {
-                    Log.w("MainActivity", "Main frame navigation failed, recovering with local SPA entry")
+                val host = request.url?.host?.lowercase() ?: ""
+                // Never show Android chromium error page for our local virtual host; gracefully recover
+                if (host == "appassets.androidplatform.net" || host == "localhost") {
+                    Log.w("MainActivity", "Local virtual asset recovery for: ${request.url}")
                     view.post {
                         view.loadUrl("https://appassets.androidplatform.net/assets/dist/index.html")
                     }
+                    return
                 }
+                super.onReceivedError(view, request, error)
             }
 
             @Deprecated("Deprecated in Java")
@@ -292,10 +305,15 @@ class MainActivity : AppCompatActivity() {
                 description: String?,
                 failingUrl: String?
             ) {
-                Log.w("MainActivity", "Legacy navigation error ($errorCode: $description), recovering with local SPA entry")
-                view.post {
-                    view.loadUrl("https://appassets.androidplatform.net/assets/dist/index.html")
+                val host = try { Uri.parse(failingUrl).host?.lowercase() ?: "" } catch (_: Exception) { "" }
+                if (host == "appassets.androidplatform.net" || host == "localhost") {
+                    Log.w("MainActivity", "Legacy navigation error recovered for: $failingUrl")
+                    view.post {
+                        view.loadUrl("https://appassets.androidplatform.net/assets/dist/index.html")
+                    }
+                    return
                 }
+                super.onReceivedError(view, errorCode, description, failingUrl)
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {

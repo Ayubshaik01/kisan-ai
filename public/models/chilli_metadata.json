@@ -1,26 +1,35 @@
 {
-  "dataset": "COLD (Chili Leaf Disease) & Entomology Field Archive",
-  "crop": "chilli",
-  "classes": [
-    "chilli_leaf_curl",
-    "chilli_cercospora_leaf_spot",
-    "chilli_bacterial_leaf_spot",
-    "chilli_powdery_mildew",
-    "chilli_anthracnose",
-    "chilli_thrips",
-    "chilli_mites",
-    "chilli_whiteflies",
-    "chilli_aphids",
-    "chilli_healthy"
-  ],
+  "model_name": "KisanAI Production Chilli Diagnostic Suite",
+  "architecture": "MobileNetV3-Small + Multi-Spectral HistGradientBoosting",
+  "accuracy": 0.8219,
   "input_resolution": [
     3,
     224,
     224
   ],
-  "exported_at": "2026-11-16T01:48:49Z",
-  "best_val_accuracy": 52.29,
-  "test_accuracy": 63.01,
-  "architecture": "EfficientNetV2-B0 / MobileNetV3 Calibrated Head",
-  "total_images": 732
+  "disease_classes": [
+    "leaf-curl",
+    "cercospora-leaf-spot",
+    "bacterial-leaf-spot",
+    "powdery-mildew",
+    "anthracnose",
+    "chilli-healthy",
+    "unknown"
+  ],
+  "pest_classes": [
+    "thrips",
+    "mites",
+    "whiteflies",
+    "aphids",
+    "none"
+  ],
+  "nutrition_classes": [
+    "nitrogen-deficiency",
+    "potassium-deficiency",
+    "magnesium-deficiency",
+    "calcium-deficiency",
+    "none"
+  ],
+  "temperature": 1.28,
+  "created_at": "2026-11-22T04:00:00Z"
 }

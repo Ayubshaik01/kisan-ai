@@ -154,15 +154,17 @@ export function TopicRow({ topic }: { topic: Topic }) {
 export function scanTitle(scan: Scan, lang: Parameters<typeof l>[0], t: (k: Key) => string): string {
   if (scan.outcome === "unanalysed") return t("unanalysedTitle");
   if (scan.outcome === "unknown") {
+    const isHuman = scan.quality?.checks?.find((c) => c.id === "leaf")?.tip?.includes("Human face");
+    if (isHuman) return lang === "te" ? "మనిషి ముఖం లేదా చర్మం గుర్తించబడింది" : lang === "hi" ? "मानव चेहरा या त्वचा पहचानी गई" : "Non-Crop: Human Face Detected";
     const isNonLeaf = scan.quality ? scan.quality.checks.find((c) => c.id === "leaf")?.pass === false : false;
-    return isNonLeaf ? t("oodTitle") : "Inconclusive Scan";
+    return isNonLeaf ? t("oodTitle") : t("inconclusiveScanTitle");
   }
   const topic = scan.topicSlug ? getTopic(scan.crop, scan.topicSlug) : undefined;
   if (topic) return l(lang, topic.name);
   if (scan.topicSlug) {
     return scan.topicSlug.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   }
-  return "Diagnosed Crop Scan";
+  return lang === "te" ? "పరీక్షించిన పంట స్కాన్" : lang === "hi" ? "जाँची गई फसल स्कैन" : "Diagnosed Crop Scan";
 }
 
 export function fmtDate(iso: string, lang: string) {
@@ -172,6 +174,7 @@ export function fmtDate(iso: string, lang: string) {
 export function ScanRow({ scan, grid }: { scan: Scan; grid?: boolean }) {
   const { lang, t } = useCropCare();
   const sev = scan.severity;
+  const isUnknown = scan.outcome === "unknown";
   return (
     <Link to="/scans/$scanId" params={{ scanId: scan.id }} className={cn(card, "group overflow-hidden transition-colors hover:border-primary/40", grid ? "block" : "flex items-center gap-3 p-3")}>
       <img src={scan.image} alt="" className={cn("object-cover", grid ? "aspect-[4/3] w-full" : "size-16 shrink-0 rounded-xl")} />
@@ -182,7 +185,15 @@ export function ScanRow({ scan, grid }: { scan: Scan; grid?: boolean }) {
         <p className="mt-0.5 truncate text-sm text-muted-foreground">{t(scan.crop)} · {fmtDate(scan.createdAt, lang)}</p>
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           {scan.source === "sample" && <SampleBadge />}
-          {sev ? <span className={cn("text-xs font-semibold", bandColor[sev.band])}>{t(bandKey[sev.band])} · {severityLabel(sev)}</span> : <span className="text-xs text-subtle">{t("notAssessed")}</span>}
+          {isUnknown ? (
+            <span className="rounded-md bg-rose-500/10 px-2 py-0.5 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+              {t("needsRetakeBadge")}
+            </span>
+          ) : sev ? (
+            <span className={cn("text-xs font-semibold", bandColor[sev.band])}>{t(bandKey[sev.band])} · {severityLabel(sev)}</span>
+          ) : (
+            <span className="text-xs text-subtle">{t("notAssessed")}</span>
+          )}
         </div>
       </div>
       {!grid && <ChevronRight className="size-4 shrink-0 text-subtle" />}

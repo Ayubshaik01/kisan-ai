@@ -29,6 +29,7 @@ import { useCropCare } from "../context";
 import { crops, getTopic, l, type CropKey } from "../knowledge";
 import { LiveWeatherCard } from "../ui/LiveWeatherCard";
 import { DownloadAppCard, getApkDownloadUrl, triggerApkDownload } from "../ui/DownloadAppCard";
+import { isNativeApp } from "../services/native";
 import {
   btnPrimary,
   btnSecondary,
@@ -133,20 +134,33 @@ export function HomePage() {
               <BookOpen className="size-5 text-muted-foreground" />
               {t("exploreLibrary")}
             </Link>
-            <a
-              href={getApkDownloadUrl()}
-              target="_blank"
-              rel="noopener noreferrer"
-              download="kisanai-offline-ai.apk"
-              className={cn(
-                btnSecondary,
-                "h-12 px-5 font-bold border-primary/40 text-primary hover:bg-primary/10 transition-all cursor-pointer",
-              )}
-              title="Download KisanAI Offline Android APK (~367 MB)"
-            >
-              <Download className="size-5" />
-              Download APK
-            </a>
+            {isNativeApp() ? (
+              <div
+                className={cn(
+                  btnSecondary,
+                  "h-12 px-5 font-bold border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 cursor-default",
+                )}
+                title="KisanAI Native Android App is running offline"
+              >
+                <CheckCircle2 className="size-5 text-emerald-600 dark:text-emerald-400" />
+                <span>App Installed & Offline</span>
+              </div>
+            ) : (
+              <a
+                href={getApkDownloadUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                download="kisanai-offline-ai.apk"
+                className={cn(
+                  btnSecondary,
+                  "h-12 px-5 font-bold border-primary/40 text-primary hover:bg-primary/10 transition-all cursor-pointer",
+                )}
+                title="Download KisanAI Offline Android APK (~396.6 MB)"
+              >
+                <Download className="size-5" />
+                Download APK
+              </a>
+            )}
           </div>
         </div>
 

@@ -14,19 +14,14 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCropCare } from "../context";
+import { isNativeApp } from "../services/native";
 
-export const APK_FILE_SIZE = "367.6 MB";
-export const APK_SHA256 = "d8a21dcb62360fdf5132ccc0b48a825b0f1293446fac10cfd3f5bf7e282db8e5";
+export const APK_FILE_SIZE = "396.6 MB";
+export const APK_SHA256 = "64a4c241d855aeb2f515a3c29c88fbe00f0459049f6b84e6e0df86511d05075c";
 export const CLOUD_APK_DOWNLOAD_URL =
   "https://github.com/Ayubshaik01/remix-of-remix-of-make-it-great/releases/download/v1.0.0/kisanai-offline-ai.apk";
 
 export function getApkDownloadUrl(): string {
-  if (
-    typeof window !== "undefined" &&
-    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
-  ) {
-    return "/download/app-release.apk";
-  }
   return CLOUD_APK_DOWNLOAD_URL;
 }
 
@@ -48,12 +43,7 @@ export function DownloadAppCard({ className }: { className?: string }) {
   const [copied, setCopied] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
 
-  const isInsideAndroidApp =
-    typeof window !== "undefined" &&
-    Boolean(
-      (window as unknown as { CropAssistantAndroid?: unknown }).CropAssistantAndroid ||
-      (window as unknown as { CropAssistantNative?: unknown }).CropAssistantNative
-    );
+  const isInsideAndroidApp = isNativeApp();
 
   const handleCopyHash = () => {
     if (navigator.clipboard) {
@@ -138,16 +128,23 @@ export function DownloadAppCard({ className }: { className?: string }) {
 
         {/* Action Button & Instructions */}
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <a
-            href={getApkDownloadUrl()}
-            target="_blank"
-            rel="noopener noreferrer"
-            download="kisanai-offline-ai.apk"
-            className="inline-flex items-center justify-center gap-2.5 rounded-2xl bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90 active:scale-95 transition-all cursor-pointer"
-          >
-            <Download className="size-5" />
-            {t("downloadApkBtn")}
-          </a>
+          {isNativeApp() ? (
+            <div className="inline-flex items-center justify-center gap-2.5 rounded-2xl bg-emerald-600/15 border border-emerald-500/30 px-6 py-3.5 text-sm font-bold text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="size-5" />
+              <span>Installed on this Device (Offline Active)</span>
+            </div>
+          ) : (
+            <a
+              href={getApkDownloadUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              download="kisanai-offline-ai.apk"
+              className="inline-flex items-center justify-center gap-2.5 rounded-2xl bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90 active:scale-95 transition-all cursor-pointer"
+            >
+              <Download className="size-5" />
+              {t("downloadApkBtn")}
+            </a>
+          )}
 
           <button
             type="button"

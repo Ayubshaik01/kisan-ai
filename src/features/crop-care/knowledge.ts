@@ -522,6 +522,141 @@ export const topics: Topic[] = [
     getHelp: "If colonies spread fast, ask for approved local advice.",
   },
   {
+    slug: "nitrogen-deficiency", crop: "chilli", kind: "disease",
+    name: {
+      en: "Nitrogen Deficiency",
+      hi: "नाइट्रोजन की कमी",
+      te: "నత్రజని లోపం",
+      ta: "நைட்ரஜன் குறைபாடு",
+      kn: "ಸಾರಜನಕ ಕೊರತೆ",
+      mr: "नायट्रोजन कमतरता"
+    },
+    scientific: "Nutritional Stress (N)",
+    summary: {
+      en: "General chlorosis where older bottom leaves turn pale yellow while new growth remains small and pale green.",
+      hi: "पुरानी निचली पत्तियां पीली पड़ जाती हैं और पौधे का विकास रुक जाता है।",
+      te: "మొక్క క్రింది పాత ఆకులు పసుపు రంగులోకి మారుతాయి, మొక్క పెరుగుదల మందగిస్తుంది.",
+      ta: "பழைய கீழ் இலைகள் வெளிர் மஞ்சளாக மாறி, பயிரின் வளர்ச்சி குறைகிறது.",
+      kn: "ಹಳೆಯ ಕೆಳ ಎಲೆಗಳು ಹಳದಿಯಾಗುತ್ತವೆ ಮತ್ತು ಸಸ್ಯದ ಬೆಳವಣಿಗೆ ಕುಂಠಿತಗೊಳ್ಳುತ್ತದೆ.",
+      mr: "जुनी खालची पाने पिवळी पडतात आणि झाडाची वाढ खुंटते."
+    },
+    parts: ["Lower leaves", "Older foliage", "Canopy"],
+    symptoms: ["Uniform chlorosis of older leaves starting from leaf tip", "Stunted vegetative growth and thin stems", "Early leaf drop in severe cases"],
+    causes: ["Leaching due to excessive rain or irrigation", "Low organic matter", "Under-fertilization"],
+    identify: ["Inspect bottom canopy: yellowing starts strictly on mature leaves, not new flushes"],
+    lookalikes: "Waterlogging causes sudden uniform yellowing; root rot shows wilted yellow leaves.",
+    severityNote: "Evaluated by percentage of lower canopy chlorosis.",
+    immediate: ["Avoid excessive irrigation that leaches soil nutrients", "Soil application of balanced urea or neem-coated urea in splits", "Foliar spray of 1% water-soluble urea (10g/L) for quick recovery"],
+    cultural: ["Apply well-decomposed FYM (Farm Yard Manure)", "Maintain split nitrogen application: 50% basal, 25% at 30 DAT, 25% at 60 DAT"],
+    prevention: [
+      { title: "Split Application", body: "Never apply all nitrogen at once; split across 3 vegetative stages." },
+      { title: "Organic Manure", body: "Incorporate 10 tonnes/ha FYM before transplanting." }
+    ],
+    monitoring: ["Scout lower canopy weekly for early pale-green discoloration"],
+    getHelp: "Conduct soil testing through your local Krishi Vigyan Kendra (KVK).",
+  },
+  {
+    slug: "potassium-deficiency", crop: "chilli", kind: "disease",
+    name: {
+      en: "Potassium Deficiency",
+      hi: "पोटेशियम की कमी",
+      te: "పొటాషియం లోపం",
+      ta: "பொட்டாசியம் குறைபாடு",
+      kn: "ಪೊಟ್ಯಾಸಿಯಮ್ ಕೊರತೆ",
+      mr: "पोटॅशियम कमतरता"
+    },
+    scientific: "Nutritional Stress (K)",
+    summary: {
+      en: "Marginal leaf scorch where margins of older leaves turn yellow and then brown/necrotic as if burnt.",
+      hi: "पत्तियों के किनारे पीले होकर झुलस जाते हैं (मार्जिनल स्कोर्च)।",
+      te: "ఆకుల అంచులు పసుపుపచ్చగా మారి, మాడిపోయినట్లుగా ఎండిపోతాయి.",
+      ta: "இலைகளின் ஓரங்கள் எரிந்தது போல் கருகிப் போகும்.",
+      kn: "ಎಲೆಗಳ ಅಂಚುಗಳು ಒಣಗಿ ಸುಟ್ಟಂತೆ ಕಂದು ಬಣ್ಣಕ್ಕೆ ತಿರುಗುತ್ತವೆ.",
+      mr: "पानांच्या कडा करपल्यासारख्या पिवळ्या व तपकिरी होतात."
+    },
+    parts: ["Leaf margins", "Older leaves", "Fruits"],
+    symptoms: ["Marginal chlorosis progressing into brown necrotic scorch", "Leaves curl upwards or downwards with scorched tips", "Poor fruit set, small thin-walled chilli pods"],
+    causes: ["Sandy soils with low cation exchange capacity", "Imbalanced heavy nitrogen or calcium application"],
+    identify: ["Classic marginal leaf firing on older leaves while center of leaf blade remains green"],
+    lookalikes: "Salt toxicity or pesticide burn also scorches margins but affects all leaf ages at once.",
+    severityNote: "Judged by percentage of leaf margin necrosis.",
+    immediate: ["Foliar spray of 1% Potassium Nitrate (13-0-45) or Potassium Sulphate (10g/L)", "Soil application of Muriate of Potash (MOP) or SOP based on soil test"],
+    cultural: ["Balance N:K ratio (1:1 or 1:1.2 in chilli) for sturdy fruit walls"],
+    prevention: [
+      { title: "Basal Potash", body: "Apply 50% of recommended potash at planting and 50% at flowering." },
+      { title: "Organic mulching", body: "Retain soil moisture to facilitate potassium uptake." }
+    ],
+    monitoring: ["Examine older leaf margins during early fruit development"],
+    getHelp: "Consult local agricultural extension for balanced NPK fertilization.",
+  },
+  {
+    slug: "magnesium-deficiency", crop: "chilli", kind: "disease",
+    name: {
+      en: "Magnesium Deficiency",
+      hi: "मैग्नीशियम की कमी",
+      te: "మెగ్నీషియం లోపం",
+      ta: "மெக்னீசியம் குறைபாடு",
+      kn: "ಮೆಗ್ನೀಸಿಯಮ್ ಕೊರತೆ",
+      mr: "मॅग्नेशियम कमतरता"
+    },
+    scientific: "Nutritional Stress (Mg)",
+    summary: {
+      en: "Distinct interveinal chlorosis on mature leaves where veins remain dark green while tissue between veins turns yellow.",
+      hi: "पत्तियों की नसों के बीच का हिस्सा पीला पड़ता है, जबकि नसें हरी रहती हैं।",
+      te: "ఆకు ఈనెలు పచ్చగా ఉండి, ఈనెల మధ్య భాగం పసుపు రంగులోకి మారుతుంది.",
+      ta: "இலை நரம்புகள் பச்சையாகவும், நரம்புகளுக்கு இடைப்பட்ட பகுதி மஞ்சளாகவும் மாறும்.",
+      kn: "ಎಲೆಯ ನಾಳಗಳು ಹಸಿರಾಗಿದ್ದು, ನಾಳಗಳ ನಡುವಿನ ಭಾಗ ಹಳದಿಯಾಗುತ್ತದೆ.",
+      mr: "पानांच्या शिरा हिरव्या राहून शिरांमधील भाग पिवळा पडतो."
+    },
+    parts: ["Middle and lower leaves", "Interveinal tissue"],
+    symptoms: ["Interveinal chlorosis on older and middle canopy leaves", "Green herringbone pattern of veins", "In severe deficiency, leaves turn reddish-purple or drop"],
+    causes: ["Acidic or very sandy soils", "High potassium or ammonium fertilizer hindering Mg absorption"],
+    identify: ["Clear contrast between dark green veins and bright yellow interveinal tissue"],
+    lookalikes: "Iron deficiency shows identical pattern but strictly on the youngest top leaves.",
+    severityNote: "Calculated from interveinal chlorotic area on mature foliage.",
+    immediate: ["Foliar spray of 0.5% to 1.0% Magnesium Sulphate (Epsom salt, 5-10g/L)", "Repeat after 12-14 days if symptoms persist"],
+    cultural: ["Apply dolomite lime to acidic soils during field preparation"],
+    prevention: [
+      { title: "Soil Amendment", body: "Apply 25 kg/ha Magnesium Sulphate in basal fertilizer." }
+    ],
+    monitoring: ["Check middle leaves during heavy flowering and fruiting"],
+    getHelp: "Confirm with soil pH test; acidic soils require liming.",
+  },
+  {
+    slug: "calcium-deficiency", crop: "chilli", kind: "disease",
+    name: {
+      en: "Calcium Deficiency (Tip Burn)",
+      hi: "कैल्शियम की कमी (टिप बर्न)",
+      te: "కాల్షియం లోపం (చిగురు మాడటం)",
+      ta: "கால்சியம் குறைபாடு",
+      kn: "ಕ್ಯಾಲ್ಸಿಯಂ ಕೊರತೆ",
+      mr: "कॅल्शियम कमतरता"
+    },
+    scientific: "Nutritional Stress (Ca)",
+    summary: {
+      en: "Deformed, cupped new leaves with necrotic margins and blossom-end rot on developing chilli fruits.",
+      hi: "नई पत्तियां विकृत हो जाती हैं और फलों के निचले सिरे पर सड़न (ब्लॉसम एंड रॉट) होती है।",
+      te: "కొత్తగా వచ్చే లేత ఆకులు ముడుచుకుపోయి, కాయల చివర కుళ్ళు లేదా మచ్చలు ఏర్పడతాయి.",
+      ta: "புதிய இலைகள் சுருங்கி, காய்களின் முனைப்பகுதி அழுகும்.",
+      kn: "ಹೊಸ ಎಲೆಗಳು ವಿರೂಪಗೊಂಡು, ಕಾಯಿಗಳ ತುದಿಯಲ್ಲಿ ಕೊಳೆತ ಉಂಟಾಗುತ್ತದೆ.",
+      mr: "नवीन पाने वाकडी होतात आणि मिरचीच्या टोकावर काळे डाग पडून सडतात."
+    },
+    parts: ["Growing tips", "Youngest leaves", "Developing pods"],
+    symptoms: ["Hooking and cupping of young emerging leaves", "Necrotic tip burn on tender foliage", "Sunken water-soaked lesions at blossom end of chilli pods"],
+    causes: ["Fluctuating soil moisture restricting calcium mobility", "High salinity or excess potassium/magnesium"],
+    identify: ["Inspect young growing tip and developing fruits; older leaves look normal"],
+    lookalikes: "Anthracnose fruit rot shows circular concentric rings; blossom end rot is non-fungal at fruit tip.",
+    severityNote: "Assessed by proportion of young tips or fruits showing necrosis.",
+    immediate: ["Foliar spray of 0.2% Calcium Nitrate or chelated Calcium (2g/L)", "Ensure uniform, regular irrigation to maintain continuous calcium transport"],
+    cultural: ["Avoid allowing soil to alternate between bone dry and waterlogged"],
+    prevention: [
+      { title: "Soil Calcium", body: "Apply gypsum or lime based on soil test." },
+      { title: "Consistent Watering", body: "Drip irrigation prevents transpiration shocks that trigger tip burn." }
+    ],
+    monitoring: ["Monitor young flush and fruit blossom ends weekly"],
+    getHelp: "Check irrigation uniformity and soil salinity.",
+  },
+  {
     slug: "hispa", crop: "rice", kind: "pest",
     name: {
       en: "Rice Hispa",

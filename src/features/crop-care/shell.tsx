@@ -17,6 +17,7 @@ import {
   UserRound,
   WifiOff,
   Calculator,
+  CheckCircle2,
   TrendingUp,
   DollarSign,
   Download,
@@ -32,6 +33,7 @@ import { langs, type Lang } from "./i18n";
 import { getApkDownloadUrl, triggerApkDownload } from "./ui/DownloadAppCard";
 import { PrivacyConsentBanner } from "./ui/PrivacyConsentBanner";
 import { StartupSplash } from "./ui/StartupSplash";
+import { isNativeApp } from "./services/native";
 
 export function Logo({ compact }: { compact?: boolean }) {
   const { t } = useCropCare();
@@ -140,17 +142,27 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <Logo />
           <div className="ml-auto flex items-center gap-1.5">
-            <a
-              href={getApkDownloadUrl()}
-              target="_blank"
-              rel="noopener noreferrer"
-              download="kisanai-offline-ai.apk"
-              title="Download KisanAI Offline Android APK (~367 MB)"
-              className="hidden sm:inline-flex h-10 items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3 text-xs font-bold text-primary hover:bg-primary/20 transition-all active:scale-95 shadow-xs cursor-pointer"
-            >
-              <Download className="size-3.5" />
-              <span>{t("downloadApp")}</span>
-            </a>
+            {isNativeApp() ? (
+              <span
+                className="hidden sm:inline-flex h-10 items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 text-xs font-bold text-emerald-600 dark:text-emerald-400"
+                title="KisanAI Native Android App is running offline"
+              >
+                <CheckCircle2 className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Installed</span>
+              </span>
+            ) : (
+              <a
+                href={getApkDownloadUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                download="kisanai-offline-ai.apk"
+                title="Download KisanAI Offline Android APK (~396.6 MB)"
+                className="hidden sm:inline-flex h-10 items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3 text-xs font-bold text-primary hover:bg-primary/20 transition-all active:scale-95 shadow-xs cursor-pointer"
+              >
+                <Download className="size-3.5" />
+                <span>{t("downloadApp")}</span>
+              </a>
+            )}
             <Link to="/profile/offline" className="hidden h-10 items-center gap-2 rounded-xl border border-line bg-card px-3 text-xs font-semibold text-muted-foreground md:flex">
               {online ? <span className="size-2 rounded-full bg-primary shadow-[0_0_0_4px] shadow-primary/20" /> : <WifiOff className="size-3.5 text-amber" />}
               {online ? t("offlineReady") : t("offlineNow").split(".")[0]}
@@ -245,17 +257,24 @@ export function AppShell({ children }: { children: ReactNode }) {
 
             {/* Mobile App Download Action */}
             <div className="pt-2">
-              <a
-                href={getApkDownloadUrl()}
-                target="_blank"
-                rel="noopener noreferrer"
-                download="kisanai-offline-ai.apk"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-xs font-bold text-primary-foreground shadow-md hover:bg-primary/90 transition-all active:scale-95 cursor-pointer"
-              >
-                <Download className="size-4" />
-                <span>{t("downloadApkBtn")}</span>
-              </a>
+              {isNativeApp() ? (
+                <div className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs font-bold text-emerald-600 dark:text-emerald-400 shadow-xs cursor-default">
+                  <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>App Installed & Offline Active</span>
+                </div>
+              ) : (
+                <a
+                  href={getApkDownloadUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download="kisanai-offline-ai.apk"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-xs font-bold text-primary-foreground shadow-md hover:bg-primary/90 transition-all active:scale-95 cursor-pointer"
+                >
+                  <Download className="size-4" />
+                  <span>{t("downloadApkBtn")}</span>
+                </a>
+              )}
             </div>
 
             {/* Offline footer badge */}
