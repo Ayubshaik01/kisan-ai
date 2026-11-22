@@ -117,65 +117,20 @@ export function ScanResultPage() {
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [showShareReport, setShowShareReport] = useState(false);
   const [showSeverityDetail, setShowSeverityDetail] = useState(false);
-
-  if (!scan) {
-    return (
-      <div className={cn("space-y-6 max-w-lg mx-auto py-12 text-center", enter)}>
-        <span className="grid size-16 mx-auto place-items-center rounded-2xl bg-primary/10 text-primary">
-          <HelpCircle className="size-8" />
-        </span>
-        <h2 className="text-2xl font-bold tracking-tight text-foreground">
-          Scan not found
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          This scan may have been deleted from your device history.
-        </p>
-        <div className="flex justify-center gap-3 pt-2">
-          <Link to="/history" className={cn(btnSecondary, "min-h-11 px-5")}>
-            View history
-          </Link>
-          <Link to="/" className={cn(btnPrimary, "min-h-11 px-5")}>
-            Go home
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  // Live predicted diagnosis directly from the on-device model
-  const isIdentified = scan.outcome === "identified";
-  const isUnknown = scan.outcome === "unknown";
-  const isUnanalysed = scan.outcome === "unanalysed";
-  const topicSlug = isIdentified && scan.topicSlug ? scan.topicSlug : undefined;
-  const topic = topicSlug ? getTopic(scan.crop, topicSlug) : null;
-
-  const applyDiagnosis = (slug: string) => {
-    const targetTopic = getTopic(scan.crop, slug);
-    const scale = scaleFor(scan.crop, slug);
-    const severity: SeverityResult =
-      scan.severity ??
-      (scale === "irri-ses"
-        ? { scale, score: 5, max: 9, band: "moderate", areaPercent: 15 }
-        : scale === "leaf-curl-index"
-          ? { scale, score: 2, max: 4, band: "moderate" }
-          : { scale, score: 18, max: 100, band: "moderate", areaPercent: 18 });
-
-    updateScan(scan.id, {
-      topicSlug: slug,
-      outcome: "identified",
-      source: "model",
-      confidence: 0.94,
-      severity,
-    });
-    toast.success(`Diagnosis set: ${targetTopic ? l(lang, targetTopic.name) : slug}`);
-  };
-
   const [analysisLang, setAnalysisLang] = useState<Lang>(lang);
   const [isPlayingVoice, setIsPlayingVoice] = useState(false);
   const [curePlan, setCurePlan] = useState<DynamicCurePlan | null>(scan?.curePlan || null);
   const [isGeneratingCure, setIsGeneratingCure] = useState(false);
 
+  // Live predicted diagnosis directly from the on-device model
+  const isIdentified = scan ? scan.outcome === "identified" : false;
+  const isUnknown = scan ? scan.outcome === "unknown" : false;
+  const isUnanalysed = scan ? scan.outcome === "unanalysed" : false;
+  const topicSlug = isIdentified && scan?.topicSlug ? scan.topicSlug : undefined;
+  const topic = scan && topicSlug ? getTopic(scan.crop, topicSlug) : null;
+
   const pestInfo = useMemo(() => {
+    if (!scan) return null;
     if (scan.pestAnalysis && scan.pestAnalysis.detectedPest && scan.pestAnalysis.detectedPest !== "none") {
       return scan.pestAnalysis;
     }
@@ -230,6 +185,7 @@ export function ScanResultPage() {
   }, [scan]);
 
   const nutritionInfo = useMemo(() => {
+    if (!scan) return null;
     if (scan.nutritionAnalysis && scan.nutritionAnalysis.suspectedDeficiency && scan.nutritionAnalysis.suspectedDeficiency !== "none") {
       return scan.nutritionAnalysis;
     }
@@ -256,7 +212,7 @@ export function ScanResultPage() {
 
   // Generate live dynamic LLM cure whenever topic or language changes
   useEffect(() => {
-    if (topic && !isGeneratingCure) {
+    if (scan && topic && !isGeneratingCure) {
       setIsGeneratingCure(true);
       generateLiveLlamaCure(scan, topic, analysisLang, settings)
         .then((plan) => {
@@ -267,8 +223,41 @@ export function ScanResultPage() {
     }
   }, [scan?.id, topic?.slug, analysisLang]);
 
+  // Subscribe to voice agent updates
+  useEffect(() => {
+    const unsub = voiceAgent.subscribe((st) => {
+      setIsPlayingVoice(st.isPlaying && !st.isPaused);
+    });
+    return () => {
+      unsub();
+      voiceAgent.stop();
+    };
+  }, []);
+
+  const applyDiagnosis = (slug: string) => {
+    if (!scan) return;
+    const targetTopic = getTopic(scan.crop, slug);
+    const scale = scaleFor(scan.crop, slug);
+    const severity: SeverityResult =
+      scan.severity ??
+      (scale === "irri-ses"
+        ? { scale, score: 5, max: 9, band: "moderate", areaPercent: 15 }
+        : scale === "leaf-curl-index"
+          ? { scale, score: 2, max: 4, band: "moderate" }
+          : { scale, score: 18, max: 100, band: "moderate", areaPercent: 18 });
+
+    updateScan(scan.id, {
+      topicSlug: slug,
+      outcome: "identified",
+      source: "model",
+      confidence: 0.94,
+      severity,
+    });
+    toast.success(`Diagnosis set: ${targetTopic ? l(lang, targetTopic.name) : slug}`);
+  };
+
   const handleRegenerateCure = async () => {
-    if (!topic || isGeneratingCure) return;
+    if (!scan || !topic || isGeneratingCure) return;
     setIsGeneratingCure(true);
     toast.info("Regenerating dynamic cure protocol with AI agronomist...");
     try {
@@ -283,24 +272,13 @@ export function ScanResultPage() {
     }
   };
 
-  const llamaReport = topic
+  const llamaReport = (scan && topic)
     ? generateLlamaAnalysis(
         { ...scan, topicSlug: topic.slug, outcome: "identified" },
         analysisLang,
         topic
       )
     : null;
-
-  // Subscribe to voice agent updates
-  useEffect(() => {
-    const unsub = voiceAgent.subscribe((st) => {
-      setIsPlayingVoice(st.isPlaying && !st.isPaused);
-    });
-    return () => {
-      unsub();
-      voiceAgent.stop();
-    };
-  }, []);
 
   const handleToggleVoiceAgent = () => {
     if (isPlayingVoice) {
@@ -322,18 +300,21 @@ export function ScanResultPage() {
   };
 
   const handleDelete = () => {
+    if (!scan) return;
     removeScan(scan.id);
     toast.success(t("scanDeleted"));
     void navigate({ to: "/history" });
   };
 
   const handleSaveNote = () => {
+    if (!scan) return;
     updateScanNote(scan.id, note.trim());
     setIsEditingNote(false);
     toast.success("Note saved on this device");
   };
 
   const handleCopyReport = () => {
+    if (!scan) return;
     const reportText = `FIELDNOTE CROP DIAGNOSIS REPORT
 Date: ${fmtDate(scan.createdAt, lang)}
 Crop: ${scan.crop.toUpperCase()}
@@ -351,6 +332,30 @@ Note: ${note || "No specific farmer notes recorded."}
     void navigator.clipboard.writeText(reportText);
     toast.success("Field report copied to clipboard");
   };
+
+  if (!scan) {
+    return (
+      <div className={cn("space-y-6 max-w-lg mx-auto py-12 text-center", enter)}>
+        <span className="grid size-16 mx-auto place-items-center rounded-2xl bg-primary/10 text-primary">
+          <HelpCircle className="size-8" />
+        </span>
+        <h2 className="text-2xl font-bold tracking-tight text-foreground">
+          Scan not found
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          This scan may have been deleted from your device history.
+        </p>
+        <div className="flex justify-center gap-3 pt-2">
+          <Link to="/history" className={cn(btnSecondary, "min-h-11 px-5")}>
+            View history
+          </Link>
+          <Link to="/" className={cn(btnPrimary, "min-h-11 px-5")}>
+            Go home
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={cn("space-y-8 pb-12", enter)}>

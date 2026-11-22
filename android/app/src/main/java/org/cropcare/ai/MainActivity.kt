@@ -278,7 +278,7 @@ class MainActivity : AppCompatActivity() {
                     if (host == "appassets.androidplatform.net" || host == "localhost" || uri.scheme == "file" || host.isEmpty()) {
                         val loaderResponse = assetLoader.shouldInterceptRequest(uri)
                         if (loaderResponse != null) return loaderResponse
-                        handleVirtualAssetRequest(uri)
+                        return handleVirtualAssetRequest(uri)
                     } else {
                         null
                     }
@@ -300,7 +300,7 @@ class MainActivity : AppCompatActivity() {
                     if (host == "appassets.androidplatform.net" || host == "localhost" || uri.scheme == "file" || host.isEmpty()) {
                         val loaderResponse = assetLoader.shouldInterceptRequest(uri)
                         if (loaderResponse != null) return loaderResponse
-                        handleVirtualAssetRequest(uri)
+                        return handleVirtualAssetRequest(uri)
                     } else {
                         null
                     }
@@ -317,8 +317,16 @@ class MainActivity : AppCompatActivity() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val uri = request.url
                 val host = uri.host?.lowercase() ?: ""
+                val path = uri.path ?: ""
                 // Let internal virtual assets remain within WebView
                 if (host == "appassets.androidplatform.net" || host == "localhost" || uri.scheme == "file") {
+                    if (path.endsWith(".apk")) {
+                        return try {
+                            val intent = Intent(Intent.ACTION_VIEW, uri)
+                            startActivity(intent)
+                            true
+                        } catch (_: Exception) { false }
+                    }
                     return false
                 }
                 // Handle external links (e.g. github, downloads) in external browser

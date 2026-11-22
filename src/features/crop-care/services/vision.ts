@@ -579,15 +579,15 @@ export async function analyzeImageWithVision(
           }
 
           // Foliar & Lesion visual masks (evaluated before skin to protect diseased spots)
-          const isChloroticStreak = (h >= 35 && h <= 68 && s >= 0.20 && v >= 0.30);
-          const isBrownLesion = ((h <= 40 || h >= 320) && s >= 0.20 && v >= 0.10 && v <= 0.75 && (r8 > b8 * 1.15));
-          const isAshCore = (s <= 0.32 && v >= 0.30 && v <= 0.85 && (r8 > 55 && g8 > 55));
-          const isPowdery = (v >= 0.75 && s <= 0.20);
-          const isOrangeDiscoloration = (h >= 20 && h <= 44 && s >= 0.36 && v >= 0.35);
+          const isChloroticStreak = (h >= 32 && h <= 72 && s >= 0.15 && v >= 0.25);
+          const isBrownLesion = ((h <= 45 || h >= 310) && s >= 0.12 && v >= 0.08 && v <= 0.80 && (r8 > b8 * 1.08));
+          const isAshCore = (s <= 0.35 && v >= 0.25 && v <= 0.88 && (r8 > 45 && g8 > 45));
+          const isPowdery = (v >= 0.72 && s <= 0.22);
+          const isOrangeDiscoloration = (h >= 18 && h <= 46 && s >= 0.30 && v >= 0.30);
           const isLesion = isChloroticStreak || isBrownLesion || isAshCore || isPowdery || isOrangeDiscoloration;
 
-          const isPureGreen = (h >= 45 && h <= 175 && s >= 0.10 && v >= 0.10 && g8 > b8 * 1.04);
-          const isChloroticLeaf = (h >= 32 && h <= 78 && s >= 0.15 && v >= 0.15 && g8 >= r8 * 0.65);
+          const isPureGreen = (h >= 40 && h <= 180 && s >= 0.08 && v >= 0.08 && g8 > b8 * 1.02);
+          const isChloroticLeaf = (h >= 30 && h <= 80 && s >= 0.12 && v >= 0.12 && g8 >= r8 * 0.60);
           const isFoliage = isPureGreen || isChloroticLeaf;
 
           if (isPureGreen) pureFoliageCount++;
@@ -637,8 +637,8 @@ export async function analyzeImageWithVision(
 
       // Guard 1: Digital flat graphic / vector art rejection (requires very low color variety AND virtually zero botanical foliage)
       const isCartoonOrClipart =
-        (uniqueColorCount < 15 && topColorDominance > 0.90 && totalBotanicalPixels / totalPixels < 0.02) ||
-        (saturatedFlatCount / totalPixels > 0.25 && totalBotanicalPixels / totalPixels < 0.02);
+        (uniqueColorCount < 8 && topColorDominance > 0.92 && totalBotanicalPixels / totalPixels < 0.005) ||
+        (saturatedFlatCount / totalPixels > 0.25 && totalBotanicalPixels / totalPixels < 0.005);
 
       if (isCartoonOrClipart) {
         return resolve({
@@ -656,7 +656,7 @@ export async function analyzeImageWithVision(
       }
 
       // Guard 2: Human Face & Skin Detection Rejection (reject only when human skin dominates and no real botanical foliage is present)
-      if (skinRatio > 0.45 && totalBotanicalPixels / totalPixels < 0.04 && foliarRatio < 0.02) {
+      if (skinRatio > 0.45 && totalBotanicalPixels / totalPixels < 0.03 && foliarRatio < 0.02) {
         return resolve({
           source: "model",
           outcome: "unknown",
@@ -672,7 +672,7 @@ export async function analyzeImageWithVision(
       }
 
       // Guard 3: Reject scenes with virtually no botanical leaf foliage (faces, furniture, rooms, random objects)
-      if (totalBotanicalPixels < 150 && foliarRatio < 0.015) {
+      if (totalBotanicalPixels < 80 && foliarRatio < 0.008) {
         return resolve({
           source: "model",
           outcome: "unknown",
@@ -914,7 +914,23 @@ export async function analyzeImageWithVision(
 
           const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
           const maxSc = sorted[0]?.[1] ?? 0;
-          if (maxSc < 15 && totalLesionPixels < 20) {
+          if (maxSc < 8 && totalLesionPixels < 12) {
+            if (plantPixels > 300) {
+              return resolve({
+                source: "model",
+                outcome: "identified",
+                topicSlug: "rice-healthy",
+                confidence: 0.92,
+                severity: { scale: "irri-ses", score: 0, max: 9, band: "mild", areaPercent: 0 },
+                diagnostics: {
+                  plantPixels,
+                  lesionPixels: 0,
+                  affectedPercent: 0,
+                  isCropValid: true,
+                  pattern: "healthy_canopy",
+                },
+              });
+            }
             return resolve({
               source: "model",
               outcome: "unknown",

@@ -38,37 +38,37 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
       skinCount++;
     }
 
-    // Neutral grey, white, cream, and beige check (walls, paper, tables, floor tiles)
+    // Neutral grey and pure white check (walls, paper, tables, floor tiles)
     const chromaRange = Math.max(r, g, b) - Math.min(r, g, b);
     const isStrictNeutralGrey =
-      (chromaRange < 18) ||
-      (r > 120 && g > 120 && b > 110 && chromaRange < 30);
+      (chromaRange <= 16) ||
+      (r > 150 && g > 150 && b > 140 && chromaRange <= 22);
 
     // Multi-spectral botanical foliage classification
-    // 1. Green foliage: dark green, bright green, or shaded foliage
+    // 1. Green foliage: dark green, bright green, olive green, or shaded canopy
     const isGreen =
       !isStrictNeutralGrey &&
-      ((g >= 22 && g >= r * 0.95 && g > b * 1.08) ||
-       (g > 32 && (g - r) >= 6 && (g - b) >= 10) ||
-       (g > 30 && g > r * 0.84 && (g + r) > b * 1.45 && g > b * 1.08));
+      ((g >= 22 && g >= r * 0.95 && g > b * 1.05) ||
+       (g > 28 && (g - r) >= 5 && (g - b) >= 8) ||
+       (g > 25 && g > r * 0.82 && (g + r) > b * 1.35 && g > b));
 
     // 2. Chlorotic, lime, & yellow foliage (natural senescence, nutritional chlorosis, or viral yellowing)
     const isChlorotic =
       !isStrictNeutralGrey &&
       !(isSkinPixel && r > 125) &&
-      (r > 38 && g > 38 && (r + g) > b * 1.45 && Math.abs(r - g) < 45 && b < Math.min(r, g) * 0.80);
+      (r > 35 && g > 35 && (r + g) > b * 1.35 && Math.abs(r - g) < 50 && b < Math.min(r, g) * 0.85);
 
     // 3. Brown, necrotic, & fungal lesion tissue (blast spots, brown spot, cercospora lesions, anthracnose)
     const isLesion =
       !isStrictNeutralGrey &&
       !(isSkinPixel && r > 125) &&
-      (r > 28 && g > 12 && r >= g * 0.90 && (r + g) > b * 1.25 && (r - b) > 8 && b < Math.max(r, g) * 0.88);
+      (r > 25 && g > 12 && (r + g) > b * 1.20 && (r - b) > 8 && b < Math.max(r, g) * 0.90);
 
     // 4. Straw, tan, & desiccated leaf blade/sheath tissue
     const isStraw =
       !isStrictNeutralGrey &&
       !(isSkinPixel && r > 125) &&
-      (r > 42 && g > 35 && (r + g) > b * 1.35 && Math.abs(r - g) < 45 && (r - b) > 10 && b < Math.max(r, g) * 0.88);
+      (r > 38 && g > 30 && (r + g) > b * 1.30 && Math.abs(r - g) < 50 && (r - b) > 8 && b < Math.max(r, g) * 0.90);
 
     if (isGreen) {
       green++;
@@ -112,21 +112,21 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
 
   // Reject flat vector art, drawings, cartoons (only when saturated neon flat art without botanical tissue):
   const isCartoonOrDrawing =
-    (uniqueColorCount < 15 && topColorShare > 0.90 && plantTissueShare < 0.02) ||
-    ((neonCount / n) > 0.25 && plantTissueShare < 0.02);
+    (uniqueColorCount < 12 && topColorShare > 0.90 && plantTissueShare < 0.015) ||
+    ((neonCount / n) > 0.20 && plantTissueShare < 0.015);
 
   // Reject flat painted drywall / artificial indoor wall decor:
-  const isIndoorWallDecor = topColorShare > 0.70 && greenShare < 0.08 && lesionShare < 0.03 && contrast < 35;
+  const isIndoorWallDecor = topColorShare > 0.70 && greenShare < 0.20 && lesionShare < 0.04;
 
   // Reject human faces (only when human skin dominates > 45% and virtually no crop foliage or lesion tissue is present)
-  const isHumanFace = (skinCount / n) > 0.45 && greenShare < 0.05 && lesionShare < 0.04;
+  const isHumanFace = (skinCount / n) > 0.45 && greenShare < 0.03 && lesionShare < 0.03;
   const isMissingBotanicalFoliage = plantTissueShare < 0.015 && !isHumanFace && !isCartoonOrDrawing && !isIndoorWallDecor;
 
   const leafOk = !isCartoonOrDrawing && !isHumanFace && !isIndoorWallDecor && !isMissingBotanicalFoliage;
 
-  const sharpOk = sharpness >= 20;
-  const lightOk = brightness >= 35 && brightness <= 245;
-  const subjectOk = contrast >= 14;
+  const sharpOk = sharpness >= 16;
+  const lightOk = brightness >= 25 && brightness <= 250;
+  const subjectOk = contrast >= 10;
   const suitable = sharpOk && lightOk && subjectOk && leafOk;
 
   const leafTip = isHumanFace

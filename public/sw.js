@@ -1,4 +1,4 @@
-const CACHE_NAME = "kisanai-offline-v4";
+const CACHE_NAME = "kisanai-offline-v5";
 
 const OFFLINE_ROUTES = [
   "/",
@@ -52,11 +52,22 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put("/", copy));
+          if (response && response.status === 200) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put("/", copy));
+          }
           return response;
         })
-        .catch(() => caches.match("/").then((cached) => cached || Response.error())),
+        .catch(async () => {
+          const cached = await caches.match("/");
+          if (cached) return cached;
+          const fallback = await caches.match(request);
+          if (fallback) return fallback;
+          return new Response(
+            `<!DOCTYPE html><html><head><meta charset="utf-8"><title>KisanAI Offline</title><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="font-family:sans-serif;padding:24px;text-align:center;background:#0f1a14;color:#fff;"><h2>KisanAI Offline</h2><p>You are currently offline. Please reconnect or return to home.</p><a href="/" style="color:#10b981;font-weight:bold;">Go Home</a></body></html>`,
+            { headers: { "Content-Type": "text/html" } }
+          );
+        }),
     );
     return;
   }
@@ -67,7 +78,7 @@ self.addEventListener("fetch", (event) => {
       caches.match(request).then((cached) =>
         cached ||
         fetch(request).then((response) => {
-          if (response.ok) {
+          if (response && response.status === 200) {
             const copy = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           }
@@ -82,12 +93,16 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(request)
       .then((response) => {
-        if (response.ok) {
+        if (response && response.status === 200) {
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
         }
         return response;
       })
-      .catch(() => caches.match(request).then((cached) => cached || Response.error())),
+      .catch(async () => {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        return new Response(null, { status: 404, statusText: "Offline Not Found" });
+      }),
   );
 });
