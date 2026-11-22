@@ -156,6 +156,8 @@ export function scanTitle(scan: Scan, lang: Parameters<typeof l>[0], t: (k: Key)
   if (scan.outcome === "unknown") {
     const isHuman = scan.quality?.checks?.find((c) => c.id === "leaf")?.tip?.includes("Human face");
     if (isHuman) return lang === "te" ? "మనిషి ముఖం లేదా చర్మం గుర్తించబడింది" : lang === "hi" ? "मानव चेहरा या त्वचा पहचानी गई" : "Non-Crop: Human Face Detected";
+    const isWall = scan.quality?.checks?.find((c) => c.id === "leaf")?.tip?.includes("Indoor wall");
+    if (isWall) return lang === "te" ? "గోడ అలంకరణ / అసలైన పంట కాదు" : lang === "hi" ? "दीवार की सजावट / गैर-फसल वस्तु" : "Indoor Wall Decor / Non-Crop";
     const isNonLeaf = scan.quality ? scan.quality.checks.find((c) => c.id === "leaf")?.pass === false : false;
     return isNonLeaf ? t("oodTitle") : t("inconclusiveScanTitle");
   }

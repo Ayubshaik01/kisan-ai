@@ -38,33 +38,37 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
       skinCount++;
     }
 
-    // Achromatic / neutral grey check (for background walls, furniture, paper)
-    // Individual leaf pixels with lesion centres are accepted if organic absorption is present
+    // Neutral grey, white, cream, and beige check (walls, paper, tables, floor tiles)
     const chromaRange = Math.max(r, g, b) - Math.min(r, g, b);
-    const isStrictNeutralGrey = chromaRange < 18 && b > Math.min(r, g) * 0.85;
+    const isStrictNeutralGrey =
+      (chromaRange < 18) ||
+      (r > 120 && g > 120 && b > 110 && chromaRange < 30);
 
     // Multi-spectral botanical foliage classification
     // 1. Green foliage: dark green, bright green, or shaded foliage
     const isGreen =
-      !isSkinPixel && !isStrictNeutralGrey &&
-      ((g >= 20 && g >= r * 0.88 && g > b * 1.04) ||
-       (g > 32 && (g - r) >= -10 && (g - b) >= 6) ||
-       (g > 30 && g > r * 0.80 && (g + r) > b * 1.5));
+      !isStrictNeutralGrey &&
+      ((g >= 22 && g >= r * 0.95 && g > b * 1.08) ||
+       (g > 32 && (g - r) >= 6 && (g - b) >= 10) ||
+       (g > 30 && g > r * 0.84 && (g + r) > b * 1.45 && g > b * 1.08));
 
     // 2. Chlorotic, lime, & yellow foliage (natural senescence, nutritional chlorosis, or viral yellowing)
     const isChlorotic =
-      !isSkinPixel && !isStrictNeutralGrey &&
-      (r > 35 && g > 35 && (r + g) > b * 1.5 && Math.abs(r - g) < 55 && b < Math.min(r, g) * 0.85);
+      !isStrictNeutralGrey &&
+      !(isSkinPixel && r > 125) &&
+      (r > 38 && g > 38 && (r + g) > b * 1.45 && Math.abs(r - g) < 45 && b < Math.min(r, g) * 0.80);
 
     // 3. Brown, necrotic, & fungal lesion tissue (blast spots, brown spot, cercospora lesions, anthracnose)
     const isLesion =
-      !isSkinPixel && !isStrictNeutralGrey &&
-      (r > 30 && g > 15 && r >= g * 0.90 && (r + g) > b * 1.3 && (r - g) < 70 && (r - b) > 10 && b < Math.min(r, g) * 0.88);
+      !isStrictNeutralGrey &&
+      !(isSkinPixel && r > 125) &&
+      (r > 28 && g > 12 && r >= g * 0.90 && (r + g) > b * 1.25 && (r - b) > 8 && b < Math.max(r, g) * 0.88);
 
     // 4. Straw, tan, & desiccated leaf blade/sheath tissue
     const isStraw =
-      !isSkinPixel && !isStrictNeutralGrey &&
-      (r > 42 && g > 35 && (r + g) > b * 1.35 && Math.abs(r - g) < 48 && (r - b) > 10 && b < Math.min(r, g) * 0.88);
+      !isStrictNeutralGrey &&
+      !(isSkinPixel && r > 125) &&
+      (r > 42 && g > 35 && (r + g) > b * 1.35 && Math.abs(r - g) < 45 && (r - b) > 10 && b < Math.max(r, g) * 0.88);
 
     if (isGreen) {
       green++;
@@ -96,6 +100,7 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
   const mean = count ? lapSum / count : 0;
   const sharpness = count ? lapSq / count - mean * mean : 0;
   const greenShare = green / n;
+  const lesionShare = lesion / n;
   const plantTissueShare = (green + chlorotic + lesion + straw) / n;
 
   let maxColorOccurrences = 0;
@@ -105,28 +110,33 @@ export function assessPixels(data: Uint8ClampedArray, width: number, height: num
   const topColorShare = maxColorOccurrences / n;
   const uniqueColorCount = colorMap.size;
 
-  // Reject flat vector art, drawings, cartoons:
+  // Reject flat vector art, drawings, cartoons (only when saturated neon flat art without botanical tissue):
   const isCartoonOrDrawing =
-    (uniqueColorCount < 20 && topColorShare > 0.88 && plantTissueShare < 0.03) ||
-    ((neonCount / n) > 0.22 && plantTissueShare < 0.03);
+    (uniqueColorCount < 15 && topColorShare > 0.90 && plantTissueShare < 0.02) ||
+    ((neonCount / n) > 0.25 && plantTissueShare < 0.02);
 
-  // Reject human faces (only when human skin dominates > 45% and virtually no crop foliage is present)
-  const isHumanFace = (skinCount / n) > 0.45 && greenShare < 0.05;
-  const isMissingBotanicalFoliage = plantTissueShare < 0.025 && !isHumanFace && !isCartoonOrDrawing;
+  // Reject flat painted drywall / artificial indoor wall decor:
+  const isIndoorWallDecor = topColorShare > 0.70 && greenShare < 0.08 && lesionShare < 0.03 && contrast < 35;
 
-  const leafOk = !isCartoonOrDrawing && !isHumanFace && !isMissingBotanicalFoliage;
+  // Reject human faces (only when human skin dominates > 45% and virtually no crop foliage or lesion tissue is present)
+  const isHumanFace = (skinCount / n) > 0.45 && greenShare < 0.05 && lesionShare < 0.04;
+  const isMissingBotanicalFoliage = plantTissueShare < 0.015 && !isHumanFace && !isCartoonOrDrawing && !isIndoorWallDecor;
 
-  const sharpOk = sharpness >= 40;
-  const lightOk = brightness >= 45 && brightness <= 235;
-  const subjectOk = contrast >= 18;
+  const leafOk = !isCartoonOrDrawing && !isHumanFace && !isIndoorWallDecor && !isMissingBotanicalFoliage;
+
+  const sharpOk = sharpness >= 20;
+  const lightOk = brightness >= 35 && brightness <= 245;
+  const subjectOk = contrast >= 14;
   const suitable = sharpOk && lightOk && subjectOk && leafOk;
 
   const leafTip = isHumanFace
     ? "Human face or skin detected. Please photograph a crop leaf, not people or faces."
+    : isIndoorWallDecor
+    ? "Indoor wall decoration or artificial object detected. Please photograph a living crop leaf in the field."
+    : isCartoonOrDrawing
+    ? "Drawing or cartoon detected. Please photograph a real crop leaf in your field."
     : isMissingBotanicalFoliage
     ? "No agricultural crop leaf detected. Please photograph a rice or chilli plant leaf."
-    : isCartoonOrDrawing
-    ? "Drawing or cartoon detected. Please photograph a real crop leaf."
     : "Real botanical foliage detected.";
 
   return {

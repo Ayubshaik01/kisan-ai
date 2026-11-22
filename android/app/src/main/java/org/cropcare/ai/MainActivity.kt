@@ -87,6 +87,43 @@ class MainActivity : AppCompatActivity() {
             .setDomain("appassets.androidplatform.net")
             .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
             .addPathHandler("/dist/", WebViewAssetLoader.AssetsPathHandler(this))
+            .addPathHandler("/", object : WebViewAssetLoader.PathHandler {
+                override fun handle(path: String): WebResourceResponse? {
+                    return try {
+                        val last = path.substringAfterLast("/")
+                        val assetPath = if (path.isEmpty() || path == "/" || path == "index.html" || !last.contains(".")) {
+                            "dist/index.html"
+                        } else {
+                            "dist/" + path.removePrefix("/")
+                        }
+                        val mimeType = when {
+                            assetPath.endsWith(".html") -> "text/html"
+                            assetPath.endsWith(".js") || assetPath.endsWith(".mjs") -> "application/javascript"
+                            assetPath.endsWith(".css") -> "text/css"
+                            assetPath.endsWith(".json") -> "application/json"
+                            assetPath.endsWith(".png") -> "image/png"
+                            assetPath.endsWith(".jpg") || assetPath.endsWith(".jpeg") -> "image/jpeg"
+                            assetPath.endsWith(".svg") -> "image/svg+xml"
+                            assetPath.endsWith(".wasm") -> "application/wasm"
+                            else -> "application/octet-stream"
+                        }
+                        WebResourceResponse(mimeType, "UTF-8", assets.open(assetPath)).apply {
+                            responseHeaders = mapOf(
+                                "Access-Control-Allow-Origin" to "*",
+                                "Cache-Control" to "no-cache"
+                            )
+                        }
+                    } catch (_: Exception) {
+                        try {
+                            WebResourceResponse("text/html", "UTF-8", assets.open("dist/index.html")).apply {
+                                responseHeaders = mapOf("Access-Control-Allow-Origin" to "*")
+                            }
+                        } catch (_: Exception) {
+                            null
+                        }
+                    }
+                }
+            })
             .build()
 
         webView.settings.apply {
@@ -233,34 +270,48 @@ class MainActivity : AppCompatActivity() {
                 view: WebView,
                 request: WebResourceRequest
             ): WebResourceResponse? {
-                val uri = request.url
-                val host = uri.host?.lowercase() ?: ""
+                return try {
+                    val uri = request.url
+                    val host = uri.host?.lowercase() ?: ""
 
-                // Always intercept our local virtual domain and local schemes - NEVER let them fall through to real DNS
-                if (host == "appassets.androidplatform.net" || host == "localhost" || uri.scheme == "file") {
-                    // Try assetLoader first if path starts with /assets/
-                    if (uri.path?.startsWith("/assets/") == true) {
+                    // Always intercept our local virtual domain and local schemes - NEVER let them fall through to real DNS
+                    if (host == "appassets.androidplatform.net" || host == "localhost" || uri.scheme == "file" || host.isEmpty()) {
                         val loaderResponse = assetLoader.shouldInterceptRequest(uri)
                         if (loaderResponse != null) return loaderResponse
+                        handleVirtualAssetRequest(uri)
+                    } else {
+                        null
                     }
-                    return handleVirtualAssetRequest(uri)
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "Error in shouldInterceptRequest", e)
+                    try {
+                        WebResourceResponse("text/html", "UTF-8", assets.open("dist/index.html")).apply {
+                            responseHeaders = mapOf("Access-Control-Allow-Origin" to "*")
+                        }
+                    } catch (_: Exception) { null }
                 }
-
-                return null
             }
 
             @Deprecated("Deprecated in Java")
             override fun shouldInterceptRequest(view: WebView, url: String): WebResourceResponse? {
-                val uri = Uri.parse(url)
-                val host = uri.host?.lowercase() ?: ""
-                if (host == "appassets.androidplatform.net" || host == "localhost" || uri.scheme == "file") {
-                    if (uri.path?.startsWith("/assets/") == true) {
+                return try {
+                    val uri = Uri.parse(url)
+                    val host = uri.host?.lowercase() ?: ""
+                    if (host == "appassets.androidplatform.net" || host == "localhost" || uri.scheme == "file" || host.isEmpty()) {
                         val loaderResponse = assetLoader.shouldInterceptRequest(uri)
                         if (loaderResponse != null) return loaderResponse
+                        handleVirtualAssetRequest(uri)
+                    } else {
+                        null
                     }
-                    return handleVirtualAssetRequest(uri)
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "Error in legacy shouldInterceptRequest", e)
+                    try {
+                        WebResourceResponse("text/html", "UTF-8", assets.open("dist/index.html")).apply {
+                            responseHeaders = mapOf("Access-Control-Allow-Origin" to "*")
+                        }
+                    } catch (_: Exception) { null }
                 }
-                return null
             }
 
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
@@ -288,7 +339,7 @@ class MainActivity : AppCompatActivity() {
             ) {
                 val host = request.url?.host?.lowercase() ?: ""
                 // Never show Android chromium error page for our local virtual host; gracefully recover
-                if (host == "appassets.androidplatform.net" || host == "localhost") {
+                if (host == "appassets.androidplatform.net" || host == "localhost" || host.isEmpty()) {
                     Log.w("MainActivity", "Local virtual asset recovery for: ${request.url}")
                     view.post {
                         view.loadUrl("https://appassets.androidplatform.net/assets/dist/index.html")

@@ -17,6 +17,7 @@ import type { Lang } from "../i18n";
 import type { DiagnosisContext } from "../types/diagnosis-context";
 import { handleAIChatServer } from "./server-chat";
 import { AgriculturalSafetyValidator } from "./safety-validator";
+import { queryGroqChat } from "./groq-pool";
 
 export interface ActiveEngineState {
   currentMode: EngineMode;
@@ -159,16 +160,28 @@ export class AIEngineRouter {
     // 2. Execute via Online Engine
     if (targetEngine === "online") {
       try {
-        const serverRes = await handleAIChatServer({
-          data: {
-            model: this.selectedOnlineModelId,
-            messages: options.messages,
-            diagnosis: options.diagnosisContext,
-            lang: options.lang,
-          },
+        const groqText = await queryGroqChat({
+          messages: options.messages as any,
+          diagnosisContext: options.diagnosisContext,
+          lang: options.lang,
+          model: this.selectedOnlineModelId,
         });
-        rawReply = serverRes.text;
-        usedModel = serverRes.model || this.selectedOnlineModelId;
+
+        if (groqText && groqText.length > 5) {
+          rawReply = groqText;
+          usedModel = "KisanAI High-Speed Neural Core (Connected)";
+        } else {
+          const serverRes = await handleAIChatServer({
+            data: {
+              model: this.selectedOnlineModelId,
+              messages: options.messages,
+              diagnosis: options.diagnosisContext,
+              lang: options.lang,
+            },
+          });
+          rawReply = serverRes.text;
+          usedModel = serverRes.model || this.selectedOnlineModelId;
+        }
       } catch (err) {
         if (this.mode === "online") {
           throw new Error(`Online AI unavailable: ${(err as Error).message}. You can switch to Offline AI in settings.`);

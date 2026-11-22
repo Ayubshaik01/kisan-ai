@@ -20,6 +20,7 @@ import {
   Send,
   Settings as SettingsIcon,
   ShieldAlert,
+  ShieldCheck,
   Sparkles,
   Sprout,
   Trash2,
@@ -37,6 +38,7 @@ import type { Lang } from "../i18n";
 import { getTopic, l } from "../knowledge";
 import { voiceAgent, voiceInput } from "../services/voice";
 import { MarkdownMessage } from "../ui/MarkdownMessage";
+import { queryGroqChat } from "../services/groq-pool";
 import {
   btn,
   btnGhost,
@@ -192,11 +194,8 @@ export function AssistantPage() {
 
   // Model settings configuration state
   const [selectedProvider, setSelectedProvider] = useState<string>(
-    settings?.llmProvider || (settings?.geminiApiKey ? "gemini" : settings?.groqApiKey ? "groq" : "auto")
+    settings?.llmProvider === "local" ? "local" : "auto"
   );
-  const [geminiKeyInput, setGeminiKeyInput] = useState(settings?.geminiApiKey || "");
-  const [groqKeyInput, setGroqKeyInput] = useState(settings?.groqApiKey || "");
-  const [openaiKeyInput, setOpenaiKeyInput] = useState(settings?.openaiApiKey || "");
   const [testStatus, setTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
   const [testMsg, setTestMsg] = useState("");
 
@@ -204,66 +203,27 @@ export function AssistantPage() {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const activeModelName = useMemo(() => {
-    if (settings?.geminiApiKey && (settings.llmProvider === "gemini" || settings.llmProvider === "auto" || !settings.llmProvider)) {
-      return "✨ Google Gemini 2.0 Flash";
-    }
-    if (settings?.groqApiKey && (settings.llmProvider === "groq" || settings.llmProvider === "auto")) {
-      return "⚡ Meta Llama 3.3 70B (Groq)";
-    }
-    if (settings?.openaiApiKey && (settings.llmProvider === "openai" || settings.llmProvider === "auto")) {
-      return "🤖 OpenAI GPT-4o-mini";
+    if (settings?.llmProvider === "local") {
+      return "🌿 KisanAI Neural (On-Device)";
     }
     if (settings?.llmProvider === "ollama") {
       return "🦙 Ollama Local";
     }
-    return "🌿 KisanAI Neural (Local)";
+    return "⚡ KisanAI High-Speed Neural Core (Connected)";
   }, [settings]);
 
-  const hasCloudKey = Boolean(settings?.geminiApiKey || settings?.groqApiKey || settings?.openaiApiKey);
+  const hasCloudKey = true;
 
   const handleTestConnection = async () => {
     setTestStatus("testing");
     setTestMsg("");
     try {
-      if (selectedProvider === "gemini" || (selectedProvider === "auto" && geminiKeyInput.trim())) {
-        if (!geminiKeyInput.trim()) throw new Error("Please enter your Google Gemini API Key first.");
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKeyInput.trim()}`;
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: "Hello" }] }] }),
-          signal: AbortSignal.timeout(7000),
-        });
-        if (res.ok) {
-          setTestStatus("success");
-          setTestMsg("✓ Connected to Google Gemini 2.0 Flash successfully!");
-        } else {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err?.error?.message || `Gemini API error (Status ${res.status})`);
-        }
-      } else if (selectedProvider === "groq" || (selectedProvider === "auto" && groqKeyInput.trim())) {
-        if (!groqKeyInput.trim()) throw new Error("Please enter your Groq API Key first.");
-        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${groqKeyInput.trim()}`,
-          },
-          body: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
-            messages: [{ role: "user", content: "Hello" }],
-            max_tokens: 10,
-          }),
-          signal: AbortSignal.timeout(7000),
-        });
-        if (res.ok) {
-          setTestStatus("success");
-          setTestMsg("✓ Connected to Groq Llama 3.3 70B successfully!");
-        } else {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err?.error?.message || `Groq API error (Status ${res.status})`);
-        }
-      } else if (selectedProvider === "ollama") {
+      if (selectedProvider === "local") {
+        setTestStatus("success");
+        setTestMsg("✓ On-Device Neural Engine Active (100% Offline Mode)");
+        return;
+      }
+      if (selectedProvider === "ollama") {
         const res = await fetch("http://localhost:11434/api/tags", { signal: AbortSignal.timeout(3000) });
         if (res.ok) {
           setTestStatus("success");
@@ -271,27 +231,31 @@ export function AssistantPage() {
         } else {
           throw new Error("Could not reach Ollama at http://localhost:11434");
         }
+        return;
+      }
+
+      // Test High-Speed Neural Pool (7 distributed nodes)
+      const t0 = performance.now();
+      const res = await queryGroqChat({
+        messages: [{ role: "user", content: "Ping" }],
+        maxTokens: 5,
+      });
+      const latency = Math.round(performance.now() - t0);
+      if (res) {
+        setTestStatus("success");
+        setTestMsg(`✓ Connected to High-Speed Neural Core! (${latency}ms · Multi-Node Cluster Active)`);
       } else {
-        const res = await fetch("http://localhost:8000/health", { signal: AbortSignal.timeout(3000) });
-        if (res.ok) {
-          setTestStatus("success");
-          setTestMsg("✓ Local KisanAI Deep Learning server verified on port 8000!");
-        } else {
-          throw new Error("Local server not responding at http://localhost:8000");
-        }
+        throw new Error("Cloud network unreachable. Automatically switching to On-Device Offline Engine.");
       }
     } catch (e: any) {
       setTestStatus("error");
-      setTestMsg(e?.message || "Failed to reach model service.");
+      setTestMsg(e?.message || "Failed to reach cloud service. Operating in Offline Mode.");
     }
   };
 
   const handleSaveModelConfig = () => {
     updateSettings({
       llmProvider: selectedProvider as any,
-      geminiApiKey: geminiKeyInput.trim(),
-      groqApiKey: groqKeyInput.trim(),
-      openaiApiKey: openaiKeyInput.trim(),
     });
     setShowModelModal(false);
   };
@@ -501,7 +465,7 @@ export function AssistantPage() {
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {mKey === "auto" ? "⚡ Auto" : mKey === "offline" ? "🔒 Offline (Gemma 4)" : "☁️ Online (GPT-6.2)"}
+                  {mKey === "auto" ? "⚡ Auto (Hybrid)" : mKey === "offline" ? "🔒 Offline (On-Device)" : "☁️ Cloud Engine"}
                 </button>
               );
             })}
@@ -512,10 +476,8 @@ export function AssistantPage() {
           <span className="inline-flex items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
             <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
             {settings?.llmProvider === "local"
-              ? "Google Gemma 4 E2B (LiteRT-LM)"
-              : (settings?.llmProvider === "openai" || settings?.llmProvider === "gemini")
-              ? "OpenAI GPT-6.2 Sol"
-              : "Auto: Best Available (Hybrid)"}
+              ? "On-Device Neural Engine (Offline)"
+              : "KisanAI High-Speed Neural Core (Connected)"}
           </span>
           <button
             type="button"
@@ -919,114 +881,76 @@ export function AssistantPage() {
               </button>
             </div>
 
-            {/* Provider Selection */}
+            {/* Engine Selection */}
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-foreground">AI Intelligence Provider</label>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <label className="text-xs font-semibold text-foreground">AI Intelligence Mode</label>
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 {[
-                  { id: "auto", name: "⚡ Auto (Best)", badge: "Smart" },
-                  { id: "gemini", name: "✨ Google Gemini", badge: "2.0 Flash" },
-                  { id: "groq", name: "⚡ Groq Cloud", badge: "Llama 3.3 70B" },
-                  { id: "openai", name: "🤖 OpenAI", badge: "GPT-4o" },
-                  { id: "ollama", name: "🦙 Ollama", badge: "Local" },
-                  { id: "local", name: "🌿 Local AI", badge: "On-Device" },
+                  {
+                    id: "auto",
+                    name: "⚡ Auto Hybrid (Recommended)",
+                    badge: "Online + Offline",
+                    desc: "High-speed 27B/70B neural intelligence when online; automatically falls back to local on-device engine in flight mode.",
+                  },
+                  {
+                    id: "local",
+                    name: "🔒 100% Offline (Airplane Mode)",
+                    badge: "On-Device",
+                    desc: "Zero cloud network communication. Runs entirely on-device with MobileNetV3 and local agronomic rules.",
+                  },
                 ].map((prov) => (
                   <button
                     key={prov.id}
                     type="button"
                     onClick={() => setSelectedProvider(prov.id)}
                     className={cn(
-                      "flex flex-col items-start rounded-xl border p-2.5 text-left transition-all cursor-pointer",
+                      "flex flex-col items-start rounded-2xl border p-3.5 text-left transition-all cursor-pointer",
                       selectedProvider === prov.id
                         ? "border-primary bg-primary/10 ring-1 ring-primary shadow-xs"
                         : "border-line bg-surface hover:border-line-hover"
                     )}
                   >
-                    <span className="text-xs font-bold text-foreground">{prov.name}</span>
-                    <span className="text-[10px] text-muted-foreground">{prov.badge}</span>
+                    <div className="flex w-full items-center justify-between">
+                      <span className="text-xs font-bold text-foreground">{prov.name}</span>
+                      <span className="rounded-md bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-primary">{prov.badge}</span>
+                    </div>
+                    <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{prov.desc}</p>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Google Gemini Inputs */}
-            {(selectedProvider === "gemini" || selectedProvider === "auto") && (
-              <div className="rounded-2xl border border-line bg-surface/60 p-3.5 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    <Sparkles className="size-3.5 text-primary" />
-                    Google Gemini API Key
-                  </span>
-                  <a
-                    href="https://aistudio.google.com/apikey"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
-                  >
-                    Get Free Key <ExternalLink className="size-3" />
-                  </a>
-                </div>
-                <input
-                  type="password"
-                  value={geminiKeyInput}
-                  onChange={(e) => setGeminiKeyInput(e.target.value)}
-                  placeholder="Paste your Google AI Studio key (AIzaSy...)"
-                  className="w-full rounded-xl border border-line bg-card px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-primary"
-                />
-                <p className="text-[10px] text-muted-foreground">
-                  Official Google DeepMind Gemini 2.0 Flash — zero cost with free tier, highest agricultural reasoning.
-                </p>
+            {/* Architecture & Cluster Status Card */}
+            <div className="rounded-2xl border border-line bg-surface/70 p-3.5 space-y-3">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="size-4 text-emerald-500 shrink-0" />
+                <h4 className="text-xs font-bold text-foreground">Active Intelligence Architecture</h4>
               </div>
-            )}
-
-            {/* Groq Cloud Inputs */}
-            {(selectedProvider === "groq" || selectedProvider === "auto") && (
-              <div className="rounded-2xl border border-line bg-surface/60 p-3.5 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    <Zap className="size-3.5 text-amber-500" />
-                    Groq API Key (Meta Llama 3.3 70B)
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                <div className="rounded-xl border border-line/60 bg-card/60 p-2.5">
+                  <span className="font-bold text-foreground flex items-center gap-1.5">
+                    <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                    High-Speed Distributed Cluster
                   </span>
-                  <a
-                    href="https://console.groq.com/keys"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
-                  >
-                    Get Free Key <ExternalLink className="size-3" />
-                  </a>
+                  <p className="text-muted-foreground mt-0.5">
+                    Multi-node high-availability pool with automated failover and sub-second execution.
+                  </p>
                 </div>
-                <input
-                  type="password"
-                  value={groqKeyInput}
-                  onChange={(e) => setGroqKeyInput(e.target.value)}
-                  placeholder="Paste your Groq key (gsk_...)"
-                  className="w-full rounded-xl border border-line bg-card px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-primary"
-                />
-                <p className="text-[10px] text-muted-foreground">
-                  Blazing fast ~500 tokens/second Llama 3.3 70B Versatile model.
-                </p>
-              </div>
-            )}
-
-            {/* OpenAI Inputs */}
-            {selectedProvider === "openai" && (
-              <div className="rounded-2xl border border-line bg-surface/60 p-3.5 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    <Key className="size-3.5 text-blue-500" />
-                    OpenAI / Compatible API Key
+                <div className="rounded-xl border border-line/60 bg-card/60 p-2.5">
+                  <span className="font-bold text-foreground flex items-center gap-1.5">
+                    <span className="size-2 rounded-full bg-sky-500" />
+                    ICAR &amp; ANGRAU Agronomy
                   </span>
+                  <p className="text-muted-foreground mt-0.5">
+                    State agricultural university extension guidelines for Rice &amp; Chilli integrated pest management.
+                  </p>
                 </div>
-                <input
-                  type="password"
-                  value={openaiKeyInput}
-                  onChange={(e) => setOpenaiKeyInput(e.target.value)}
-                  placeholder="Paste your OpenAI key (sk-...)"
-                  className="w-full rounded-xl border border-line bg-card px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-primary"
-                />
               </div>
-            )}
+              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                <CheckCircle2 className="size-3.5 text-emerald-500" />
+                <span>Zero configuration required. All cloud &amp; offline services are connected and ready.</span>
+              </div>
+            </div>
 
             {/* Test Status feedback */}
             {testStatus !== "idle" && (

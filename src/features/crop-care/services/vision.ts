@@ -637,8 +637,8 @@ export async function analyzeImageWithVision(
 
       // Guard 1: Digital flat graphic / vector art rejection (requires very low color variety AND virtually zero botanical foliage)
       const isCartoonOrClipart =
-        (uniqueColorCount < 20 && topColorDominance > 0.85 && totalBotanicalPixels / totalPixels < 0.05) ||
-        (saturatedFlatCount / totalPixels > 0.20 && totalBotanicalPixels / totalPixels < 0.05);
+        (uniqueColorCount < 15 && topColorDominance > 0.90 && totalBotanicalPixels / totalPixels < 0.02) ||
+        (saturatedFlatCount / totalPixels > 0.25 && totalBotanicalPixels / totalPixels < 0.02);
 
       if (isCartoonOrClipart) {
         return resolve({
@@ -656,7 +656,7 @@ export async function analyzeImageWithVision(
       }
 
       // Guard 2: Human Face & Skin Detection Rejection (reject only when human skin dominates and no real botanical foliage is present)
-      if (skinRatio > 0.45 && totalBotanicalPixels / totalPixels < 0.08) {
+      if (skinRatio > 0.45 && totalBotanicalPixels / totalPixels < 0.04 && foliarRatio < 0.02) {
         return resolve({
           source: "model",
           outcome: "unknown",
@@ -672,7 +672,7 @@ export async function analyzeImageWithVision(
       }
 
       // Guard 3: Reject scenes with virtually no botanical leaf foliage (faces, furniture, rooms, random objects)
-      if (totalBotanicalPixels < 200 && foliarRatio < 0.02) {
+      if (totalBotanicalPixels < 150 && foliarRatio < 0.015) {
         return resolve({
           source: "model",
           outcome: "unknown",
@@ -683,6 +683,23 @@ export async function analyzeImageWithVision(
             affectedPercent: 0,
             isCropValid: false,
             pattern: "out_of_distribution_non_leaf",
+          },
+        });
+      }
+
+      // Guard 4: Indoor wall decor & artificial decorative objects (flat painted drywall with low organic foliage)
+      const isIndoorWallDecor = topColorDominance > 0.68 && foliarRatio < 0.08 && ((chloroticStreakPixels + brownSpotPixels + blastAshCorePixels) / totalPixels) < 0.04;
+      if (isIndoorWallDecor) {
+        return resolve({
+          source: "model",
+          outcome: "unknown",
+          confidence: 0.15,
+          diagnostics: {
+            plantPixels: totalFoliarChlorophyll,
+            lesionPixels: 0,
+            affectedPercent: 0,
+            isCropValid: false,
+            pattern: "rejected_indoor_wall_decor",
           },
         });
       }

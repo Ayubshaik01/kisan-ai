@@ -1,6 +1,7 @@
 import type { Lang } from "../i18n";
 import { getTopic, l, type CropKey, type Topic } from "../knowledge";
 import type { DynamicCurePlan, Scan, SeverityResult } from "./types";
+import { queryGroqChat, type GroqChatMessage } from "./groq-pool";
 
 /**
  * Llama 3.2 1B Multimodal & Multilingual Engine for Web & Android
@@ -1479,12 +1480,9 @@ Return strictly a JSON object with this exact shape:
   const systemPrompt = "You are KisanAI's Master Agronomist AI. You provide verified, practical, ICAR/IRRI/university-aligned cure and management guidance for farmers. Output valid JSON only.";
 
   let activeModel = "Meta Llama 3.2 1B Instruct (On-Device)";
-  if (settings?.geminiApiKey && (settings.llmProvider === "gemini" || settings.llmProvider === "auto" || !settings.llmProvider)) {
-    activeModel = "Google Gemini 2.0 Flash";
-  } else if (settings?.groqApiKey && (settings.llmProvider === "groq" || settings.llmProvider === "auto")) {
-    activeModel = "Groq Llama 3.3 70B";
-  } else if (settings?.openaiApiKey) {
-    activeModel = "OpenAI GPT-4o-mini";
+  const isOnline = typeof navigator === "undefined" || navigator.onLine;
+  if (isOnline && settings?.llmProvider !== "local") {
+    activeModel = "KisanAI High-Speed Neural Core (Connected)";
   }
 
   // Attempt live LLM generation if online
@@ -1570,7 +1568,32 @@ export async function queryLiveLlamaEndpoint(
   const isOnline = typeof navigator === "undefined" || navigator.onLine;
   const provider = settings?.llmProvider || "auto";
 
-  // 1. Google Gemini Official API (Gemini 2.0 Flash / 1.5 Flash)
+  if (provider === "local") return null;
+
+  // 1. Primary Default: KisanAI Distributed Groq Engine Pool (7 load-balanced nodes)
+  if (isOnline && (provider === "groq" || provider === "auto")) {
+    try {
+      const messages: GroqChatMessage[] = [
+        ...(history || []).slice(-6).map((m) => ({
+          role: (m.role === "farmer" ? "user" : "assistant") as const,
+          content: m.text,
+        })),
+        { role: "user" as const, content: prompt },
+      ];
+      const groqReply = await queryGroqChat({
+        messages,
+        lang: settings?.lang || "en",
+        model: settings?.customModel,
+      });
+      if (groqReply && groqReply.length > 5) {
+        return groqReply;
+      }
+    } catch (err) {
+      console.warn("Groq Engine Pool notice:", err);
+    }
+  }
+
+  // 2. Google Gemini Official API (Gemini 2.0 Flash / 1.5 Flash)
   if (isOnline && settings?.geminiApiKey && (provider === "gemini" || provider === "auto")) {
     try {
       const model = settings.customModel?.trim() || "gemini-2.0-flash";

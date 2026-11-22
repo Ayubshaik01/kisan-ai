@@ -1,5 +1,6 @@
 import type { Context } from "h3";
 import { createServerFn } from "@tanstack/react-start";
+import { queryGroqChat } from "./groq-pool";
 
 // Secure server function executing strictly on server runtime
 // Accesses environment variables (OPENAI_API_KEY, GEMINI_API_KEY) securely without leaking to client
@@ -93,23 +94,49 @@ GUIDELINES:
       };
     }
 
-    // 3. Fallback to Local AI Engine (Port 8000) if no cloud key configured
-    const localRes = await fetch("http://127.0.0.1:8000/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: model || "gemma-4-e2b",
-        messages,
-      }),
-    });
+    // 3. High-Speed Distributed Groq Engine Pool (Primary Default Cloud Engine)
+    try {
+      const groqReply = await queryGroqChat({
+        messages: messages as any,
+        diagnosisContext: diagnosis,
+        lang,
+        temperature,
+        maxTokens: max_tokens,
+        model,
+      });
 
-    if (localRes.ok) {
-      const localJson = await localRes.json();
-      return {
-        text: localJson.choices?.[0]?.message?.content || "",
-        model: "gemma-4-e2b",
-        provider: "offline",
-      };
+      if (groqReply && groqReply.length > 5) {
+        return {
+          text: groqReply,
+          model: "qwen/qwen3.8-27b",
+          provider: "groq",
+        };
+      }
+    } catch (e) {
+      console.warn("Groq server pool notice:", e);
+    }
+
+    // 4. Fallback to Local AI Engine (Port 8000) if no cloud key configured
+    try {
+      const localRes = await fetch("http://127.0.0.1:8000/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: model || "gemma-4-e2b",
+          messages,
+        }),
+      });
+
+      if (localRes.ok) {
+        const localJson = await localRes.json();
+        return {
+          text: localJson.choices?.[0]?.message?.content || "",
+          model: "gemma-4-e2b",
+          provider: "offline",
+        };
+      }
+    } catch {
+      // Local server offline
     }
 
     throw new Error("No online AI provider configured and local engine unreachable.");

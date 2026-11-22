@@ -65,6 +65,33 @@ describe("Out-Of-Distribution (OOD) Non-Plant & Face Rejection", () => {
     expect(leafCheck?.pass).toBe(false);
   });
 
+  it("rejects indoor painted walls with decorative carvings", () => {
+    const W = 64;
+    const H = 64;
+    const pixels = new Uint8ClampedArray(W * H * 4);
+
+    // 85% uniform painted cream wall, 15% greyish metallic vine shape
+    for (let i = 0; i < W * H; i++) {
+      const idx = i * 4;
+      if (i < W * H * 0.85) {
+        pixels[idx] = 215; // wall R
+        pixels[idx + 1] = 210; // wall G
+        pixels[idx + 2] = 200; // wall B
+      } else {
+        pixels[idx] = 110; // decor carving
+        pixels[idx + 1] = 120;
+        pixels[idx + 2] = 105;
+      }
+      pixels[idx + 3] = 255;
+    }
+
+    const report = assessPixels(pixels, W, H);
+    expect(report.ok).toBe(false);
+    const leafCheck = report.checks.find((c) => c.id === "leaf");
+    expect(leafCheck?.pass).toBe(false);
+    expect(leafCheck?.tip).toContain("Indoor wall decoration");
+  });
+
   it("accepts genuine green botanical crop leaves", () => {
     const W = 64;
     const H = 64;
